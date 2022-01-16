@@ -1,0 +1,241 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.8.5　分区和性能</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2F4UM0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.8.5　分区和性能</h3>
+
+  <p class="ziti3">我常听到开发人员说“对表做个分区”，然后数据库的查询就会快了。这是真的吗？实际上可能根本感觉不到查询速度的提升，甚至会发现查询速度急剧下降。因此，在合理使用分区之前，必须了解分区的使用环境。</p>
+
+  <p class="ziti3">数据库的应用分为两类：一类是OLTP（在线事务处理），如Blog、电子商务、网络游戏等；另一类是OLAP（在线分析处理），如数据仓库、数据集市。在一个实际的应用环境中，可能既有OLTP的应用，也有OLAP的应用。如网络游戏中，玩家操作的游戏数据库应用就是OLTP的，但是游戏厂商可能需要对游戏产生的日志进行分析，通过分析得到的结果来更好地服务于游戏，预测玩家的行为等，而这却是OLAP的应用。</p>
+
+  <p class="ziti3">对于OLAP的应用，分区的确是可以很好地提高查询的性能，因为OLAP应用大多数查询需要频繁地扫描一张很大的表。假设有一张1亿行的表，其中有一个时间戳属性列。用户的查询需要从这张表中获取一年的数据。如果按时间戳进行分区，则只需要扫描相应的分区即可。这就是前面介绍的Partition Pruning技术。</p>
+
+  <p class="ziti3">然而对于OLTP的应用，分区应该非常小心。在这种应用下，通常不可能会获取一张大表中10%的数据，大部分都是通过索引返回几条记录即可。而根据B+树索引的原理可知，对于一张大表，一般的B+树需要2～3次的磁盘IO。因此B+树可以很好地完成操作，不需要分区的帮助，并且设计不好的分区会带来严重的性能问题。</p>
+
+  <p class="ziti3">我发现很多开发团队会认为含有1000W行的表是一张非常巨大的表，所以他们往往会选择采用分区，如对主键做10个HASH的分区，这样每个分区就只有100W的数据了，因此查询应该变得更快了，如SELECT*FROM TABLE WHERE PK=@pk。但是有没有考虑过这样一种情况：100W和1000W行的数据本身构成的B+树的层次都是一样的，可能都是2层。那么上述走主键分区的索引并不会带来性能的提高。好的，如果1000W的B+树的高度是3，100W的B+树的高度是2，那么上述按主键分区的索引可以避免1次IO，从而提高查询的效率。这没问题，但是这张表只有主键索引，没有任何其他的列需要查询的。如果还有类似如下的SQL语句：SELECT*FROM TABLE WHERE KEY=@key，这时对于KEY的查询需要扫描所有的10个分区，即使每个分区的查询开销为2次IO，则一共需要20次IO。而对于原来单表的设计，对于KEY的查询只需要2～3次IO。</p>
+
+  <p class="ziti3">接着来看如下的表Profile，根据主键ID进行了HASH分区，HASH分区的数量为10，表Profile有接近1000W的数据：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE'Profile'(</p>
+
+  <p class="ziti4">-＞'id'int(11)NOT NULL AUTO_INCREMENT,</p>
+
+  <p class="ziti4">-＞'nickname'varchar(20)NOT NULL DEFAULT'',</p>
+
+  <p class="ziti4">-＞'password'varchar(32)NOT NULL DEFAULT'',</p>
+
+  <p class="ziti4">-＞'sex'char(1)NOT NULL DEFAULT'',</p>
+
+  <p class="ziti4">-＞'rdate'date NOT NULL DEFAULT'0000-00-00',</p>
+
+  <p class="ziti4">-＞PRIMARY KEY('id'),</p>
+
+  <p class="ziti4">-＞KEY'nickname'('nickname')</p>
+
+  <p class="ziti4">-＞)ENGINE=InnoDB</p>
+
+  <p class="ziti4">-＞PARTITION BY HASH(id)</p>
+
+  <p class="ziti4">-＞PARTITIONS 10;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(1.29 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT COUNT(nickname)FROM Profile;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">count(1):9999248</p>
+
+  <p class="ziti4">1 row in set(1 min 24.62 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">因为是根据HASH分区的，所以每个区分的记录数大致是相同的，即数据分布比较均匀：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT table_name,partition_name,table_rows</p>
+
+  <p class="ziti4">-＞FROM information_schema.PARTITIONS</p>
+
+  <p class="ziti4">-＞WHERE table_schema=DATABASE()AND table_name='Profile'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">table_name:Profile</p>
+
+  <p class="ziti4">partition_name:p0</p>
+
+  <p class="ziti4">table_rows:990703</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">table_name:Profile</p>
+
+  <p class="ziti4">partition_name:p1</p>
+
+  <p class="ziti4">table_rows:1086519</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">table_name:Profile</p>
+
+  <p class="ziti4">partition_name:p2</p>
+
+  <p class="ziti4">table_rows:976474</p>
+
+  <p class="ziti4">***************************4.row***************************</p>
+
+  <p class="ziti4">table_name:Profile</p>
+
+  <p class="ziti4">partition_name:p3</p>
+
+  <p class="ziti4">table_rows:986937</p>
+
+  <p class="ziti4">***************************5.row***************************</p>
+
+  <p class="ziti4">table_name:Profile</p>
+
+  <p class="ziti4">partition_name:p4</p>
+
+  <p class="ziti4">table_rows:993667</p>
+
+  <p class="ziti4">***************************6.row***************************</p>
+
+  <p class="ziti4">table_name:Profile</p>
+
+  <p class="ziti4">partition_name:p5</p>
+
+  <p class="ziti4">table_rows:978046</p>
+
+  <p class="ziti4">***************************7.row***************************</p>
+
+  <p class="ziti4">table_name:Profile</p>
+
+  <p class="ziti4">partition_name:p6</p>
+
+  <p class="ziti4">table_rows:990703</p>
+
+  <p class="ziti4">***************************8.row***************************</p>
+
+  <p class="ziti4">table_name:Profile</p>
+
+  <p class="ziti4">partition_name:p7</p>
+
+  <p class="ziti4">table_rows:978639</p>
+
+  <p class="ziti4">***************************9.row***************************</p>
+
+  <p class="ziti4">table_name:Profile</p>
+
+  <p class="ziti4">partition_name:p8</p>
+
+  <p class="ziti4">table_rows:1085334</p>
+
+  <p class="ziti4">***************************10.row***************************</p>
+
+  <p class="ziti4">table_name:Profile</p>
+
+  <p class="ziti4">partition_name:p9</p>
+
+  <p class="ziti4">table_rows:982788</p>
+
+  <p class="ziti4">10 rows in set(0.80 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">注意　即使是根据自增长主键进行的HASH分区也不能保证分区数据的均匀。因为插入的自增长ID并非总是连续的，如果该主键值因为某种原因被回滚了，则该值将不会再次被自动使用。</p>
+
+  <p class="ziti3">如果进行主键的查询，可以发现分区的确是有意义的：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞EXPLAIN PARTITIONS SELECT*FROM Profile WHERE id=1\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">id:1</p>
+
+  <p class="ziti4">select_type:SIMPLE</p>
+
+  <p class="ziti4">table:Profile</p>
+
+  <p class="ziti4">partitions:p1</p>
+
+  <p class="ziti4">type:const</p>
+
+  <p class="ziti4">possible_keys:PRIMARY</p>
+
+  <p class="ziti4">key:PRIMARY</p>
+
+  <p class="ziti4">key_len:4</p>
+
+  <p class="ziti4">ref:const</p>
+
+  <p class="ziti4">rows:1</p>
+
+  <p class="ziti4">Extra:</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以发现只寻找了p1分区，但是对于表Profile中nickname列索引的查询，EXPLAIN PARTITIONS则会得到如下的结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞EXPLAIN PARTITIONS</p>
+
+  <p class="ziti4">-＞SELECT*FROM Profile WHERE nickname='david'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">id:1</p>
+
+  <p class="ziti4">select_type:SIMPLE</p>
+
+  <p class="ziti4">table:Profile</p>
+
+  <p class="ziti4">partitions:p0,p1,p2,p3,p4,p5,p6,p7,p8,p9</p>
+
+  <p class="ziti4">type:ref</p>
+
+  <p class="ziti4">possible_keys:nickname</p>
+
+  <p class="ziti4">key:nickname</p>
+
+  <p class="ziti4">key_len:62</p>
+
+  <p class="ziti4">ref:const</p>
+
+  <p class="ziti4">rows:10</p>
+
+  <p class="ziti4">Extra:Using where</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，MySQL数据库会搜索所有分区，因此查询速度上会慢很多，比较上述的语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM Profile WHERE nickname='david'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">id:5566</p>
+
+  <p class="ziti4">nickname:david</p>
+
+  <p class="ziti4">password:3e35d1025659d07ae28e0069ec51ab92</p>
+
+  <p class="ziti4">sex:M</p>
+
+  <p class="ziti4">rdate:2003-09-20</p>
+
+  <p class="ziti4">1 row in set(1.05 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述简单的索引查找语句竟然需要1.05秒，这显然是因为查询需要遍历所有分区的关系，实际的IO执行了约20～30次。而在未分区的同样结构和大小的表上，执行上述同样的SQL语句只需要0.26秒。</p>
+
+  <p class="ziti3">因此对于使用InnoDB存储引擎作为OLTP应用的表在使用分区时应该十分小心，设计时确认数据的访问模式，否则在OLTP应用下分区可能不仅不会带来查询速度的提高，反而可能会使你的应用执行得更慢。</p>
+</body></html>

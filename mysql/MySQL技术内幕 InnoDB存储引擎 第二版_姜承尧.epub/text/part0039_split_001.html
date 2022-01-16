@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>第3章　文件</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1565U0-878f632495a744b2a24ea2205f162355" class="calibre">
+<h2 class="p4" id="heading_id_3"><a id="bw1" class="pcalibre calibre1"></a>3.1　参数文件</h2>
+
+  <p class="ziti3">在第1章中已经介绍过了，当MySQL实例启动时，数据库会先去读一个配置参数文件，用来寻找数据库的各种文件所在位置以及指定某些初始化参数，这些参数通常定义了某种内存结构有多大等。在默认情况下，MySQL实例会按照一定的顺序在指定的位置进行读取，用户只需通过命令mysql--help|grep my.cnf来寻找即可。</p>
+
+  <p class="ziti3">MySQL数据库参数文件的作用和Oracle数据库的参数文件极其类似，不同的是，Oracle实例在启动时若找不到参数文件，是不能进行装载（mount）操作的。MySQL稍微有所不同，MySQL实例可以不需要参数文件，这时所有的参数值取决于编译MySQL时指定的默认值和源代码中指定参数的默认值。但是，如果MySQL实例在默认的数据库目录下找不到mysql架构，则启动同样会失败，此时可能在错误日志文件中找到如下内容：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">090922 16:25:52 mysqld started</p>
+
+  <p class="ziti4">090922 16:25:53 InnoDB:Started;log sequence number 8 2801063211</p>
+
+  <p class="ziti4">InnoDB:!!!innodb_force_recovery is set to 1!!!</p>
+
+  <p class="ziti4">090922 16:25:53[ERROR]Fatal error:Can't open and lock privilege tables:Table'mysql.host'doesn't exist</p>
+
+  <p class="ziti4">090922 16:25:53 mysqld ended</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">MySQL的mysql架构中记录了访问该实例的权限，当找不到这个架构时，MySQL实例不会成功启动。</p>
+
+  <p class="ziti3">MySQL数据库的参数文件是以文本方式进行存储的。用户可以直接通过一些常用的文本编辑软件（如vi和emacs）进行参数的修改。</p>
+
+  <h3 class="p1" id="heading_id_4"><a id="bw2" class="pcalibre calibre1"></a>3.1.1　什么是参数</h3>
+
+  <p class="ziti3">简单地说，可以把数据库参数看成一个键/值（key/value）对。第2章已经介绍了一个对于InnoDB存储引擎很重要的参数innodb_buffer_pool_size。如我们将这个参数设置为1G，即innodb_buffer_pool_size=1G。这里的“键”是innodb_buffer_pool_size，“值”是1G，这就是键值对。可以通过命令SHOW VARIABLES查看数据库中的所有参数，也可以通过LIKE来过滤参数名。从MySQL 5.1版本开始，还可以通过information_schema架构下的GLOBAL_VARIABLES视图来进行查找，如下所示。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM</p>
+
+  <p class="ziti4">-＞GLOBAL_VARIABLES</p>
+
+  <p class="ziti4">-＞WHERE VARIABLE_NAME LIKE'innodb_buffer%'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">VARIABLE_NAME:INNODB_BUFFER_POOL_SIZE</p>
+
+  <p class="ziti4">VARIABLE_VALUE:1073741824</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_buffer%'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_buffer_pool_size</p>
+
+  <p class="ziti4">Value:1073741824</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">无论使用哪种方法，输出的信息基本上都一样的，只不过通过视图GLOBAL_VARIABLES需要指定视图的列名。推荐使用命令SHOW VARIABLES，因为这个命令使用更为简单，且各版本的MySQL数据库都支持。</p>
+
+  <p class="ziti3">Oracle数据库存在所谓的隐藏参数（undocumented parameter），以供Oracle“内部人士”使用，SQL Server也有类似的参数。有些DBA曾问我，MySQL中是否也有这类参数。我的回答是：没有，也不需要。即使Oracle和SQL Server中都有些所谓的隐藏参数，在绝大多数的情况下，这些数据库厂商也不建议用户在生产环境中对其进行很大的调整。</p>
+</body></html>

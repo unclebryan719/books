@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.3.4　Compressed和Dynamic行记录格式</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1P71O0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.3.4　Compressed和Dynamic行记录格式</h3>
+
+  <p class="ziti3">InnoDB 1.0.x版本开始引入了新的文件格式（file format，用户可以理解为新的页格式），以前支持的Compact和Redundant格式称为Antelope文件格式，新的文件格式称为Barracuda文件格式。Barracuda文件格式下拥有两种新的行记录格式：Compressed和Dynamic。</p>
+
+  <p class="ziti3">新的两种记录格式对于存放在BLOB中的数据采用了完全的行溢出的方式，如图4-5所示，在数据页中只存放20个字节的指针，实际的数据都存放在Off Page中，而之前的Compact和Redundant两种格式会存放768个前缀字节。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00022.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　4-5　Barracuda文件格式的溢出行
+  </div>
+
+  <p class="ziti3">Compressed行记录格式的另一个功能就是，存储在其中的行数据会以zlib的算法进行压缩，因此对于BLOB、TEXT、VARCHAR这类大长度类型的数据能够进行非常有效的存储。</p>
+</body></html>

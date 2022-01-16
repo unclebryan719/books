@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.5　锁问题</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3JCK20-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">6.5　锁问题</h2>
+
+  <p class="ziti3">通过锁定机制可以实现事务的隔离性要求，使得事务可以并发地工作。锁提高了并发，但是却会带来潜在的问题。不过好在因为事务隔离性的要求，锁只会带来三种问题，如果可以防止这三种情况的发生，那将不会产生并发异常。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>6.5.1　脏读</h3>
+
+  <p class="ziti3">在理解脏读（Dirty Read）之前，需要理解脏数据的概念。但是脏数据和之前所介绍的脏页完全是两种不同的概念。脏页指的是在缓冲池中已经被修改的页，但是还没有刷新到磁盘中，即数据库实例内存中的页和磁盘中的页的数据是不一致的，当然在刷新到磁盘之前，日志都已经被写入到了重做日志文件中。而所谓脏数据是指事务对缓冲池中行记录的修改，并且还没有被提交（commit）。</p>
+
+  <p class="ziti3">对于脏页的读取，是非常正常的。脏页是因为数据库实例内存和磁盘的异步造成的，这并不影响数据的一致性（或者说两者最终会达到一致性，即当脏页都刷回到磁盘）。并且因为脏页的刷新是异步的，不影响数据库的可用性，因此可以带来性能的提高。</p>
+
+  <p class="ziti3">脏数据却截然不同，脏数据是指未提交的数据，如果读到了脏数据，即一个事务可以读到另外一个事务中未提交的数据，则显然违反了数据库的隔离性。</p>
+
+  <p class="ziti3">脏读指的就是在不同的事务下，当前事务可以读到另外事务未提交的数据，简单来说就是可以读到脏数据。表6-15的例子显示了一个脏读的例子。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00097.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">表t为我们之前在6.4.1中创建的表，不同的是在上述例子中，事务的隔离级别进行了更换，由默认的REPEATABLE READ换成了READ UNCOMMITTED。因此在会话A中，在事务并没有提交的前提下，会话B中的两次SELECT操作取得了不同的结果，并且2这条记录是在会话A中并未提交的数据，即产生了脏读，违反了事务的隔离性。</p>
+
+  <p class="ziti3">脏读现象在生产环境中并不常发生，从上面的例子中就可以发现，脏读发生的条件是需要事务的隔离级别为READ UNCOMMITTED，而目前绝大部分的数据库都至少设置成READ COMMITTED。InnoDB存储引擎默认的事务隔离级别为READ REPEATABLE，Microsoft SQL Server数据库为READ COMMITTED，Oracle数据库同样也是READ COMMITTED。</p>
+
+  <p class="ziti3">脏读隔离看似毫无用处，但在一些比较特殊的情况下还是可以将事务的隔离级别设置为READ UNCOMMITTED。例如replication环境中的slave节点，并且在该slave上的查询并不需要特别精确的返回值。</p>
+</body></html>

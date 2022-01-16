@@ -1,0 +1,177 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.3.5　CHAR的行结构存储</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1Q5IA0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.3.5　CHAR的行结构存储</h3>
+
+  <p class="ziti3">通常理解VARCHAR是存储变长长度的字符类型，CHAR是存储固定长度的字符类型。而在前面的小节中，用户已经了解行结构的内部的存储，并可以发现每行的变长字段长度的列表都没有存储CHAR类型的长度。</p>
+
+  <p class="ziti3">然而，值得注意的是之前给出的两个例子中的字符集都是单字节的latin1格式。从MySQL 4.1版本开始，CHR（N）中的N指的是字符的长度，而不是之前版本的字节长度。也就说在不同的字符集下，CHAR类型列内部存储的可能不是定长的数据。例如下面的这个示例：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE j(</p>
+
+  <p class="ziti4">-＞a CHAR(2)</p>
+
+  <p class="ziti4">-＞)CHARSET=GBK ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.11 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO j SELECT'ab';</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.03 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SET NAMES GBK;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO j SELECT'我们';</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.04 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO j SELECT'a';</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.03 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在上述例子中，表j的字符集是GBK。用户分别插入了两个字符的数据'ab'和'我们'，然后查看所占字节，可得如下结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT a,CHAR_LENGTH(a),LENGTH(a)</p>
+
+  <p class="ziti4">-＞FROM j\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">a:ab</p>
+
+  <p class="ziti4">CHAR_LENGTH(a):2</p>
+
+  <p class="ziti4">LENGTH(a):2</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">a:我们</p>
+
+  <p class="ziti4">CHAR_LENGTH(a):2</p>
+
+  <p class="ziti4">LENGTH(a):4</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">a:a</p>
+
+  <p class="ziti4">CHAR_LENGTH(a):1</p>
+
+  <p class="ziti4">LENGTH(a):1</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过不同的CHAR_LENGTH和CHAR函数可以观察到：前两个记录'ab'和'我们'字符串的长度都是2。但是内部存储上'ab'占用2字节，而'我们'占用4字节。如果通过HEX函数查看内部十六进制的存储，可以看到：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT a,HEX(a)</p>
+
+  <p class="ziti4">-＞FROM j\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">a:ab</p>
+
+  <p class="ziti4">HEX(a):6162</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">a:我们</p>
+
+  <p class="ziti4">HEX(a):CED2C3C7</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">a:a</p>
+
+  <p class="ziti4">HEX(a):61</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到对于字符串'ab'，其内部存储为0x6162。而字符串'我们'为0xCED2C3C7。因此对于多字节的字符编码，CHAR类型不再代表固定长度的字符串了。例如，对于UTF-8下CHAR（10）类型的列，其最小可以存储10字节的字符，而最大可以存储30字节的字符。因此，对于多字节字符编码的CHAR数据类型的存储，InnoDB存储引擎在内部将其视为变长字符类型。这也就意味着在变长长度列表中会记录CHAR数据类型的长度。下面通过hexdump工具来查看表空间j.ibd文件：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">0000c070 73 75 70 72 65 6d 75 6d 02 00 00 00 10 00 1c 00|supremum........|</p>
+
+  <p class="ziti4">0000c080 00 00 b6 2b 2b 00 00 00 51 52 da 80 00 00 00 2d|...++...QR.....-|</p>
+
+  <p class="ziti4">0000c090 01 10 61 62 04 00 00 00 18 ff d5 00 00 00 b6 2b|..ab...........+|</p>
+
+  <p class="ziti4">0000c0a0 2c 00 00 00 51 52 db 80 00 00 00 2d 01 10 ce d2|,...QR.....-....|</p>
+
+  <p class="ziti4">0000c0b0 c3 c7 00 00 00 00 00 00 00 00 00 00 00 00 00 00|................|</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">整理后可以得到如下结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#第一行记录</p>
+
+  <p class="ziti4">02/*变长字段长度2，将CHAR视作变长类型*/</p>
+
+  <p class="ziti4">00/*NULL标志位*/</p>
+
+  <p class="ziti4">00 00 10 00 1c/*Recoder Header*/</p>
+
+  <p class="ziti4">00 00 00 b6 2b 2b/*RowID*/</p>
+
+  <p class="ziti4">00 00 00 51 52 da/*TransactionID*/</p>
+
+  <p class="ziti4">80 00 00 00 2d 01 10/*Roll Point*/</p>
+
+  <p class="ziti4">61 62/*字符'ab'*/</p>
+
+  <p class="ziti4">#第二行记录</p>
+
+  <p class="ziti4">04/*变长字段长度4，将CHAR视作变长类型*/</p>
+
+  <p class="ziti4">00/*NULL标志位*/</p>
+
+  <p class="ziti4">00 00 18 ff d5/*Recoder Header*/</p>
+
+  <p class="ziti4">00 00 00 b6 2b 2c/*RowID*/</p>
+
+  <p class="ziti4">00 00 00 51 52 db/*TransactionID*/</p>
+
+  <p class="ziti4">80 00 00 00 2d 01 10/*Roll Point*/</p>
+
+  <p class="ziti4">c3 d2 c3 c7/*字符'我们'*/</p>
+
+  <p class="ziti4">#第三行记录</p>
+
+  <p class="ziti4">02/*变长字段长度2，将CHAR视作变长类型*/</p>
+
+  <p class="ziti4">00/*NULL标志位*/</p>
+
+  <p class="ziti4">00 00 20 ff b7/*Recoder Header*/</p>
+
+  <p class="ziti4">00 00 00 b6 2b 2d/*RowID*/</p>
+
+  <p class="ziti4">00 00 00 51 53 17/*TransactionID*/</p>
+
+  <p class="ziti4">80 00 00 00 2d 01 10/*Roll Point*/</p>
+
+  <p class="ziti4">61 20/*字符'a'*/</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述例子清楚地显示了InnoDB存储引擎内部对CHAR类型在多字节字符集类型的存储。CHAR类型被明确视为了变长字符类型，对于未能占满长度的字符还是填充0x20。InnoDB存储引擎内部对字符的存储和我们用HEX函数看到的也是一致的。因此可以认为在多字节字符集的情况下，CHAR和VARCHAR的实际行存储基本是没有区别的。</p>
+</body></html>

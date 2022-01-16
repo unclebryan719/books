@@ -1,0 +1,265 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.3　InnoDB行记录格式</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1MBG20-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">4.3　InnoDB行记录格式</h2>
+
+  <p class="ziti3">InnoDB存储引擎和大多数数据库一样（如Oracle和Microsoft SQL Server数据库），记录是以行的形式存储的。这意味着页中保存着表中一行行的数据。在InnoDB 1.0.x版本之前，InnoDB存储引擎提供了Compact和Redundant两种格式来存放行记录数据，这也是目前使用最多的一种格式。Redundant格式是为兼容之前版本而保留的，如果阅读过InnoDB的源代码，用户会发现源代码中是用PHYSICAL RECORD（NEW STYLE）和PHYSICAL RECORD（OLD STYLE）来区分两种格式的。在MySQL 5.1版本中，默认设置为Compact行格式。用户可以通过命令SHOW TABLE STATUS LIKE'table_name'来查看当前表使用的行格式，其中row_format属性表示当前所使用的行记录结构类型。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW TABLE STATUS like'mytest%'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Name:mytest</p>
+
+  <p class="ziti4">Engine:InnoDB</p>
+
+  <p class="ziti4">Version:10</p>
+
+  <p class="ziti4">Row_format:Compact</p>
+
+  <p class="ziti4">Rows:6</p>
+
+  <p class="ziti4">Avg_row_length:2730</p>
+
+  <p class="ziti4">Data_length:16384</p>
+
+  <p class="ziti4">Max_data_length:0</p>
+
+  <p class="ziti4">Index_length:0</p>
+
+  <p class="ziti4">Data_free:0</p>
+
+  <p class="ziti4">Auto_increment:NULL</p>
+
+  <p class="ziti4">Create_time:2009-03-17 13:33:50</p>
+
+  <p class="ziti4">Update_time:NULL</p>
+
+  <p class="ziti4">Check_time:NULL</p>
+
+  <p class="ziti4">Collation:latin1_swedish_ci</p>
+
+  <p class="ziti4">Checksum:NULL</p>
+
+  <p class="ziti4">Create_options:</p>
+
+  <p class="ziti4">Comment:</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">Name:mytest2</p>
+
+  <p class="ziti4">Engine:InnoDB</p>
+
+  <p class="ziti4">Version:10</p>
+
+  <p class="ziti4">Row_format:Redundant</p>
+
+  <p class="ziti4">Rows:0</p>
+
+  <p class="ziti4">Avg_row_length:0</p>
+
+  <p class="ziti4">Data_length:16384</p>
+
+  <p class="ziti4">Max_data_length:0</p>
+
+  <p class="ziti4">Index_length:0</p>
+
+  <p class="ziti4">Data_free:0</p>
+
+  <p class="ziti4">Auto_increment:NULL</p>
+
+  <p class="ziti4">Create_time:2009-03-17 13:57:23</p>
+
+  <p class="ziti4">Update_time:NULL</p>
+
+  <p class="ziti4">Check_time:NULL</p>
+
+  <p class="ziti4">Collation:latin1_swedish_ci</p>
+
+  <p class="ziti4">Checksum:NULL</p>
+
+  <p class="ziti4">Create_options:row_format=REDUNDANT</p>
+
+  <p class="ziti4">Comment:</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，这里的mytest表是Compact的行格式，mytest2表是Redundant的行格式。通过之前的介绍可以知道，数据库实例的作用之一就是读取页中存放的行记录。如果用户自己知道页中行记录的组织规则，也可以自行通过编写工具的方式来读取其中的记录，如之前介绍的py_innodb_page_info工具。本节的其余小节将具体分析各格式存放数据的规则。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>4.3.1　Compact行记录格式</h3>
+
+  <p class="ziti3">Compact行记录是在MySQL 5.0中引入的，其设计目标是高效地存储数据。简单来说，一个页中存放的行数据越多，其性能就越高。图4-2显示了Compact行记录的存储方式：</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00017.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　4-2　Compact行记录的格式
+  </div>
+
+  <p class="ziti3">从图4-2可以观察到，Compact行记录格式的首部是一个非NULL变长字段长度列表，并且其是按照列的顺序逆序放置的，其长度为：</p>
+
+  <p class="ziti3">❑若列的长度小于255字节，用1字节表示；</p>
+
+  <p class="ziti3">❑若大于255个字节，用2字节表示。</p>
+
+  <p class="ziti3">变长字段的长度最大不可以超过2字节，这是因在MySQL数据库中VARCHAR类型的最大长度限制为65535。变长字段之后的第二个部分是NULL标志位，该位指示了该行数据中是否有NULL值，有则用1表示。该部分所占的字节应该为1字节。接下来的部分是记录头信息（record header），固定占用5字节（40位），每位的含义见表4-1。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00018.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">最后的部分就是实际存储每个列的数据。需要特别注意的是，NULL不占该部分任何空间，即NULL除了占有NULL标志位，实际存储不占有任何空间。另外有一点需要注意的是，每行数据除了用户定义的列外，还有两个隐藏列，事务ID列和回滚指针列，分别为6字节和7字节的大小。若InnoDB表没有定义主键，每行还会增加一个6字节的rowid列。</p>
+
+  <p class="ziti3">接下去用一个具体示例来分析Compact行记录的内部结构：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE mytest(</p>
+
+  <p class="ziti4">-＞t1 VARCHAR(10),</p>
+
+  <p class="ziti4">-＞t2 VARCHAR(10),</p>
+
+  <p class="ziti4">-＞t3 CHAR(10),</p>
+
+  <p class="ziti4">-＞t4 VARCHAR(10)</p>
+
+  <p class="ziti4">-＞)ENGINE=INNODB CHARSET=LATIN1 ROW_FORMAT=COMPACT;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO mytest</p>
+
+  <p class="ziti4">-＞VALUES('a','bb','bb','ccc');</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.01 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO mytest</p>
+
+  <p class="ziti4">-＞VALUES('d','ee','ee','fff');</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO mytest</p>
+
+  <p class="ziti4">-＞VALUES('d',NULL,NULL,'fff');</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM mytest\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">t1:a</p>
+
+  <p class="ziti4">t2:bb</p>
+
+  <p class="ziti4">t3:bb</p>
+
+  <p class="ziti4">t4:ccc</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">t1:d</p>
+
+  <p class="ziti4">t2:ee</p>
+
+  <p class="ziti4">t3:ee</p>
+
+  <p class="ziti4">t4:fff</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">t1:d</p>
+
+  <p class="ziti4">t2:NULL</p>
+
+  <p class="ziti4">t3:NULL</p>
+
+  <p class="ziti4">t4:fff</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在上述示例中，创建表mytest，该表共有4个列。t1、t2、t4都为VARCHAR变长字段类型，t3为固定长度类型CHAR。接着插入了3条有代表性的数据，然后将打开表空间文件mytest.ibd（这里启用了innodb_file_per_table，若没有启用该选项，打开默认的共享表空间文件ibdata1）。</p>
+
+  <p class="ziti3">在Windows操作系统下，可以选择通过程序UltraEdit打开该二进制文件。在Linux环境下，使用命令hexdump-C-v mytest.ibd＞mytest.txt。这里将结果重定向到了文件mytest.txt，打开mytest.txt文件，找到如下内容：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">0000c070 73 75 70 72 65 6d 75 6d 03 02 01 00 00 00 10 00|supremum........|</p>
+
+  <p class="ziti4">0000c080 2c 00 00 00 2b 68 00 00 00 00 00 06 05 80 00 00|,...+h..........|</p>
+
+  <p class="ziti4">0000c090 00 32 01 10 61 62 62 62 62 20 20 20 20 20 20 20|.2..abbbb|</p>
+
+  <p class="ziti4">0000c0a0 20 63 63 63 03 02 01 00 00 00 18 00 2b 00 00 00|ccc........+...|</p>
+
+  <p class="ziti4">0000c0b0 2b 68 01 00 00 00 00 06 06 80 00 00 00 32 01 10|+h...........2..|</p>
+
+  <p class="ziti4">0000c0c0 64 65 65 65 65 20 20 20 20 20 20 20 20 66 66 66|deeeefff|</p>
+
+  <p class="ziti4">0000c0d0 03 01 06 00 00 20 ff 98 00 00 00 2b 68 02 00 00|..........+h...|</p>
+
+  <p class="ziti4">0000c0e0 00 00 06 07 80 00 00 00 32 01 10 64 66 66 66 00|........2..dfff.|</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">该行记录从0000c078开始，若整理一下，相信用户会有更好的理解：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">03 02 01/*变长字段长度列表，逆序*/</p>
+
+  <p class="ziti4">00/*NULL标志位，第一行没有NULL值*/</p>
+
+  <p class="ziti4">00 00 10 00 2c/*Record Header，固定5字节长度*/</p>
+
+  <p class="ziti4">00 00 00 2b 68 00/*RowID InnoDB自动创建，6字节*/</p>
+
+  <p class="ziti4">00 00 00 00 06 05/*TransactionID*/</p>
+
+  <p class="ziti4">80 00 0000 32 01 10/*Roll Pointer*/</p>
+
+  <p class="ziti4">61/*列1数据'a'*/</p>
+
+  <p class="ziti4">62 62/*列2数据'bb'*/</p>
+
+  <p class="ziti4">62 62 20 20 20 20 20 20 20 20/*列3数据'bb'*/</p>
+
+  <p class="ziti4">63 63 63/*列4数据'ccc'*/</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">现在第一行数据就展现在用户眼前了。需要注意的是，变长字段长度列表是逆序存放的，因此变长字段长度列表为03 02 01，而不是01 02 03。此外还需要注意InnoDB每行有隐藏列TransactionID和Roll Pointer。同时可以发现，固定长度CHAR字段在未能完全占用其长度空间时，会用0x20来进行填充。</p>
+
+  <p class="ziti3">接着再来分析下Record Header的最后两个字节，这两个字节代表next_recorder，0x2c代表下一个记录的偏移量，即当前记录的位置加上偏移量0x2c就是下条记录的起始位置。所以InnoDB存储引擎在页内部是通过一种链表的结构来串连各个行记录的。</p>
+
+  <p class="ziti3">第二行将不做整理，除了RowID不同外，它和第一行大同小异，有兴趣的读者可以用上面的方法自己试试。现在来关心有NULL值的第三行：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">03 01/*变长字段长度列表，逆序*/</p>
+
+  <p class="ziti4">06/*NULL标志位，第三行有NULL值*/</p>
+
+  <p class="ziti4">00 00 20 ff 98/*Record Header*/</p>
+
+  <p class="ziti4">00 00 00 2b 68 02/*RowID*/</p>
+
+  <p class="ziti4">00 00 00 00 06 07/*TransactionID*/</p>
+
+  <p class="ziti4">80 00 00 00 32 01 10/*Roll Pointer*/</p>
+
+  <p class="ziti4">64/*列1数据'd'*/</p>
+
+  <p class="ziti4">66 66 66/*列4数据'fff'*/</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">第三行有NULL值，因此NULL标志位不再是00而是06，转换成二进制为00000110，为1的值代表第2列和第3列的数据为NULL。在其后存储列数据的部分，用户会发现没有存储NULL列，而只存储了第1列和第4列非NULL的值。因此这个例子很好地说明了：不管是CHAR类型还是VARCHAR类型，在compact格式下NULL值都不占用任何存储空间。</p>
+</body></html>

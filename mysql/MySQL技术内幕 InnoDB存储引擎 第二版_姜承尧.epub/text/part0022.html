@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>1.5.3　UNIX域套接字</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="KVCC0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">1.5.3　UNIX域套接字</h3>
+
+  <p class="ziti3">在Linux和UNIX环境下，还可以使用UNIX域套接字。UNIX域套接字其实不是一个网络协议，所以只能在MySQL客户端和数据库实例在一台服务器上的情况下使用。用户可以在配置文件中指定套接字文件的路径，如--socket=/tmp/mysql.sock。当数据库实例启动后，用户可以通过下列命令来进行UNIX域套接字文件的查找：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'socket';</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:socket</p>
+
+  <p class="ziti4">Value:/tmp/mysql.sock</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在知道了UNIX域套接字文件的路径后，就可以使用该方式进行连接了，如下所示：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@stargazer～]#mysql-udavid-S/tmp/mysql.sock</p>
+
+  <p class="ziti4">Welcome to the MySQL monitor.Commands end with;or\g.</p>
+
+  <p class="ziti4">Your MySQL connection id is 20333</p>
+
+  <p class="ziti4">Server version:5.0.77-log MySQL Community Server(GPL)</p>
+
+  <p class="ziti4">Type'help;'or'\h'for help.Type'\c'to clear the buffer.</p>
+
+  <p class="ziti4">mysql＞</p>
+  <hr class="calibre2"/>
+</body></html>

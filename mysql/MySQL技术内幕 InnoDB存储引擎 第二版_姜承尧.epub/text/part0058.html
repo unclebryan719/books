@@ -1,0 +1,193 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.3.2　Redundant行记录格式</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1NA0K0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.3.2　Redundant行记录格式</h3>
+
+  <p class="ziti3">Redundant是MySQL 5.0版本之前InnoDB的行记录存储方式，MySQL 5.0支持Redundant是为了兼容之前版本的页格式。Redundant行记录采用如图4-3所示的方式存储。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00019.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　4-3　Redundant行记录格式
+  </div>
+
+  <p class="ziti3">从图4-3可以看到，不同于Compact行记录格式，Redundant行记录格式的首部是一个字段长度偏移列表，同样是按照列的顺序逆序放置的。若列的长度小于255字节，用1字节表示；若大于255字节，用2字节表示。第二个部分为记录头信息（record header），不同于Compact行记录格式，Redundant行记录格式的记录头占用6字节（48位），每位的含义见表4-2。从表4-2中可以发现，n_fields值代表一行中列的数量，占用10位。同时这也很好地解释了为什么MySQL数据库一行支持最多的列为1023。另一个需要注意的值为1byte_offs_flags，该值定义了偏移列表占用1字节还是2字节。而最后的部分就是实际存储的每个列的数据了。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00020.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">接着创建一张和4.3.1节中表mytest内容完全一样但行格式为Redundant的表mytest2。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE mytest2</p>
+
+  <p class="ziti4">-＞ENGINE=InnodB ROW_FORMAT=Redundant</p>
+
+  <p class="ziti4">-＞AS</p>
+
+  <p class="ziti4">-＞SELECT*FROM mytest;</p>
+
+  <p class="ziti4">Query OK,3 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:3 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SHOW TABLE STATUS LIKE'mytest2'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Name:mytest2</p>
+
+  <p class="ziti4">Engine:InnoDB</p>
+
+  <p class="ziti4">Version:10</p>
+
+  <p class="ziti4">Row_format:Redundant</p>
+
+  <p class="ziti4">Rows:3</p>
+
+  <p class="ziti4">Avg_row_length:5461</p>
+
+  <p class="ziti4">Data_length:16384</p>
+
+  <p class="ziti4">Max_data_length:0</p>
+
+  <p class="ziti4">Index_length:0</p>
+
+  <p class="ziti4">Data_free:0</p>
+
+  <p class="ziti4">Auto_increment:NULL</p>
+
+  <p class="ziti4">Create_time:2009-03-18 15:49:42</p>
+
+  <p class="ziti4">Update_time:NULL</p>
+
+  <p class="ziti4">Check_time:NULL</p>
+
+  <p class="ziti4">Collation:latin1_swedish_ci</p>
+
+  <p class="ziti4">Checksum:NULL</p>
+
+  <p class="ziti4">Create_options:row_format=REDUNDANT</p>
+
+  <p class="ziti4">Comment:</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM mytest2\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">t1:a</p>
+
+  <p class="ziti4">t2:bb</p>
+
+  <p class="ziti4">t3:bb</p>
+
+  <p class="ziti4">t4:ccc</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">t1:d</p>
+
+  <p class="ziti4">t2:ee</p>
+
+  <p class="ziti4">t3:ee</p>
+
+  <p class="ziti4">t4:fff</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">t1:d</p>
+
+  <p class="ziti4">t2:NULL</p>
+
+  <p class="ziti4">t3:NULL</p>
+
+  <p class="ziti4">t4:fff</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，现在row_format变为Redundant。同样通过hexdump将表空间mytest2.ibd导出到文本文件mytest2.txt。打开文件，找到类似如下行：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">0000c070 08 03 00 00 73 75 70 72 65 6d 75 6d 00 23 20 16|....supremum.#.|</p>
+
+  <p class="ziti4">0000c080 14 13 0c 06 00 00 10 0f 00 ba 00 00 00 2b 68 0b|.............+h.|</p>
+
+  <p class="ziti4">0000c090 00 00 00 00 06 53 80 00 00 00 32 01 10 61 62 62|.....S....2..abb|</p>
+
+  <p class="ziti4">0000c0a0 62 62 20 20 20 20 20 20 20 20 63 63 63 23 20 16|bb ccc#.|</p>
+
+  <p class="ziti4">0000c0b0 14 13 0c 06 00 00 18 0f 00 ea 00 00 00 2b 68 0c|.............+h.|</p>
+
+  <p class="ziti4">0000c0c0 00 00 00 00 06 53 80 00 00 00 32 01 1e 64 65 65|.....S....2..dee|</p>
+
+  <p class="ziti4">0000c0d0 65 65 20 20 20 20 20 20 20 20 66 66 66 21 9e 94|ee fff!..|</p>
+
+  <p class="ziti4">0000c0e0 14 13 0c 06 00 00 20 0f 00 74 00 00 00 2b 68 0d|........t...+h.|</p>
+
+  <p class="ziti4">0000c0f0 00 00 00 00 06 53 80 00 00 00 32 01 2c 64 00 00|.....S....2.,d..|</p>
+
+  <p class="ziti4">0000c100 00 00 00 00 00 00 00 00 66 66 66 00 00 00 00 00|........fff.....|</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">整理可以得到如下内容：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">23 20 16 14 13 0c 06/*长度偏移列表，逆序*/</p>
+
+  <p class="ziti4">00 00 10 0f 00 ba/*Record Header，固定6个字节*/</p>
+
+  <p class="ziti4">00 00 00 2b 68 0b/*RowID*/</p>
+
+  <p class="ziti4">00 00 00 00 06 53/*TransactionID*/</p>
+
+  <p class="ziti4">80 00 00 00 32 01 10/*Roll Point*/</p>
+
+  <p class="ziti4">61/*列1数据'a'*/</p>
+
+  <p class="ziti4">62 62/*列2数据'bb'*/</p>
+
+  <p class="ziti4">62 62 20 20 20 20 20 20 20 20/*列3数据'bb'Char类型*/</p>
+
+  <p class="ziti4">63 63 63/*列4数据'ccc'*/</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">23 20 16 14 13 0c 06逆转为06，0c，13，14，16，20，23，分别代表第一列长度6，第二列长度6（6+6=0x0C），第三列长度为7（6+6+7=0x13），第四列长度1（6+6+7+1=0x14），第五列长度2（6+6+7+1+2=0x16），第六列长度10（6+6+7+1+2+10=0x20），第七列长度3（6+6+7+1+2+10+3=0x23）。</p>
+
+  <p class="ziti3">在接下来的记录头信息（Record Header）中应该注意48位中的第22～32位，为0000000111，表示表共有7个列（包含了隐藏的3列），接下来的第33位为1，代表偏移列表为一个字节。</p>
+
+  <p class="ziti3">后面的信息就是实际每行存放的数据了，这同Redundant行记录格式大致相同，注意是大致相同，因为如果分析第三行，会发现对于NULL值的处理两者是非常不同的：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">21 9e 94 14 13 0c 06/*长度偏移列表，逆序*/</p>
+
+  <p class="ziti4">00 00 20 0f 00 74/*Record Header，固定6字节*/</p>
+
+  <p class="ziti4">00 00 00 2b 68 0d/*RowID*/</p>
+
+  <p class="ziti4">00 00 00 00 06 53/*TransactionID*/</p>
+
+  <p class="ziti4">80 00 00 00 32 01 10/*Roll Point*/</p>
+
+  <p class="ziti4">64/*列1数据'd'*/</p>
+
+  <p class="ziti4">00 00 00 00 00 00 00 00 00 00/*列3数据NULL*/</p>
+
+  <p class="ziti4">66 66 66/*列4数据'fff'*/</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这里与之前Compact行记录格式有着很大的不同了，首先来看长度偏移列表，逆序排列后得到06 0c 13 14 94 9e 21，前4个值都很好理解，第5个NULL值变为了94，接着第6个CHAR类型的NULL值为9e（94+10=0x9e），之后的21代表（14+3=0x21）。可以看到对于VARCHAR类型的NULL值，Redundant行记录格式同样不占用任何存储空间，而CHAR类型的NULL值需要占用空间。</p>
+
+  <p class="ziti3">当前表mytest2的字符集为Latin1，每个字符最多只占用1字节。若用户将表mytest2的字符集转换为utf8，第三列CHAR固定长度类型不再是只占用10字节了，而是10×3=30字节。所以在Redundant行记录格式下，CHAR类型将会占用可能存放的最大值字节数。有兴趣的读者可以自行尝试。</p>
+</body></html>

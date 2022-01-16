@@ -1,0 +1,79 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.3　B+树</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2KS220-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">5.3　B+树</h2>
+
+  <p class="ziti3">B+树和二叉树、平衡二叉树一样，都是经典的数据结构。B+树由B树和索引顺序访问方法（ISAM，是不是很熟悉？对，这也是MyISAM引擎最初参考的数据结构）演化而来，但是在现实使用过程中几乎已经没有使用B树的情况了。</p>
+
+  <p class="ziti3">B+树的定义在任何一本数据结构书中都能找到，其定义十分复杂，在这里列出来只会让读者感到更加困惑。这里，我来精简地对B+树做个介绍：B+树是为磁盘或其他直接存取辅助设备设计的一种平衡查找树。在B+树中，所有记录节点都是按键值的大小顺序存放在同一层的叶子节点上，由各叶子节点指针进行连接。先来看一个B+树，其高度为2，每页可存放4条记录，扇出（fan out）为5，如图5-6所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00035.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-6　一棵高度为2的B+树
+  </div>
+
+  <p class="ziti3">从图5-6可以看出，所有记录都在叶子节点上，并且是顺序存放的，如果用户从最左边的叶子节点开始顺序遍历，可以得到所有键值的顺序排序：5、10、15、20、25、30、50、55、60、65、75、80、85、90。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>5.3.1　B+树的插入操作</h3>
+
+  <p class="ziti3">B+树的插入必须保证插入后叶子节点中的记录依然排序，同时需要考虑插入到B+树的三种情况，每种情况都可能会导致不同的插入算法。如表5-1所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00036.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">这里用一个例子来分析B+树的插入。例如，对于图5-6中的这棵B+树，若用户插入28这个键值，发现当前Leaf Page和Index Page都没有满，直接进行插入即可，之后得图5-7。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00037.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-7　插入键值28
+  </div>
+
+  <p class="ziti3">接着再插入70这个键值，这时原先的Leaf Page已经满了，但是Index Page还没有满，符合表5-1的第二种情况，这时插入Leaf Page后的情况为55、55、60、65、70，并根据中间的值60来拆分叶子节点，可得图5-8。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00038.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-8　插入键值70
+  </div>
+
+  <p class="ziti3">因为图片显示的关系，这次没有能在各叶子节点加上双向链表指针。不过和图5-6、图5-7一样，它还是存在的。</p>
+
+  <p class="ziti3">最后插入键值95，这时符合表5-1中讨论的第三种情况，即Leaf Page和Index Page都满了，这时需要做两次拆分，如图5-9所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00039.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-9　插入键值95
+  </div>
+
+  <p class="ziti3">可以看到，不管怎么变化，B+树总是会保持平衡。但是为了保持平衡对于新插入的键值可能需要做大量的拆分页（split）操作。因为B+树结构主要用于磁盘，页的拆分意味着磁盘的操作，所以应该在可能的情况下尽量减少页的拆分操作。因此，B+树同样提供了类似于平衡二叉树的旋转（Rotation）功能。</p>
+
+  <p class="ziti3">旋转发生在Leaf Page已经满，但是其的左右兄弟节点没有满的情况下。这时B+树并不会急于去做拆分页的操作，而是将记录移到所在页的兄弟节点上。在通常情况下，左兄弟会被首先检查用来做旋转操作，因此再来看图5-7的情况，若插入键值70，其实B+树并不会急于去拆分叶子节点，而是去做旋转操作，得到如图5-10所示的操作。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00040.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-10　B+树的旋转操作
+  </div>
+
+  <p class="ziti3">从图5-10可以看到，采用旋转操作使B+树减少了一次页的拆分操作，同时这棵B+树的高度依然还是2。</p>
+</body></html>

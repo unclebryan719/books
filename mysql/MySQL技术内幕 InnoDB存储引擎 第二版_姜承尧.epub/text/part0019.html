@@ -1,0 +1,171 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>1.4　各存储引擎之间的比较</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="I3QM0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">1.4　各存储引擎之间的比较</h2>
+
+  <p class="ziti3">通过1.3节的介绍，我们了解了存储引擎是MySQL体系结构的核心。本节我们将通过简单比较几个存储引擎来让读者更直观地理解存储引擎的概念。图1-2取自于MySQL的官方手册，展现了一些常用MySQL存储引擎之间的不同之处，包括存储容量的限制、事务支持、锁的粒度、MVCC支持、支持的索引、备份和复制等。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00002.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　1-2　不同MySQL存储引擎相关特性比较
+  </div>
+
+  <p class="ziti3">可以看到，每种存储引擎的实现都不相同。有些竟然不支持事务，相信在任何一本关于数据库原理的书中，可能都会提到数据库与传统文件系统的最大区别在于数据库是支持事务的。而MySQL数据库的设计者在开发时却认为可能不是所有的应用都需要事务，所以存在不支持事务的存储引擎。更有不明其理的人把MySQL称做文件系统数据库，其实不然，只是MySQL数据库的设计思想和存储引擎的关系可能让人产生了理解上的偏差。</p>
+
+  <p class="ziti3">可以通过SHOW ENGINES语句查看当前使用的MySQL数据库所支持的存储引擎，也可以通过查找information_schema架构下的ENGINES表，如下所示：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINES\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Engine:InnoDB</p>
+
+  <p class="ziti4">Support:YES</p>
+
+  <p class="ziti4">Comment:Supports transactions,row-level locking,and foreign keys</p>
+
+  <p class="ziti4">Transactions:YES</p>
+
+  <p class="ziti4">XA:YES</p>
+
+  <p class="ziti4">Savepoints:YES</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">Engine:MRG_MYISAM</p>
+
+  <p class="ziti4">Support:YES</p>
+
+  <p class="ziti4">Comment:Collection of identical MyISAM tables</p>
+
+  <p class="ziti4">Transactions:NO</p>
+
+  <p class="ziti4">XA:NO</p>
+
+  <p class="ziti4">Savepoints:NO</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">Engine:BLACKHOLE</p>
+
+  <p class="ziti4">Support:YES</p>
+
+  <p class="ziti4">Comment:/dev/null storage engine(anything you write to it disappears)</p>
+
+  <p class="ziti4">Transactions:NO</p>
+
+  <p class="ziti4">XA:NO</p>
+
+  <p class="ziti4">Savepoints:NO</p>
+
+  <p class="ziti4">***************************4.row***************************</p>
+
+  <p class="ziti4">Engine:CSV</p>
+
+  <p class="ziti4">Support:YES</p>
+
+  <p class="ziti4">Comment:CSV storage engine</p>
+
+  <p class="ziti4">Transactions:NO</p>
+
+  <p class="ziti4">XA:NO</p>
+
+  <p class="ziti4">Savepoints:NO</p>
+
+  <p class="ziti4">***************************5.row***************************</p>
+
+  <p class="ziti4">Engine:MEMORY</p>
+
+  <p class="ziti4">Support:YES</p>
+
+  <p class="ziti4">Comment:Hash based,stored in memory,useful for temporary tables</p>
+
+  <p class="ziti4">Transactions:NO</p>
+
+  <p class="ziti4">XA:NO</p>
+
+  <p class="ziti4">Savepoints:NO</p>
+
+  <p class="ziti4">***************************6.row***************************</p>
+
+  <p class="ziti4">Engine:FEDERATED</p>
+
+  <p class="ziti4">Support:NO</p>
+
+  <p class="ziti4">Comment:Federated MySQL storage engine</p>
+
+  <p class="ziti4">Transactions:NULL</p>
+
+  <p class="ziti4">XA:NULL</p>
+
+  <p class="ziti4">Savepoints:NULL</p>
+
+  <p class="ziti4">***************************7.row***************************</p>
+
+  <p class="ziti4">Engine:ARCHIVE</p>
+
+  <p class="ziti4">Support:YES</p>
+
+  <p class="ziti4">Comment:Archive storage engine</p>
+
+  <p class="ziti4">Transactions:NO</p>
+
+  <p class="ziti4">XA:NO</p>
+
+  <p class="ziti4">Savepoints:NO</p>
+
+  <p class="ziti4">***************************8.row***************************</p>
+
+  <p class="ziti4">Engine:MyISAM</p>
+
+  <p class="ziti4">Support:DEFAULT</p>
+
+  <p class="ziti4">Comment:Default engine as of MySQL 3.23 with great performance</p>
+
+  <p class="ziti4">Transactions:NO</p>
+
+  <p class="ziti4">XA:NO</p>
+
+  <p class="ziti4">Savepoints:NO</p>
+
+  <p class="ziti4">8 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">下面将通过MySQL提供的示例数据库来简单显示各存储引擎之间的不同。这里将分别运行以下语句，然后统计每次使用各存储引擎后表的大小。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE mytest Engine=MyISAM</p>
+
+  <p class="ziti4">-＞AS SELECT*FROM salaries;</p>
+
+  <p class="ziti4">Query OK,2844047 rows affected(4.37 sec)</p>
+
+  <p class="ziti4">Records:2844047 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞ALTER TABLE mytest Engine=InnoDB;</p>
+
+  <p class="ziti4">Query OK,2844047 rows affected(15.86 sec)</p>
+
+  <p class="ziti4">Records:2844047 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞ALTER TABLE mytest Engine=ARCHIVE;</p>
+
+  <p class="ziti4">Query OK,2844047 rows affected(16.03 sec)</p>
+
+  <p class="ziti4">Records:2844047 Duplicates:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过每次的统计，可以发现当最初表使用MyISAM存储引擎时，表的大小为40.7MB，使用InnoDB存储引擎时表增大到了113.6MB，而使用Archive存储引擎时表的大小却只有20.2MB。该例子只从表的大小方面简单地揭示了各存储引擎的不同。</p>
+
+  <p class="ziti3">注意　MySQL提供了一个非常好的用来演示MySQL各项功能的示例数据库，如SQL Server提供的AdventureWorks示例数据库和Oracle提供的示例数据库。据我所知，知道MySQL示例数据库的人很少，可能是因为这个示例数据库没有在安装的时候提示用户是否安装（如Oracle和SQL Server）以及这个示例数据库的下载竟然和文档放在一起。用户可以通过以下地址找到并下载示例数据库：http://dev.mysql.com/doc/。</p>
+</body></html>

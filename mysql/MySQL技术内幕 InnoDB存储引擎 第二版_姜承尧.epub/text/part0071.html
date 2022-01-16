@@ -1,0 +1,171 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.6.2　约束的创建和查找</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="23MNU0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.6.2　约束的创建和查找</h3>
+
+  <p class="ziti3">约束的创建可以采用以下两种方式：</p>
+
+  <p class="ziti3">❑表建立时就进行约束定义</p>
+
+  <p class="ziti3">❑利用ALTER TABLE命令来进行创建约束</p>
+
+  <p class="ziti3">对Unique Key（唯一索引）的约束，用户还可以通过命令CREATE UNIQUE INDEX来建立。对于主键约束而言，其默认约束名为PRIMARY。而对于Unique Key约束而言，默认约束名和列名一样，当然也可以人为指定Unique Key约束的名字。Foreign Key约束似乎会有一个比较神秘的默认名称。下面是一个简单的创建表的语句，表上有一个主键和一个唯一键：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE u(</p>
+
+  <p class="ziti4">-＞id INT,</p>
+
+  <p class="ziti4">-＞name VARCHAR(20),</p>
+
+  <p class="ziti4">-＞id_card CHAR(18),</p>
+
+  <p class="ziti4">-＞PRIMARY KEY(id),</p>
+
+  <p class="ziti4">-＞UNIQUE KEY(name));</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.16 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT constraint_name,constraint_type</p>
+
+  <p class="ziti4">-＞FROM</p>
+
+  <p class="ziti4">-＞information_schema.TABLE_CONSTRAINTS</p>
+
+  <p class="ziti4">-＞WHERE table_schema='mytest'AND table_name='u';\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">constraint_name:PRIMARY</p>
+
+  <p class="ziti4">constraint_type:PRIMARY KEY</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">constraint_name:name</p>
+
+  <p class="ziti4">constraint_type:UNIQUE</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，约束名就如之前所说的，主键的约束名为PRIMARY，唯一索引的默认约束名与列名相同。当然用户还可以通过ALTER TABLE来创建约束，并且可以定义用户所希望的约束名，如下面这个例子:</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞ALTER TABLE u</p>
+
+  <p class="ziti4">-＞ADD UNIQUE KEY uk_id_card(id_card);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.19 sec)</p>
+
+  <p class="ziti4">Records:0 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT constraint_name,constraint_type</p>
+
+  <p class="ziti4">-＞FROM</p>
+
+  <p class="ziti4">-＞information_schema.TABLE_CONSTRAINTS</p>
+
+  <p class="ziti4">-＞WHERE table_schema='mytest'AND table_name='u';\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">constraint_name:PRIMARY</p>
+
+  <p class="ziti4">constraint_type:PRIMARY KEY</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">constraint_name:name</p>
+
+  <p class="ziti4">constraint_type:UNIQUE</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">constraint_name:uk_id_card</p>
+
+  <p class="ziti4">constraint_type:UNIQUE</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着来看Foreign Key的约束。为了创建Foreign Key，用户必须创建另一张表，例如在下面的示例中创建表p。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE p(</p>
+
+  <p class="ziti4">-＞id INT,</p>
+
+  <p class="ziti4">-＞u_id INT,</p>
+
+  <p class="ziti4">-＞PRIMARY KEY(id),</p>
+
+  <p class="ziti4">-＞FOREIGN KEY(u_id)REFERENCES p(id));</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.13 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT constraint_name,constraint_type</p>
+
+  <p class="ziti4">-＞FROM</p>
+
+  <p class="ziti4">-＞information_schema.TABLE_CONSTRAINTS</p>
+
+  <p class="ziti4">-＞WHERE table_schema='mytest'and table_name='p'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">constraint_name:PRIMARY</p>
+
+  <p class="ziti4">constraint_type:PRIMARY KEY</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">constraint_name:p_ibfk_1</p>
+
+  <p class="ziti4">constraint_type:FOREIGN KEY</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在上面的例子中，通过information_schema架构下的表TABLE_CONSTRAINTS来查看当前MySQL库下所有的约束信息。对于Foreign Key的约束的命名，用户还可以通过查看表REFERENTIAL_CONSTRAINTS，并且可以详细地了解外键的属性，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM</p>
+
+  <p class="ziti4">-＞information_schema.REFERENTIAL_CONSTRAINTS</p>
+
+  <p class="ziti4">-＞WHERE constraint_schema='mytest'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">CONSTRAINT_CATALOG:NULL</p>
+
+  <p class="ziti4">CONSTRAINT_SCHEMA:test2</p>
+
+  <p class="ziti4">CONSTRAINT_NAME:p_ibfk_1</p>
+
+  <p class="ziti4">UNIQUE_CONSTRAINT_CATALOG:NULL</p>
+
+  <p class="ziti4">UNIQUE_CONSTRAINT_SCHEMA:test2</p>
+
+  <p class="ziti4">UNIQUE_CONSTRAINT_NAME:PRIMARY</p>
+
+  <p class="ziti4">MATCH_OPTION:NONE</p>
+
+  <p class="ziti4">UPDATE_RULE:RESTRICT</p>
+
+  <p class="ziti4">DELETE_RULE:RESTRICT</p>
+
+  <p class="ziti4">TABLE_NAME:p</p>
+
+  <p class="ziti4">REFERENCED_TABLE_NAME:p</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

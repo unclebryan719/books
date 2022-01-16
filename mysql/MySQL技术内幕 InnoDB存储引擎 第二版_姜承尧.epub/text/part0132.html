@@ -1,0 +1,347 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.2　事务的实现</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3TSA80-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">7.2　事务的实现</h2>
+
+  <p class="ziti3">事务隔离性由第6章讲述的锁来实现。原子性、一致性、持久性通过数据库的redo log和undo log来完成。redo log称为重做日志，用来保证事务的原子性和持久性。undo log用来保证事务的一致性。</p>
+
+  <p class="ziti3">有的DBA或许会认为undo是redo的逆过程，其实不然。redo和undo的作用都可以视为是一种恢复操作，redo恢复提交事务修改的页操作，而undo回滚行记录到某个特定版本。因此两者记录的内容不同，redo通常是物理日志，记录的是页的物理修改操作。undo是逻辑日志，根据每行记录进行记录。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>7.2.1　redo</h3>
+
+  <p class="yanse">1.基本概念</p>
+
+  <p class="ziti3">重做日志用来实现事务的持久性，即事务ACID中的D。其由两部分组成：一是内存中的重做日志缓冲（redo log buffer），其是易失的；二是重做日志文件（redo log file），其是持久的。</p>
+
+  <p class="ziti3">InnoDB是事务的存储引擎，其通过Force Log at Commit机制实现事务的持久性，即当事务提交（COMMIT）时，必须先将该事务的所有日志写入到重做日志文件进行持久化，待事务的COMMIT操作完成才算完成。这里的日志是指重做日志，在InnoDB存储引擎中，由两部分组成，即redo log和undo log。redo log用来保证事务的持久性，undo log用来帮助事务回滚及MVCC的功能。redo log基本上都是顺序写的，在数据库运行时不需要对redo log的文件进行读取操作。而undo log是需要进行随机读写的。</p>
+
+  <p class="ziti3">为了确保每次日志都写入重做日志文件，在每次将重做日志缓冲写入重做日志文件后，InnoDB存储引擎都需要调用一次fsync操作。由于重做日志文件打开并没有使用O_DIRECT选项，因此重做日志缓冲先写入文件系统缓存。为了确保重做日志写入磁盘，必须进行一次fsync操作。由于fsync的效率取决于磁盘的性能，因此磁盘的性能决定了事务提交的性能，也就是数据库的性能。</p>
+
+  <p class="ziti3">InnoDB存储引擎允许用户手工设置非持久性的情况发生，以此提高数据库的性能。即当事务提交时，日志不写入重做日志文件，而是等待一个时间周期后再执行fsync操作。由于并非强制在事务提交时进行一次fsync操作，显然这可以显著提高数据库的性能。但是当数据库发生宕机时，由于部分日志未刷新到磁盘，因此会丢失最后一段时间的事务。</p>
+
+  <p class="ziti3">参数innodb_flush_log_at_trx_commit用来控制重做日志刷新到磁盘的策略。该参数的默认值为1，表示事务提交时必须调用一次fsync操作。还可以设置该参数的值为0和2。0表示事务提交时不进行写入重做日志操作，这个操作仅在master thread中完成，而在master thread中每1秒会进行一次重做日志文件的fsync操作。2表示事务提交时将重做日志写入重做日志文件，但仅写入文件系统的缓存中，不进行fsync操作。在这个设置下，当MySQL数据库发生宕机而操作系统不发生宕机时，并不会导致事务的丢失。而当操作系统宕机时，重启数据库后会丢失未从文件系统缓存刷新到重做日志文件那部分事务。</p>
+
+  <p class="ziti3">下面看一个例子，比较innodb_flush_log_at_trx_commit对事务的影响。首先根据如下代码创建表t1和存储过程p_load：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE test_load(</p>
+
+  <p class="ziti4">a INT,</p>
+
+  <p class="ziti4">b CHAR(80)</p>
+
+  <p class="ziti4">)ENGINE=INNODB;</p>
+
+  <p class="ziti4">DELIMITER//</p>
+
+  <p class="ziti4">CREATE PROCEDURE p_load(count INT UNSIGNED)</p>
+
+  <p class="ziti4">BEGIN</p>
+
+  <p class="ziti4">DECLARE s INT UNSIGNED DEFAULT 1;</p>
+
+  <p class="ziti4">DECLARE c CHAR(80)DEFAULT REPEAT('a',80);</p>
+
+  <p class="ziti4">WHILE s＜=count DO</p>
+
+  <p class="ziti4">INSERT INTO test_load SELECT NULL,c;</p>
+
+  <p class="ziti4">COMMIT;</p>
+
+  <p class="ziti4">SET s=s+1;</p>
+
+  <p class="ziti4">END WHILE;</p>
+
+  <p class="ziti4">END;</p>
+
+  <p class="ziti4">//</p>
+
+  <p class="ziti4">DELIMITER;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">存储过程p_load的作用是将数据不断地插入表test_load中，并且每插入一条就进行一次显式的COMMIT操作。在默认的设置下，即参数innodb_flush_log_at_trx_commit为1的情况下，InnoDB存储引擎会将重做日志缓冲中的日志写入文件，并调用一次fsync操作。如果执行命令CALL p_load（500 000），则会向表中插入50万行的记录，并执行50万次的fsync操作。先看在默认情况插入50万条记录所需的时间下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CALL p_load(500000);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(1 min 53.11 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到插入50万条记录差不多需要2分钟的时间。对于生产环境的用户来说，这个时间显然是不能接受的。而造成时间比较长的原因就在于fsync操作所需的时间。接着来看将参数innodb_flush_log_at_trx_commit设置为0的情况：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_flush_log_at_trx_commit'\G</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_flush_log_at_trx_commit</p>
+
+  <p class="ziti4">Value:0</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞CALL p_load(500000);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(13.90 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到将参数innodb_flush_log_at_trx_commit设置为0后，插入50万行记录的时间缩短为了13.90秒，差不多是之前的12%。而形成这个现象的主要原因是：后者大大减少了fsync的次数，从而提高了数据库执行的性能。表7-1显示了在参数innodb_flush_log_at_trx_commit的不同设置下，调用存储过程p_load插入50万行记录所需的时间。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00114.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">虽然用户可以通过设置参数innodb_flush_log_at_trx_commit为0或2来提高事务提交的性能，但是需要牢记的是，这种设置方法丧失了事务的ACID特性。而针对上述存储过程，为了提高事务的提交性能，应该在将50万行记录插入表后进行一次的COMMIT操作，而不是在每插入一条记录后进行一次COMMIT操作。这样做的好处是还可以使事务方法在回滚时回滚到事务最开始的确定状态。</p>
+
+  <p class="ziti3">在MySQL数据库中还有一种二进制日志（binlog），其用来进行POINT-IN-TIME（PIT）的恢复及主从复制（Replication）环境的建立。从表面上看其和重做日志非常相似，都是记录了对于数据库操作的日志。然而，从本质上来看，两者有着非常大的不同。</p>
+
+  <p class="ziti3">首先，重做日志是在InnoDB存储引擎层产生，而二进制日志是在MySQL数据库的上层产生的，并且二进制日志不仅仅针对于InnoDB存储引擎，MySQL数据库中的任何存储引擎对于数据库的更改都会产生二进制日志。</p>
+
+  <p class="ziti3">其次，两种日志记录的内容形式不同。MySQL数据库上层的二进制日志是一种逻辑日志，其记录的是对应的SQL语句。而InnoDB存储引擎层面的重做日志是物理格式日志，其记录的是对于每个页的修改。</p>
+
+  <p class="ziti3">此外，两种日志记录写入磁盘的时间点不同，如图7-6所示。二进制日志只在事务提交完成后进行一次写入。而InnoDB存储引擎的重做日志在事务进行中不断地被写入，这表现为日志并不是随事务提交的顺序进行写入的。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00115.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-6　二进制日志与重做日志的写入的时间点不同
+  </div>
+
+  <p class="ziti3">从图7-6中可以看到，二进制日志仅在事务提交时记录，并且对于每一个事务，仅包含对应事务的一个日志。而对于InnoDB存储引擎的重做日志，由于其记录的是物理操作日志，因此每个事务对应多个日志条目，并且事务的重做日志写入是并发的，并非在事务提交时写入，故其在文件中记录的顺序并非是事务开始的顺序。*T1、*T2、*T3表示的是事务提交时的日志。</p>
+
+  <p class="yanse">2.log block</p>
+
+  <p class="ziti3">在InnoDB存储引擎中，重做日志都是以512字节进行存储的。这意味着重做日志缓存、重做日志文件都是以块（block）的方式进行保存的，称之为重做日志块（redo log block），每块的大小为512字节。</p>
+
+  <p class="ziti3">若一个页中产生的重做日志数量大于512字节，那么需要分割为多个重做日志块进行存储。此外，由于重做日志块的大小和磁盘扇区大小一样，都是512字节，因此重做日志的写入可以保证原子性，不需要doublewrite技术。</p>
+
+  <p class="ziti3">重做日志块除了日志本身之外，还由日志块头（log block header）及日志块尾（log block tailer）两部分组成。重做日志头一共占用12字节，重做日志尾占用8字节。故每个重做日志块实际可以存储的大小为492字节（512-12-8）。图7-7显示了重做日志块缓存的结构。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00116.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-7　重做日志块缓存的结构
+  </div>
+
+  <p class="ziti3">图7-7显示了重做日志缓存的结构，可以发现重做日志缓存由每个为512字节大小的日志块所组成。日志块由三部分组成，依次为日志块头（log block header）、日志内容（log body）、日志块尾（log block tailer）。</p>
+
+  <p class="ziti3">log block header由4部分组成，如表7-2所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00117.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">log buffer是由log block组成，在内部log buffer就好似一个数组，因此LOG_BLOCK_HDR_NO用来标记这个数组中的位置。其是递增并且循环使用的，占用4个字节，但是由于第一位用来判断是否是flush bit，所以最大的值为2G。</p>
+
+  <p class="ziti3">LOG_BLOCK_HDR_DATA_LEN占用2字节，表示log block所占用的大小。当log block被写满时，该值为0x200，表示使用全部log block空间，即占用512字节。</p>
+
+  <p class="ziti3">LOG_BLOCK_FIRST_REC_GROUP占用2个字节，表示log block中第一个日志所在的偏移量。如果该值的大小和LOG_BLOCK_HDR_DATA_LEN相同，则表示当前log block不包含新的日志。如事务T1的重做日志1占用762字节，事务T2的重做日志占用100字节。由于每个log block实际只能保存492个字节，因此其在log buffer中的情况应如图7-8所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00118.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-8　LOG_BLOCK_FIRST_REC_GROUP的例子
+  </div>
+
+  <p class="ziti3">从图7-8中可以观察到，由于事务T1的重做日志占用792字节，因此需要占用两个log block。左侧的log block中LOG_BLOCK_FIRST_REC_GROUP为12，即log block中第一个日志的开始位置。在第二个log block中，由于包含了之前事务T1的重做日志，事务T2的日志才是log block中第一个日志，因此该log block的LOG_BLOCK_FIRST_REC_GROUP为282（270+12）。</p>
+
+  <p class="ziti3">LOG_BLOCK_CHECKPOINT_NO占用4字节，表示该log block最后被写入时的检查点第4字节的值。</p>
+
+  <p class="ziti3">log block tailer只由1个部分组成（如表7-3所示），且其值和LOG_BLOCK_HDR_NO相同，并在函数log_block_init中被初始化。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00119.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="yanse">3.log group</p>
+
+  <p class="ziti3">log group为重做日志组，其中有多个重做日志文件。虽然源码中已支持log group的镜像功能，但是在ha_innobase.cc文件中禁止了该功能。因此InnoDB存储引擎实际只有一个log group。</p>
+
+  <p class="ziti3">log group是一个逻辑上的概念，并没有一个实际存储的物理文件来表示log group信息。log group由多个重做日志文件组成，每个log group中的日志文件大小是相同的，且在InnoDB 1.2版本之前，重做日志文件的总大小要小于4GB（不能等于4GB）。从InnoDB 1.2版本开始重做日志文件总大小的限制提高为了512GB。InnoSQL版本的InnoDB存储引擎在1.1版本就支持大于4GB的重做日志。</p>
+
+  <p class="ziti3">重做日志文件中存储的就是之前在log buffer中保存的log block，因此其也是根据块的方式进行物理存储的管理，每个块的大小与log block一样，同样为512字节。在InnoDB存储引擎运行过程中，log buffer根据一定的规则将内存中的log block刷新到磁盘。这个规则具体是：</p>
+
+  <p class="ziti3">❑事务提交时</p>
+
+  <p class="ziti3">❑当log buffer中有一半的内存空间已经被使用时</p>
+
+  <p class="ziti3">❑log checkpoint时</p>
+
+  <p class="ziti3">对于log block的写入追加（append）在redo log file的最后部分，当一个redo log file被写满时，会接着写入下一个redo log file，其使用方式为round-robin。</p>
+
+  <p class="ziti3">虽然log block总是在redo log file的最后部分进行写入，有的读者可能以为对redo log file的写入都是顺序的。其实不然，因为redo log file除了保存log buffer刷新到磁盘的log block，还保存了一些其他的信息，这些信息一共占用2KB大小，即每个redo log file的前2KB的部分不保存log block的信息。对于log group中的第一个redo log file，其前2KB的部分保存4个512字节大小的块，其中存放的内容如表7-4所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00120.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">需要特别注意的是，上述信息仅在每个log group的第一个redo log file中进行存储。log group中的其余redo log file仅保留这些空间，但不保存上述信息。正因为保存了这些信息，就意味着对redo log file的写入并不是完全顺序的。因为其除了log block的写入操作，还需要更新前2KB部分的信息，这些信息对于InnoDB存储引擎的恢复操作来说非常关键和重要。故log group与redo log file之间的关系如图7-9所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00121.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-9　log group与redo log file之间的关系
+  </div>
+
+  <p class="ziti3">在log filer header后面的部分为InnoDB存储引擎保存的checkpoint（检查点）值，其设计是交替写入，这样的设计避免了因介质失败而导致无法找到可用的checkpoint的情况。</p>
+
+  <p class="yanse">4.重做日志格式</p>
+
+  <p class="ziti3">不同的数据库操作会有对应的重做日志格式。此外，由于InnoDB存储引擎的存储管理是基于页的，故其重做日志格式也是基于页的。虽然有着不同的重做日志格式，但是它们有着通用的头部格式，如图7-10所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00122.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-10　重做日志格式
+  </div>
+
+  <p class="ziti3">通用的头部格式由以下3部分组成：</p>
+
+  <p class="ziti3">❑redo_log_type：重做日志的类型。</p>
+
+  <p class="ziti3">❑space：表空间的ID。</p>
+
+  <p class="ziti3">❑page_no：页的偏移量。</p>
+
+  <p class="ziti3">之后redo log body的部分，根据重做日志类型的不同，会有不同的存储内容，例如，对于页上记录的插入和删除操作，分别对应如图7-11所示的格式：</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00123.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-11　插入和删除的重做日志格式
+  </div>
+
+  <p class="ziti3">到InnoDB1.2版本时，一共有51种重做日志类型。随着功能不断地增加，相信会加入越来越多的重做日志类型。</p>
+
+  <p class="yanse">5.LSN</p>
+
+  <p class="ziti3">LSN是Log Sequence Number的缩写，其代表的是日志序列号。在InnoDB存储引擎中，LSN占用8字节，并且单调递增。LSN表示的含义有：</p>
+
+  <p class="ziti3">❑重做日志写入的总量</p>
+
+  <p class="ziti3">❑checkpoint的位置</p>
+
+  <p class="ziti3">❑页的版本</p>
+
+  <p class="ziti3">LSN表示事务写入重做日志的字节的总量。例如当前重做日志的LSN为1 000，有一个事务T1写入了100字节的重做日志，那么LSN就变为了1100，若又有事务T2写入了200字节的重做日志，那么LSN就变为了1 300。可见LSN记录的是重做日志的总量，其单位为字节。</p>
+
+  <p class="ziti3">LSN不仅记录在重做日志中，还存在于每个页中。在每个页的头部，有一个值FIL_PAGE_LSN，记录了该页的LSN。在页中，LSN表示该页最后刷新时LSN的大小。因为重做日志记录的是每个页的日志，因此页中的LSN用来判断页是否需要进行恢复操作。例如，页P1的LSN为10 000，而数据库启动时，InnoDB检测到写入重做日志中的LSN为13 000，并且该事务已经提交，那么数据库需要进行恢复操作，将重做日志应用到P1页中。同样的，对于重做日志中LSN小于P1页的LSN，不需要进行重做，因为P1页中的LSN表示页已经被刷新到该位置。</p>
+
+  <p class="ziti3">用户可以通过命令SHOW ENGINE INNODB STATUS查看LSN的情况：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">---</p>
+
+  <p class="ziti4">LOG</p>
+
+  <p class="ziti4">---</p>
+
+  <p class="ziti4">Log sequence number 11 3047174608</p>
+
+  <p class="ziti4">Log flushed up to 11 3047174608</p>
+
+  <p class="ziti4">Last checkpoint at 11 3047174608</p>
+
+  <p class="ziti4">0 pending log writes,0 pending chkp writes</p>
+
+  <p class="ziti4">142 log i/o's done,0.00 log i/o's/second</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">Log sequence number表示当前的LSN，Log flushed up to表示刷新到重做日志文件的LSN，Last checkpoint at表示刷新到磁盘的LSN。</p>
+
+  <p class="ziti3">虽然在上面的例子中，Log sequence number和Log flushed up to的值是相同的，但是在实际生产环境中，该值有可能是不同的。因为在一个事务中从日志缓冲刷新到重做日志文件并不只是在事务提交时发生，每秒都会有从日志缓冲刷新到重做日志文件的动作。下面是在生产环境下重做日志的信息的示例。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞show engine innodb status\G;</p>
+
+  <p class="ziti4">---</p>
+
+  <p class="ziti4">LOG</p>
+
+  <p class="ziti4">---</p>
+
+  <p class="ziti4">Log sequence number 203318213447</p>
+
+  <p class="ziti4">Log flushed up to 203318213326</p>
+
+  <p class="ziti4">Last checkpoint at 203252831194</p>
+
+  <p class="ziti4">1 pending log writes,0 pending chkp writes</p>
+
+  <p class="ziti4">103447 log i/o's done,7.00 log i/o's/second</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，在生产环境下Log sequence number、Log flushed up to、Last checkpoint at三个值可能是不同的。</p>
+
+  <p class="yanse">6.恢复</p>
+
+  <p class="ziti3">InnoDB存储引擎在启动时不管上次数据库运行时是否正常关闭，都会尝试进行恢复操作。因为重做日志记录的是物理日志，因此恢复的速度比逻辑日志，如二进制日志，要快很多。与此同时，InnoDB存储引擎自身也对恢复进行了一定程度的优化，如顺序读取及并行应用重做日志，这样可以进一步地提高数据库恢复的速度。</p>
+
+  <p class="ziti3">由于checkpoint表示已经刷新到磁盘页上的LSN，因此在恢复过程中仅需恢复checkpoint开始的日志部分。对于图7-12中的例子，当数据库在checkpoint的LSN为10 000时发生宕机，恢复操作仅恢复LSN 10 000～13 000范围内的日志。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00124.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-12　恢复的例子
+  </div>
+
+  <p class="ziti3">InnoDB存储引擎的重做日志是物理日志，因此其恢复速度较之二进制日志恢复快得多。例如对于INSERT操作，其记录的是每个页上的变化。对于下面的表：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE t(a INT,b INT,PRIMARY KEY(a),KEY(b));</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">若执行SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">INSERT INTO t SELECT 1,2;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">由于需要对聚集索引页和辅助索引页进行操作，其记录的重做日志大致为：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">page(2,3),offset 32,value 1,2#聚集索引</p>
+
+  <p class="ziti4">page(2,4),offset 64,value 2#辅助索引</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到记录的是页的物理修改操作，若插入涉及B+树的split，可能会有更多的页需要记录日志。此外，由于重做日志是物理日志，因此其是幂等的。幂等的概念如下：</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00125.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">有的DBA或开发人员错误地认为只要将二进制日志的格式设置为ROW，那么二进制日志也是幂等的。这显然是错误的，举个简单的例子，INSERT操作在二进制日志中就不是幂等的，重复执行可能会插入多条重复的记录。而上述INSERT操作的重做日志是幂等的。</p>
+</body></html>

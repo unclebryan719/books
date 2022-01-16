@@ -1,0 +1,163 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.6.6　触发器与约束</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="27GQ60-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.6.6　触发器与约束</h3>
+
+  <p class="ziti3">通过前面小节的介绍，用户已经知道完整性约束通常也可以使用触发器来实现，因此在了解数据完整性前先对触发器来做一个了解。</p>
+
+  <p class="ziti3">触发器的作用是在执行INSERT、DELETE和UPDATE命令之前或之后自动调用SQL命令或存储过程。MySQL 5.0对触发器的实现还不是非常完善，限制比较多，而从MySQL 5.1开始触发器已经相对稳定，功能也较之前有了大幅的提高。</p>
+
+  <p class="ziti3">创建触发器的命令是CREATE TRIGGER，只有具备Super权限的MySQL数据库用户才可以执行这条命令：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE</p>
+
+  <p class="ziti4">[DEFINER={user|CURRENT_USER}]</p>
+
+  <p class="ziti4">TRIGGER trigger_name BEFORE|AFTER INSERT|UPDATE|DELETE</p>
+
+  <p class="ziti4">ON tbl_name FOR EACH ROW trigger_stmt</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">最多可以为一个表建立6个触发器，即分别为INSERT、UPDATE、DELETE的BEFORE和AFTER各定义一个。BEFORE和AFTER代表触发器发生的时间，表示是在每行操作的之前发生还是之后发生。当前MySQL数据库只支持FOR EACH ROW的触发方式，即按每行记录进行触发，不支持像DB2的FOR EACH STATEMENT的触发方式。</p>
+
+  <p class="ziti3">通过触发器，用户可以实现MySQL数据库本身并不支持的一些特性，如对于传统CHECK约束的支持，物化视图、高级复制、审计等特性。这里先关注触发器对于约束的支持。</p>
+
+  <p class="ziti3">假设有张用户消费表，每次用户购买一样物品后其金额都是减的，若这时有“不怀好意”的用户做了类似减去一个负值的操作，这样用户的钱没减少反而会不断增加，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE usercash(</p>
+
+  <p class="ziti4">-＞userid INT NOT NULL,</p>
+
+  <p class="ziti4">-＞cash INT UNSIGNED NOT NULL);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.11 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO usercash</p>
+
+  <p class="ziti4">-＞SELECT 1,1000;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.03 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞UPDATE usercash</p>
+
+  <p class="ziti4">-＞SET cash=cash-(-20)WHERE userid=1;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.05 sec)</p>
+
+  <p class="ziti4">Rows matched:1 Changed:1 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述运行的SQL语句对数据库来说没有任何问题，都可以正常的运行，不会报错。但是从业务的逻辑上来说，这是绝对错误的。因为消费总是意味着减去一个正值，而不是负值，所以这时要通过触发器来约束这个逻辑行为，可以进行如下设置：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE usercash_err_log(</p>
+
+  <p class="ziti4">-＞userid INT NOT NULL,</p>
+
+  <p class="ziti4">-＞old_cash INT UNSIGNED NOT NULL,</p>
+
+  <p class="ziti4">-＞new_cash INT UNSIGNED NOT NULL,</p>
+
+  <p class="ziti4">-＞user VARCHAR(30),</p>
+
+  <p class="ziti4">-＞time DATETIME);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.13 sec)</p>
+
+  <p class="ziti4">mysql＞DELIMITER$$</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞CREATE TRIGGER tgr_usercash_update BEFORE UPDATE ON usercash</p>
+
+  <p class="ziti4">-＞FOR EACH ROW</p>
+
+  <p class="ziti4">-＞BEGIN</p>
+
+  <p class="ziti4">-＞IF new.cash-old.cash＞0 THEN</p>
+
+  <p class="ziti4">-＞INSERT INTO usercash_err_log</p>
+
+  <p class="ziti4">-＞SELECT old.userid,old.cash,new.cash,USER(),NOW();</p>
+
+  <p class="ziti4">-＞SET new.cash=old.cash;</p>
+
+  <p class="ziti4">-＞END IF;</p>
+
+  <p class="ziti4">-＞END;</p>
+
+  <p class="ziti4">-＞$$</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞DELIMITER$$</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述例子首先创建了一张表usercash_err_log来记录错误数值更新的日志，然后创建了进行约束操作的触发器tgr_usercash_update，其类型为BEFORE。触发器首先判断新、旧值之间的差值，在正常情况下消费总是减的，新值应该总是小于原来的值，因此大于原值的数据被判断为非法的输入，将cash值设定为原来的值，并将非法的数据更新插入表usercash_err_log。再次运行上述的SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞DELETE FROM usercash;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.02 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO usercash</p>
+
+  <p class="ziti4">-＞SELECT 1,1000;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.03 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞UPDATE usercash</p>
+
+  <p class="ziti4">-＞SET cash=cash-(-20)</p>
+
+  <p class="ziti4">-＞WHERE userid=1;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.02 sec)</p>
+
+  <p class="ziti4">Rows matched:1 Changed:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM usercash\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">userid:1</p>
+
+  <p class="ziti4">cash:100</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM usercash_err_log\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">userid:1</p>
+
+  <p class="ziti4">old_cash:1000</p>
+
+  <p class="ziti4">new_cash:1020</p>
+
+  <p class="ziti4">user:root@localhost</p>
+
+  <p class="ziti4">time:2009-11-06 11:49:49</p>
+
+  <p class="ziti4">Message:Column'id'cannot be null</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到这次对于异常的数据更新通过触发器将其保存到了usercash_err_log。此外该触发器还记录了操作该SQL语句的用户及时间。通过上述的例子可以发现，创建触发器也是实现约束的一种手段和方法。</p>
+</body></html>

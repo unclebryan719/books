@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.3.4　自增长与锁</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3FIHQ0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">6.3.4　自增长与锁</h3>
+
+  <p class="ziti3">自增长在数据库中是非常常见的一种属性，也是很多DBA或开发人员首选的主键方式。在InnoDB存储引擎的内存结构中，对每个含有自增长值的表都有一个自增长计数器（auto-increment counter）。当对含有自增长的计数器的表进行插入操作时，这个计数器会被初始化，执行如下的语句来得到计数器的值：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT MAX(auto_inc_col)FROM t FOR UPDATE;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">插入操作会依据这个自增长的计数器值加1赋予自增长列。这个实现方式称做AUTO-INC Locking。这种锁其实是采用一种特殊的表锁机制，为了提高插入的性能，锁不是在一个事务完成后才释放，而是在完成对自增长值插入的SQL语句后立即释放。</p>
+
+  <p class="ziti3">虽然AUTO-INC Locking从一定程度上提高了并发插入的效率，但还是存在一些性能上的问题。首先，对于有自增长值的列的并发插入性能较差，事务必须等待前一个插入的完成（虽然不用等待事务的完成）。其次，对于INSERT…SELECT的大数据量的插入会影响插入的性能，因为另一个事务中的插入会被阻塞。</p>
+
+  <p class="ziti3">从MySQL 5.1.22版本开始，InnoDB存储引擎中提供了一种轻量级互斥量的自增长实现机制，这种机制大大提高了自增长值插入的性能。并且从该版本开始，InnoDB存储引擎提供了一个参数innodb_autoinc_lock_mode来控制自增长的模式，该参数的默认值为1。在继续讨论新的自增长实现方式之前，需要对自增长的插入进行分类，如表6-9所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00090.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">接着来分析参数innodb_autoinc_lock_mode以及各个设置下对自增的影响，其总共有三个有效值可供设定，即0、1、2，具体说明如表6-10所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00091.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">此外，还需要特别注意的是InnoDB存储引擎中自增长的实现和MyISAM不同，MyISAM存储引擎是表锁设计，自增长不用考虑并发插入的问题。因此在master上用InnoDB存储引擎，在slave上用MyISAM存储引擎的replication架构下，用户必须考虑这种情况。</p>
+
+  <p class="ziti3">另外，在InnoDB存储引擎中，自增长值的列必须是索引，同时必须是索引的第一个列。如果不是第一个列，则MySQL数据库会抛出异常，而MyISAM存储引擎没有这个问题，下面的测试反映了这两个存储引擎的不同：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t(</p>
+
+  <p class="ziti4">-＞a INT AUTO_INCREMENT,</p>
+
+  <p class="ziti4">-＞B INT,</p>
+
+  <p class="ziti4">-＞KEY(b,a)</p>
+
+  <p class="ziti4">-＞)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">ERROR 1075(42000):Incorrect table definition;there can be only one auto column and it must be defined as a key</p>
+
+  <p class="ziti4">mysql＞CREATE TABLE t(</p>
+
+  <p class="ziti4">-＞a INT AUTO_INCREMENT,</p>
+
+  <p class="ziti4">-＞B INT,</p>
+
+  <p class="ziti4">-＞KEY(b,a)</p>
+
+  <p class="ziti4">-＞)ENGINE=MyISAM;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.01 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.2　数据结构与算法</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2IV0U0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">5.2　数据结构与算法</h2>
+
+  <p class="ziti3">B+树索引是最为常见，也是在数据库中使用最为频繁的一种索引。在介绍该索引之前先介绍与之密切相关的一些算法与数据结构，这有助于读者更好的理解B+树索引的工作方式。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>5.2.1　二分查找法</h3>
+
+  <p class="ziti3">二分查找法（binary search）也称为折半查找法，用来查找一组有序的记录数组中的某一记录，其基本思想是：将记录按有序化（递增或递减）排列，在查找过程中采用跳跃式方式查找，即先以有序数列的中点位置为比较对象，如果要找的元素值小于该中点元素，则将待查序列缩小为左半部分，否则为右半部分。通过一次比较，将查找区间缩小一半。</p>
+
+  <p class="ziti3">如有5、10、19、21、31、37、42、48、50、52这10个数，现要从这10个数中查找48这条记录，其查找过程如图5-1所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00030.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-1　二分查找法
+  </div>
+
+  <p class="ziti3">从图5-1可以看出，用了3次就找到了48这个数。如果是顺序查找，则需要8次。因此二分查找法的效率比顺序查找法要好（平均地来说）。但如果说查5这条记录，顺序查找只需1次，而二分查找法需要4次。我们来看，对于上面10个数来说，平均查找次数为（1+2+3+4+5+6+7+8+9+10）/10=5.5次。而二分查找法为（4+3+2+4+3+1+4+3+2+3）/10=2.9次。在最坏的情况下，顺序查找的次数为10，而二分查找的次数为4。</p>
+
+  <p class="ziti3">二分查找法的应用极其广泛，而且它的思想易于理解。第一个二分查找法在1946年就出现了，但是第一个完全正确的二分查找法直到1962年才出现。在前面的章节中，相信读者已经知道了，每页Page Directory中的槽是按照主键的顺序存放的，对于某一条具体记录的查询是通过对Page Directory进行二分查找得到的。</p>
+</body></html>

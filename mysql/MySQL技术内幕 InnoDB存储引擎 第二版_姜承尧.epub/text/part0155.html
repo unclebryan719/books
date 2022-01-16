@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>8.5　热备</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4JQ760-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">8.5　热备</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>8.5.1　ibbackup</h3>
+
+  <p class="ziti3">ibbackup是InnoDB存储引擎官方提供的热备工具，可以同时备份MyISAM存储引擎和InnoDB存储引擎表。对于InnoDB存储引擎表其备份工作原理如下：</p>
+
+  <p class="ziti3">1）记录备份开始时，InnoDB存储引擎重做日志文件检查点的LSN。</p>
+
+  <p class="ziti3">2）复制共享表空间文件以及独立表空间文件。</p>
+
+  <p class="ziti3">3）记录复制完表空间文件后，InnoDB存储引擎重做日志文件检查点的LSN。</p>
+
+  <p class="ziti3">4）复制在备份时产生的重做日志。</p>
+
+  <p class="ziti3">对于事务的数据库，如Microsoft SQL Server数据库和Oracle数据库，热备的原理大致和上述相同。可以发现，在备份期间不会对数据库本身有任何影响，所做的操作只是复制数据库文件，因此任何对数据库的操作都是允许的，不会阻塞任何操作。故ibbackup的优点如下：</p>
+
+  <p class="ziti3">❑在线备份，不阻塞任何的SQL语句。</p>
+
+  <p class="ziti3">❑备份性能好，备份的实质是复制数据库文件和重做日志文件。</p>
+
+  <p class="ziti3">❑支持压缩备份，通过选项，可以支持不同级别的压缩。</p>
+
+  <p class="ziti3">❑跨平台支持，ibbackup可以运行在Linux、Windows以及主流的UNIX系统平台上。</p>
+
+  <p class="ziti3">ibbackup对InnoDB存储引擎表的恢复步骤为：</p>
+
+  <p class="ziti3">❑恢复表空间文件。</p>
+
+  <p class="ziti3">❑应用重做日志文件。</p>
+
+  <p class="ziti3">ibbackup提供了一种高性能的热备方式，是InnoDB存储引擎备份的首选方式。不过它是收费软件，并非免费的软件。好在开源的魅力就在于社区的力量，Percona公司给用户带来了开源、免费的XtraBackup热备工具，它实现所有ibbackup的功能，并且扩展支持了真正的增量备份功能。因此，更好的选择是使用XtraBackup来完成热备的工作。</p>
+</body></html>

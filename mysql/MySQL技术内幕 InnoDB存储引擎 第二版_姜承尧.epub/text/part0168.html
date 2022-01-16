@@ -1,0 +1,231 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>9.4.3　RAID配置工具</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="506UG0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">9.4.3　RAID配置工具</h3>
+
+  <p class="ziti3">对RAID卡进行配置可以在服务器启动时进入一个类似于BIOS的配置界面，然后再对其进行各种设置。此外，很多厂商都开发了各种操作系统下的软件对RAID进行配置，如果用户使用的是LSI公司生产提供的RAID卡，则可以使用MegaCLI工具来进行配置。</p>
+
+  <p class="ziti3">MegaCLI为多个操作系统提供了支持，对Windows操作系统还提供了GUI界面的配置环境，因此相对来说比较简单。这里主要介绍命令行下MegaCLI的使用，在Windows下同样可以使用命令MegaCLI.exe。</p>
+
+  <p class="ziti3">使用MegaCLI查看RAID卡的信息：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#/opt/MegaRAID/MegaCli/MegaCli64-AdpAllInfo-a0</p>
+
+  <p class="ziti4">Adapter#0</p>
+
+  <p class="ziti4">==============================================================================</p>
+
+  <p class="ziti4">Versions</p>
+
+  <p class="ziti4">================</p>
+
+  <p class="ziti4">Product Name:MegaRAID SAS 8708ELP</p>
+
+  <p class="ziti4">Serial No:P012233608</p>
+
+  <p class="ziti4">FW Package Build:9.0.1-0030</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">HW Configuration</p>
+
+  <p class="ziti4">================</p>
+
+  <p class="ziti4">SAS Address:500605b000d1e180</p>
+
+  <p class="ziti4">BBU:Present</p>
+
+  <p class="ziti4">Alarm:Present</p>
+
+  <p class="ziti4">NVRAM:Present</p>
+
+  <p class="ziti4">Serial Debugger:Present</p>
+
+  <p class="ziti4">Memory:Present</p>
+
+  <p class="ziti4">Flash:Present</p>
+
+  <p class="ziti4">Memory Size:256MB</p>
+
+  <p class="ziti4">TPM:Absent</p>
+
+  <p class="ziti4">Default Settings</p>
+
+  <p class="ziti4">================</p>
+
+  <p class="ziti4">Phy Polarity:0</p>
+
+  <p class="ziti4">PhyPolaritySplit:240</p>
+
+  <p class="ziti4">Background Rate:30</p>
+
+  <p class="ziti4">Stripe Size:64kB</p>
+
+  <p class="ziti4">Flush Time:4 seconds</p>
+
+  <p class="ziti4">Write Policy:WB</p>
+
+  <p class="ziti4">Read Policy:None</p>
+
+  <p class="ziti4">Cache When BBU Bad:Disabled</p>
+
+  <p class="ziti4">Cached IO:No</p>
+
+  <p class="ziti4">SMART Mode:Mode 6</p>
+
+  <p class="ziti4">Alarm Disable:Yes</p>
+
+  <p class="ziti4">Coercion Mode:1GB</p>
+
+  <p class="ziti4">ZCR Config:Unknown</p>
+
+  <p class="ziti4">Dirty LED Shows Drive Activity:No</p>
+
+  <p class="ziti4">BIOS Continue on Error:No</p>
+
+  <p class="ziti4">Spin Down Mode:None</p>
+
+  <p class="ziti4">Allowed Device Type:SAS/SATA Mix</p>
+
+  <p class="ziti4">Allow Mix in Enclosure:Yes</p>
+
+  <p class="ziti4">Allow HDD SAS/SATA Mix in VD:Yes</p>
+
+  <p class="ziti4">Allow SSD SAS/SATA Mix in VD:No</p>
+
+  <p class="ziti4">Allow HDD/SSD Mix in VD:No</p>
+
+  <p class="ziti4">Allow SATA in Cluster:No</p>
+
+  <p class="ziti4">Max Chained Enclosures:3</p>
+
+  <p class="ziti4">Disable Ctrl-R:Yes</p>
+
+  <p class="ziti4">Enable Web BIOS:Yes</p>
+
+  <p class="ziti4">Direct PD Mapping:No</p>
+
+  <p class="ziti4">BIOS Enumerate VDs:Yes</p>
+
+  <p class="ziti4">Restore Hot Spare on Insertion:No</p>
+
+  <p class="ziti4">Expose Enclosure Devices:Yes</p>
+
+  <p class="ziti4">Maintain PD Fail History:Yes</p>
+
+  <p class="ziti4">Disable Puncturing:No</p>
+
+  <p class="ziti4">Zero Based Enclosure Enumeration:No</p>
+
+  <p class="ziti4">PreBoot CLI Enabled:Yes</p>
+
+  <p class="ziti4">LED Show Drive Activity:No</p>
+
+  <p class="ziti4">Cluster Disable:Yes</p>
+
+  <p class="ziti4">SAS Disable:No</p>
+
+  <p class="ziti4">Auto Detect BackPlane Enable:SGPIO/i2c SEP</p>
+
+  <p class="ziti4">Use FDE Only:No</p>
+
+  <p class="ziti4">Enable Led Header:No</p>
+
+  <p class="ziti4">Delay during POST:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">由于排版的原因，这里只列出了输出的一小部分。通过上述命令可以看到RAID卡的一些硬件设置，如这块RAID卡的型号是MegaRAID SAS 8708ELP，缓存大小是256MB。还可以看到一些默认的配置，如默认启用的Write Policy为WB（Write Back）等。</p>
+
+  <p class="ziti3">MegaCLI还可以用来查看当前物理磁盘的信息，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#/opt/MegaRAID/MegaCli/MegaCli64-PDList-aALL</p>
+
+  <p class="ziti4">Adapter#0</p>
+
+  <p class="ziti4">Enclosure Device ID:252</p>
+
+  <p class="ziti4">Slot Number:0</p>
+
+  <p class="ziti4">Device Id:8</p>
+
+  <p class="ziti4">Sequence Number:2</p>
+
+  <p class="ziti4">Media Error Count:0</p>
+
+  <p class="ziti4">Other Error Count:0</p>
+
+  <p class="ziti4">Predictive Failure Count:0</p>
+
+  <p class="ziti4">Last Predictive Failure Event Seq Number:0</p>
+
+  <p class="ziti4">PD Type:SAS</p>
+
+  <p class="ziti4">Raw Size:279.396 GB[0x22ecb25c Sectors]</p>
+
+  <p class="ziti4">Non Coerced Size:278.896 GB[0x22dcb25c Sectors]</p>
+
+  <p class="ziti4">Coerced Size:278.464 GB[0x22cee000 Sectors]</p>
+
+  <p class="ziti4">Firmware state:Online</p>
+
+  <p class="ziti4">SAS Address(0):0x5000c5000f363b55</p>
+
+  <p class="ziti4">SAS Address(1):0x0</p>
+
+  <p class="ziti4">Connected Port Number:0(path0)</p>
+
+  <p class="ziti4">Inquiry Data:SEAGATE ST3300655SS 00023LM5MGZZ</p>
+
+  <p class="ziti4">FDE Capable:Not Capable</p>
+
+  <p class="ziti4">FDE Enable:Disable</p>
+
+  <p class="ziti4">Secured:Unsecured</p>
+
+  <p class="ziti4">Locked:Unlocked</p>
+
+  <p class="ziti4">Foreign State:None</p>
+
+  <p class="ziti4">Device Speed:Unknown</p>
+
+  <p class="ziti4">Link Speed:Unknown</p>
+
+  <p class="ziti4">Media Type:Hard Disk Device</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到当前使用的磁盘型号是SEAGATE ST3300655SS。可以从这个型号继续找到这个硬盘的具体信息，如在希捷官网http://discountechnology.com/Seagate-ST3300655SS-SAS-Hard-Drive上可以知道这块硬盘大小是3.5寸的，转速为15 000，硬盘的Cache为16MB，随机读取的寻道时间是3.5毫秒，随机写入的寻道时间是4.0毫秒等。</p>
+
+  <p class="ziti3">此外，还可以通过下面的命令来查看是否开启了Write Back功能：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#/opt/MegaRAID/MegaCli/MegaCli64-LDGetProp-Cache-LALL-aALL</p>
+
+  <p class="ziti4">Adapter 0-VD 0(target id:0):Cache Policy:WriteBack,ReadAheadNone,Direct,No Write Cache if bad BBU</p>
+
+  <p class="ziti4">Adapter 0-VD 1(target id:1):Cache Policy:WriteBack,ReadAheadNone,Direct,No Write Cache if bad BBU</p>
+
+  <p class="ziti4">Exit Code:0x00</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过上面的结果可以发现当前开启了RAID卡的Write Back功能，并且当BBU有问题时或在充电时禁用Write Back功能。此外，这里还显示了不需要启用RAID卡的预读功能，写入方式为直接写入。</p>
+
+  <p class="ziti3">通过下面的命令可以对当前的写入策略进行调整：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#/opt/MegaRAID/MegaCli/MegaCli64-LDSetPropWB-LALL-aALL</p>
+
+  <p class="ziti4">#/opt/MegaRAID/MegaCli/MegaCli64-LDSetPropWT-LALL-aALL</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">特别需要注意地是，当RAID卡的写入策略从Write Back切换为Write Through时，该更改立即生效。然而从Write Through切换为Write Back时，必须重启服务器才能使其生效。</p>
+</body></html>

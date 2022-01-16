@@ -1,0 +1,255 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.8.4　分区中的NULL值</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2E6E40-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.8.4　分区中的NULL值</h3>
+
+  <p class="ziti3">MySQL数据库允许对NULL值做分区，但是处理的方法与其他数据库可能完全不同。MYSQL数据库的分区总是视NULL值视小于任何的一个非NULL值，这和MySQL数据库中处理NULL值的ORDER BY操作是一样的。因此对于不同的分区类型，MySQL数据库对于NULL值的处理也是各不相同。</p>
+
+  <p class="ziti3">对于RANGE分区，如果向分区列插入了NULL值，则MySQL数据库会将该值放入最左边的分区。例如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t_range(</p>
+
+  <p class="ziti4">-＞a INT,</p>
+
+  <p class="ziti4">-＞b INT)ENGINE=InnoDB</p>
+
+  <p class="ziti4">-＞PARTITION BY RANGE(b)(</p>
+
+  <p class="ziti4">-＞PARTITION p0 VALUES LESS THAN(10),</p>
+
+  <p class="ziti4">-＞PARTITION p1 VALUES LESS THAN(20),</p>
+
+  <p class="ziti4">-＞PARTITION p2 VALUES LESS THAN MAXVALUE</p>
+
+  <p class="ziti4">-＞);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.01 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着向表中插入（1,1），（1,NULL）两条数据，并观察每个分区中记录的数量：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞INSERT INTO t_range SELECT 1,1;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t_range SELECT 1,NULL;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t_range\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">a:1</p>
+
+  <p class="ziti4">b:1</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">a:1</p>
+
+  <p class="ziti4">b:NULL</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT table_name,partition_name,table_rows</p>
+
+  <p class="ziti4">-＞FROM information_schema.PARTITIONS</p>
+
+  <p class="ziti4">-＞WHERE table_schema=DATABASE()AND table_name='t_range'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">table_name:t_range</p>
+
+  <p class="ziti4">partition_name:p0</p>
+
+  <p class="ziti4">table_rows:2</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">table_name:t_range</p>
+
+  <p class="ziti4">partition_name:p1</p>
+
+  <p class="ziti4">table_rows:0</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">table_name:t_range</p>
+
+  <p class="ziti4">partition_name:p2</p>
+
+  <p class="ziti4">table_rows:0</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到两条数据都放入了p0分区，也就是说明了RANGE分区下，NULL值会放入最左边的分区中。另外需要注意的是，如果删除p0这个分区，删除的将是小于10的记录，并且还有NULL值的记录，这点非常重要：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞ALTER TABLE t_range DROP PARTITION p0;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.01 sec)</p>
+
+  <p class="ziti4">Records:0 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t_range;</p>
+
+  <p class="ziti4">Empty set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在LIST分区下要使用NULL值，则必须显式地指出哪个分区中放入NULL值，否则会报错，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t_list(</p>
+
+  <p class="ziti4">-＞a INT,</p>
+
+  <p class="ziti4">-＞b INT)ENGINE=INNODB</p>
+
+  <p class="ziti4">-＞PARTITION BY LIST(b)(</p>
+
+  <p class="ziti4">-＞PARTITION p0 VALUES IN(1,3,5,7,9),</p>
+
+  <p class="ziti4">-＞PARTITION p1 VALUES IN(0,2,4,6,8)</p>
+
+  <p class="ziti4">);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t_list SELECT 1,NULL;</p>
+
+  <p class="ziti4">ERROR 1526(HY000):Table has no partition for value NULL</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">若p0分区允许NULL值，则插入不会报错：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t_list(</p>
+
+  <p class="ziti4">-＞a INT,</p>
+
+  <p class="ziti4">-＞b INT)ENGINE=INNODB</p>
+
+  <p class="ziti4">-＞PARTITION BY LIST(b)(</p>
+
+  <p class="ziti4">-＞PARTITION p0 VALUES IN(1,3,5,7,9,NULL),</p>
+
+  <p class="ziti4">-＞PARTITION p1 VALUES IN(0,2,4,6,8)</p>
+
+  <p class="ziti4">);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t_list SELECT 1,NULL;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT table_name,partition_name,table_rows</p>
+
+  <p class="ziti4">-＞FROM information_schema.PARTITIONS</p>
+
+  <p class="ziti4">-＞WHERE table_schema=DATABASE()AND table_name='t_list'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">table_name:t_list</p>
+
+  <p class="ziti4">partition_name:p0</p>
+
+  <p class="ziti4">table_rows:1</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">table_name:t_list</p>
+
+  <p class="ziti4">partition_name:p1</p>
+
+  <p class="ziti4">table_rows:0</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">HASH和KEY分区对于NULL的处理方式和RANGE分区、LIST分区不一样。任何分区函数都会将含有NULL值的记录返回为0。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t_hash(</p>
+
+  <p class="ziti4">-＞a INT,</p>
+
+  <p class="ziti4">-＞b INT)ENGINE=InnoDB</p>
+
+  <p class="ziti4">-＞PARTITION BY HASH(b)</p>
+
+  <p class="ziti4">-＞PARTITIONS 4;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t_hash SELECT 1,0;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t_hash SELECT 1,NULL;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.01 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT table_name,partition_name,table_rows</p>
+
+  <p class="ziti4">-＞FROM information_schema.PARTITIONS</p>
+
+  <p class="ziti4">-＞WHERE table_schema=DATABASE()AND table_name='t_hash'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">table_name:t_hash</p>
+
+  <p class="ziti4">partition_name:p0</p>
+
+  <p class="ziti4">table_rows:2</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">table_name:t_hash</p>
+
+  <p class="ziti4">partition_name:p1</p>
+
+  <p class="ziti4">table_rows:0</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">table_name:t_hash</p>
+
+  <p class="ziti4">partition_name:p2</p>
+
+  <p class="ziti4">table_rows:0</p>
+
+  <p class="ziti4">***************************4.row***************************</p>
+
+  <p class="ziti4">table_name:t_hash</p>
+
+  <p class="ziti4">partition_name:p3</p>
+
+  <p class="ziti4">table_rows:0</p>
+
+  <p class="ziti4">4 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.4.2　解决Phantom Problem</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3IE3G0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">6.4.2　解决Phantom Problem</h3>
+
+  <p class="ziti3">在默认的事务隔离级别下，即REPEATABLE READ下，InnoDB存储引擎采用Next-Key Locking机制来避免Phantom Problem（幻像问题）。这点可能不同于与其他的数据库，如Oracle数据库，因为其可能需要在SERIALIZABLE的事务隔离级别下才能解决Phantom Problem。</p>
+
+  <p class="ziti3">Phantom Problem是指在同一事务下，连续执行两次同样的SQL语句可能导致不同的结果，第二次的SQL语句可能会返回之前不存在的行。下面将演示这个例子，使用前一小节所创建的表t。表t由1、2、5这三个值组成，若这时事务T1执行如下的SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM t WHERE a＞2 FOR UPDATE;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">注意这时事务T1并没有进行提交操作，上述应该返回5这个结果。若与此同时，另一个事务T2插入了4这个值，并且数据库允许该操作，那么事务T1再次执行上述SQL语句会得到结果4和5。这与第一次得到的结果不同，违反了事务的隔离性，即当前事务能够看到其他事务的结果。其过程如表6-13所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00094.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="pic">
+    <img alt="" src="../images/00095.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">InnoDB存储引擎采用Next-Key Locking的算法避免Phantom Problem。对于上述的SQL语句SELECT*FROM t WHERE a＞2 FOR UPDATE，其锁住的不是5这单个值，而是对（2，+∞）这个范围加了X锁。因此任何对于这个范围的插入都是不被允许的，从而避免Phantom Problem。</p>
+
+  <p class="ziti3">InnoDB存储引擎默认的事务隔离级别是REPEATABLE READ，在该隔离级别下，其采用Next-Key Locking的方式来加锁。而在事务隔离级别READ COMMITTED下，其仅采用Record Lock，因此在上述的示例中，会话A需要将事务的隔离级别设置为READ COMMITTED。</p>
+
+  <p class="ziti3">此外，用户可以通过InnoDB存储引擎的Next-Key Locking机制在应用层面实现唯一性的检查。例如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM table WHERE col=xxx LOCK IN SHARE MODE；</p>
+
+  <p class="ziti4">If not found any row:</p>
+
+  <p class="ziti4">#unique for insert value</p>
+
+  <p class="ziti4">INSERT INTO table VALUES(...);</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果用户通过索引查询一个值，并对该行加上一个SLock，那么即使查询的值不在，其锁定的也是一个范围，因此若没有返回任何行，那么新插入的值一定是唯一的。也许有读者会有疑问，如果在进行第一步SELECT…LOCK IN SHARE MODE操作时，有多个事务并发操作，那么这种唯一性检查机制是否存在问题。其实并不会，因为这时会导致死锁，只有一个事务的插入操作会成功，而其余的事务会抛出死锁的错误，如表6-14所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00096.jpeg" class="calibre3"/>
+  </div>
+</body></html>

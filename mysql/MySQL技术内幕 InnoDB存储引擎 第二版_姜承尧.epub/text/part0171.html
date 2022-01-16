@@ -1,0 +1,429 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>9.7　选择合适的基准测试工具</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="532G60-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">9.7　选择合适的基准测试工具</h2>
+
+  <p class="ziti3">基准测试工具可以用来对数据库或操作系统调优后的性能进行对比。MySQL数据库本身提供了一些比较优秀的工具，这里将介绍另外两款更为优秀和常用的基准测试工具：sysbench和mysql-tpcc。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>9.7.1　sysbench</h3>
+
+  <p class="ziti3">sysbench是一个模块化的、跨平台的多线程基准测试工具，主要用于测试各种不同系统参数下的数据库负载情况。它主要包括以下几种测试方式：</p>
+
+  <p class="ziti3">❑CPU性能</p>
+
+  <p class="ziti3">❑磁盘IO性能</p>
+
+  <p class="ziti3">❑调度程序性能</p>
+
+  <p class="ziti3">❑内存分配及传输速度</p>
+
+  <p class="ziti3">❑POSIX线程性能</p>
+
+  <p class="ziti3">❑数据库OLTP基准测试</p>
+
+  <p class="ziti3">sysbench的数据库OLTP测试支持MySQL、PostgreSQL和Oracle。目前sysbench主要用于Linux操作系统，开源社区已经将sysbench移植到Windows，并支持对Microsoft SQL Server数据库的测试。</p>
+
+  <p class="ziti3">sysbench的官网地址是：http://sysbench.sourceforge.net，可以从该地址下载最新版本的sysbench工具，然后进行编译和安装。此外，有些Linux操作系统发行版本，如RED HAT，本身可能已经提供了sysbench的安装包，直接安装即可。</p>
+
+  <p class="ziti3">sysbench可以通过不同的参数设置来进行不同项目的测试，使用方法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#sysbench</p>
+
+  <p class="ziti4">Missing required command argument.</p>
+
+  <p class="ziti4">Usage:</p>
+
+  <p class="ziti4">sysbench[general-options]...--test=＜test-name＞[test-options]...command</p>
+
+  <p class="ziti4">General options:</p>
+
+  <p class="ziti4">--num-threads=N number of threads to use[1]</p>
+
+  <p class="ziti4">--max-requests=N limit for total number of requests[10000]</p>
+
+  <p class="ziti4">--max-time=N limit for total execution time in seconds[0]</p>
+
+  <p class="ziti4">--thread-stack-size=SIZE size of stack per thread[32K]</p>
+
+  <p class="ziti4">--init-rng=[on|off]initialize random number generator[off]</p>
+
+  <p class="ziti4">--test=STRING test to run</p>
+
+  <p class="ziti4">--debug=[on|off]print more debugging info[off]</p>
+
+  <p class="ziti4">--validate=[on|off]perform validation checks where possible[off]</p>
+
+  <p class="ziti4">--help=[on|off]print help and exit</p>
+
+  <p class="ziti4">--version=[on|off]print version and exit</p>
+
+  <p class="ziti4">Compiled-in tests:</p>
+
+  <p class="ziti4">fileio-File I/O test</p>
+
+  <p class="ziti4">cpu-CPU performance test</p>
+
+  <p class="ziti4">memory-Memory functions speed test</p>
+
+  <p class="ziti4">threads-Threads subsystem performance test</p>
+
+  <p class="ziti4">mutex-Mutex performance test</p>
+
+  <p class="ziti4">oltp-OLTP test</p>
+
+  <p class="ziti4">Commands:prepare run cleanup help version</p>
+
+  <p class="ziti4">See'sysbench--test=＜name＞help'for a list of options for each test.</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">对于InnoDB存储引擎的数据库应用来说，用户可能更关心磁盘和OLTP的性能，因此主要测试fileio和oltp这两个项目。对于磁盘的测试，sysbench提供了以下的测试选项：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#sysbench--test=fileio help</p>
+
+  <p class="ziti4">sysbench 0.4.10:multi-threaded system evaluation benchmark</p>
+
+  <p class="ziti4">fileio options:</p>
+
+  <p class="ziti4">--file-num=N number of files to create[128]</p>
+
+  <p class="ziti4">--file-block-size=N block size to use in all IO operations[16384]</p>
+
+  <p class="ziti4">--file-total-size=SIZE total size of files to create[2G]</p>
+
+  <p class="ziti4">--file-test-mode=STRING test mode{seqwr,seqrewr,seqrd,rndrd,rndwr,rndrw}</p>
+
+  <p class="ziti4">--file-io-mode=STRING file operations mode{sync,async,fastmmap,slowmmap}[sync]</p>
+
+  <p class="ziti4">--file-extra-flags=STRING additional flags to use on opening files{sync,dsync,direct}[]</p>
+
+  <p class="ziti4">--file-fsync-freq=N do fsync()after this number of requests(0-don't use fsync())[100]</p>
+
+  <p class="ziti4">--file-fsync-all=[on|off]do fsync()after each write operation[off]</p>
+
+  <p class="ziti4">--file-fsync-end=[on|off]do fsync()at the end of test[on]</p>
+
+  <p class="ziti4">--file-fsync-mode=STRING which method to use for synchronization{fsync,fdatasync}[fsync]</p>
+
+  <p class="ziti4">--file-merged-requests=N merge at most this number of IO requests if possible(0-don't merge)[0]</p>
+
+  <p class="ziti4">--file-rw-ratio=N reads/writes ratio for combined test[1.5]</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">各个参数的含义如下：</p>
+
+  <p class="ziti3">❑--file-num，生成测试文件的数量，默认为128。</p>
+
+  <p class="ziti3">❑--file-block-size，测试期间文件块的大小，如果想知道磁盘针对InnoDB存储引擎进行的测试，可以将其设置为16384，即InnoDB存储引擎页的大小。默认为16384。</p>
+
+  <p class="ziti3">❑--file-total-size，每个文件的大小，默认为2GB。</p>
+
+  <p class="ziti3">❑--file-test-mode，文件测试模式,包含seqwr（顺序写）、seqrewr（顺序读写）、seqrd（顺序读）、rndrd（随机读）、rndwr（随机写）和rndrw（随机读写）。</p>
+
+  <p class="ziti3">❑--file-io-mode，文件操作的模式，同步还是异步，或者是选择MMAP（map映射）模式。默认为同步。</p>
+
+  <p class="ziti3">❑--file-extra-flags，打开文件时的选项，这是与API相关的参数。</p>
+
+  <p class="ziti3">❑--file-fsync-freq，执行fsync函数的频率。fsync主要是同步磁盘文件，因为可能有系统和磁盘缓冲的关系。</p>
+
+  <p class="ziti3">❑--file-fsync-all，每执行完一次写操作，就执行一次fsync。默认为off。</p>
+
+  <p class="ziti3">❑--file-fsync-end，在测试结束时，执行fsync。默认为on。</p>
+
+  <p class="ziti3">❑--file-fsync-mode，文件同步函数的选择，同样是和API相关的参数，由于多个操作系统对fdatasync支持的不同，因此不建议使用fdatasync。默认为fsync。</p>
+
+  <p class="ziti3">❑--file-rw-ratio，测试时的读写比例，默认是2∶1。</p>
+
+  <p class="ziti3">sysbench的fileio测试需要经过prepare、run和cleanup三个阶段。prepare是准备阶段，生产需要的测试文件，run是实际测试阶段，cleanup是清理测试产生的文件。例如进行16个文件、总大小2GB的fileio测试：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server ssd]#sysbench--test=fileio--file-num=16--file-total-size=2G prepare</p>
+
+  <p class="ziti4">sysbench 0.4.10:multi-threaded system evaluation benchmark</p>
+
+  <p class="ziti4">16 files,131072Kb each,2048Mb total</p>
+
+  <p class="ziti4">Creating files for the test...</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着在相应的目录下就会产生16个文件，因为总大小是2GB，所以每个文件的大小应该是128MB。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server ssd]#ls-lh</p>
+
+  <p class="ziti4">total 2G</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.0</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.1</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.10</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.11</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.12</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.13</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.14</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.15</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.2</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.3</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.4</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.5</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.6</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.7</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.8</p>
+
+  <p class="ziti4">-rw-------1 root root 128M Aug 12 10:42 test_file.9</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着就可以基于这些文件进行测试了。下面是在16个线程下的随机读取性能：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server ssd]#sysbench--test=fileio--file-total-size=2G--file-test-mode=rndrd--max-time=180--max-requests=100000000--num-threads=16--init-rng=on--file-num=16--file-extra-flags=direct--file-fsync-freq=0--file-block-size=16384 run</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述测试的最大随机读取请求是100 000 000次，如果在180秒内不能完成，测试即结束。测试结束后可以看到如下的测试结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server ssd]#sysbench--test=fileio--file-total-size=2G--file-test-mode=rndrd--max-time=180--max-requests=100000000--num-threads=16--init-rng=on--file-num=16--file-extra-flags=direct--file-fsync-freq=0--file-block-size=16384 run</p>
+
+  <p class="ziti4">sysbench 0.4.10:multi-threaded system evaluation benchmark</p>
+
+  <p class="ziti4">Running the test with following options:</p>
+
+  <p class="ziti4">Number of threads:16</p>
+
+  <p class="ziti4">Initializing random number generator from timer.</p>
+
+  <p class="ziti4">Extra file open flags:16384</p>
+
+  <p class="ziti4">16 files,128Mb each</p>
+
+  <p class="ziti4">2Gb total file size</p>
+
+  <p class="ziti4">Block size 16Kb</p>
+
+  <p class="ziti4">Number of random requests for random IO:100000000</p>
+
+  <p class="ziti4">Read/Write ratio for combined random IO test:1.50</p>
+
+  <p class="ziti4">Calling fsync()at the end of test,Enabled.</p>
+
+  <p class="ziti4">Using synchronous I/O mode</p>
+
+  <p class="ziti4">Doing random read test</p>
+
+  <p class="ziti4">Threads started!</p>
+
+  <p class="ziti4">Time limit exceeded,exiting...</p>
+
+  <p class="ziti4">(last message repeated 15 times)</p>
+
+  <p class="ziti4">Done.</p>
+
+  <p class="ziti4">Operations performed:619908 Read,0 Write,0 Other=619908 Total</p>
+
+  <p class="ziti4">Read 9.459Gb Written 0b Total transferred 9.459Gb(53.81Mb/sec)</p>
+
+  <p class="ziti4">3443.85 Requests/sec executed</p>
+
+  <p class="ziti4">Test execution summary:</p>
+
+  <p class="ziti4">total time:180.0044s</p>
+
+  <p class="ziti4">total number of events:619908</p>
+
+  <p class="ziti4">total time taken by event execution:2878.0750</p>
+
+  <p class="ziti4">per-request statistics:</p>
+
+  <p class="ziti4">min:0.42ms</p>
+
+  <p class="ziti4">avg:4.64ms</p>
+
+  <p class="ziti4">max:27.30ms</p>
+
+  <p class="ziti4">approx.95 percentile:8.13ms</p>
+
+  <p class="ziti4">Threads fairness:</p>
+
+  <p class="ziti4">events(avg/stddev):38744.2500/102.69</p>
+
+  <p class="ziti4">execution time(avg/stddev):179.8797/0.00</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到随机读取的性能为53.81MB/s，随机读的IOPS为3443.85。测试的硬盘是固态硬盘，因此随机读取的性能较为强劲。此外还可以看到每次请求的一些具体数据，如最大值、最小值、平均值等。</p>
+
+  <p class="ziti3">测试结束后，记得要执行cleanup，确保测试产生的文件都已删除：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server ssd]#sysbench--test=fileio--file-num=16--file-total-size=2G cleanup</p>
+
+  <p class="ziti4">sysbench 0.4.10:multi-threaded system evaluation benchmark</p>
+
+  <p class="ziti4">Removing test files...</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可能用户需要测试随机读、随机写、随机读写、顺序写、顺序读等所有这些模式，并且还可能需要测试不同的线程和不同文件块下磁盘的性能表现，这时可能需要类似如下的脚本来帮用户自动完成这些测试：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#!/bin/sh</p>
+
+  <p class="ziti4">set-u</p>
+
+  <p class="ziti4">set-x</p>
+
+  <p class="ziti4">set-e</p>
+
+  <p class="ziti4">for size in 8G 64G;do</p>
+
+  <p class="ziti4">for mode in seqrd seqrw rndrd rndwr rndrw;do</p>
+
+  <p class="ziti4">for blksize in 4096 16384;do</p>
+
+  <p class="ziti4">sysbench--test=fileio--file-num=64--file-total-size=$size prepare</p>
+
+  <p class="ziti4">for threads in 1 4 8 16 32;do</p>
+
+  <p class="ziti4">echo"======testing$blksize in$threads threads"</p>
+
+  <p class="ziti4">echo PARAMS$size$mode$threads$blksize＞sysbench-size-$size-mode-$mode-threads-$threads-blksz-$blksize</p>
+
+  <p class="ziti4">for i in 1 2 3;do</p>
+
+  <p class="ziti4">sysbench--test=fileio--file-total-size=$size--file-test-mode=$mode\</p>
+
+  <p class="ziti4">--max-time=180--max-requests=100000000--num-threads=$threads--init-rng=on\</p>
+
+  <p class="ziti4">--file-num=64--file-extra-flags=direct--file-fsync-freq=0--file-block-size=$blksize run\</p>
+
+  <p class="ziti4">|tee-a sysbench-size-$size-mode-$mode-threads-$threads-blksz-$blksize 2＞＆1</p>
+
+  <p class="ziti4">done</p>
+
+  <p class="ziti4">done</p>
+
+  <p class="ziti4">sysbench--test=fileio--file-total-size=$size cleanup</p>
+
+  <p class="ziti4">done</p>
+
+  <p class="ziti4">done</p>
+
+  <p class="ziti4">done</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">对于MySQL数据库的OLTP测试，和fileio一样需要经历prepare、run和cleanup阶段。prepare阶段会根据选项产生一张指定行数的表，默认表在sbtest架构下，表名为sbtest（sysbench默认生成表的存储引擎为InnoDB）。例如创建一张8000W的表：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#sysbench--test=oltp--oltp-table-size=80000000--db-driver=mysql--mysql-socket=/tmp/mysql.sock--mysql-user=root prepare</p>
+
+  <p class="ziti4">sysbench 0.4.10:multi-threaded system evaluation benchmark</p>
+
+  <p class="ziti4">Creating table'sbtest'...</p>
+
+  <p class="ziti4">Creating 80000000 records in table'sbtest'...</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着就可以根据产生的表进行oltp的测试：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">sysbench--test=oltp--oltp-table-size=80000000--oltp-read-only=off--init-rng=on--num-threads=16--max-requests=0--oltp-dist-type=uniform--max-time=3600--mysql-user=root--mysql-socket=/tmp/mysql.sock--db-driver=mysql run＞res</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">用户可将测试结果放入到了文件res中，查看res可得类似如下结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">sysbench 0.4.10:multi-threaded system evaluation benchmark</p>
+
+  <p class="ziti4">WARNING:Preparing of"BEGIN"is unsupported,using emulation</p>
+
+  <p class="ziti4">(last message repeated 15 times)</p>
+
+  <p class="ziti4">Running the test with following options:</p>
+
+  <p class="ziti4">Number of threads:16</p>
+
+  <p class="ziti4">Initializing random number generator from timer.</p>
+
+  <p class="ziti4">Doing OLTP test.</p>
+
+  <p class="ziti4">Running mixed OLTP test</p>
+
+  <p class="ziti4">Using Uniform distribution</p>
+
+  <p class="ziti4">Using"BEGIN"for starting transactions</p>
+
+  <p class="ziti4">Using auto_inc on the id column</p>
+
+  <p class="ziti4">Threads started!</p>
+
+  <p class="ziti4">Time limit exceeded,exiting...</p>
+
+  <p class="ziti4">(last message repeated 15 times)</p>
+
+  <p class="ziti4">Done.</p>
+
+  <p class="ziti4">OLTP test statistics:</p>
+
+  <p class="ziti4">queries performed:</p>
+
+  <p class="ziti4">read:6043324</p>
+
+  <p class="ziti4">write:2158330</p>
+
+  <p class="ziti4">other:863332</p>
+
+  <p class="ziti4">total:9064986</p>
+
+  <p class="ziti4">transactions:431666(119.90 per sec.)</p>
+
+  <p class="ziti4">deadlocks:0(0.00 per sec.)</p>
+
+  <p class="ziti4">read/write requests:8201654(2278.07 per sec.)</p>
+
+  <p class="ziti4">other operations:863332(239.80 per sec.)</p>
+
+  <p class="ziti4">Test execution summary:</p>
+
+  <p class="ziti4">total time:3600.2672s</p>
+
+  <p class="ziti4">total number of events:431666</p>
+
+  <p class="ziti4">total time taken by event execution:57598.5965</p>
+
+  <p class="ziti4">per-request statistics:</p>
+
+  <p class="ziti4">min:6.84ms</p>
+
+  <p class="ziti4">avg:133.43ms</p>
+
+  <p class="ziti4">max:7155.61ms</p>
+
+  <p class="ziti4">approx.95 percentile:325.84ms</p>
+
+  <p class="ziti4">Threads fairness:</p>
+
+  <p class="ziti4">events(avg/stddev):26979.1250/64.14</p>
+
+  <p class="ziti4">execution time(avg/stddev):3599.9123/0.06.</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">结果中罗列出了测试时很多操作的详细信息，transactions代表了测试结果的评判标准，即TPS，上述测试的结果是119.9tps。用户可以对数据库进行调优后再运行sysbench的OLTP测试，看看TPS是否有所提高。注意，sysbench的测试只是基准测试，并不代表实际生产环境下的性能指标。</p>
+</body></html>

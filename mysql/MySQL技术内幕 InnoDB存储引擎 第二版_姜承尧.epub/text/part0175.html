@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>10.2　InnoDB源代码结构</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="56SIE0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">10.2　InnoDB源代码结构</h2>
+
+  <p class="ziti3">进入InnoDB存储引擎的源代码文件夹，应该可以看到如图10-7所示的源代码结构。下面介绍一些主要文件夹内的源代码的具体作用。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00163.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-7　InnoDB存储引擎源代码的文件夹结构
+  </div>
+
+  <p class="ziti3">❑btr：B+树的实现。</p>
+
+  <p class="ziti3">❑buf：缓冲池的实现，包括LRU算法，Flush刷新算法等。</p>
+
+  <p class="ziti3">❑dict：InnoDB存储引擎中内存数据字典的实现。</p>
+
+  <p class="ziti3">❑dyn：InnoDB存储引擎中动态数组的实现。</p>
+
+  <p class="ziti3">❑fil：InnoDB存储引擎中文件数据结构以及对文件的一些操作。</p>
+
+  <p class="ziti3">❑fsp：可以理解为file space，即对InnoDB存储引擎物理文件的管理，如页、区、段等。</p>
+
+  <p class="ziti3">❑ha：哈希算法的实现。</p>
+
+  <p class="ziti3">❑handler：继承于MySQL的handler，插件式存储引擎的实现。</p>
+
+  <p class="ziti3">❑ibuf：插入缓冲的实现。</p>
+
+  <p class="ziti3">❑include：InnoDB将头文件（.h，.ic）文件都统一放在这个文件夹下。</p>
+
+  <p class="ziti3">❑lock：InnoDB存储引擎锁的实现，如S锁、X锁，以及定义锁的一系列算法。</p>
+
+  <p class="ziti3">❑log：日志缓冲和重组日志文件的实现。对重组日志感兴趣的应该好好阅读该源代码。</p>
+
+  <p class="ziti3">❑mem：辅助缓冲池的实现，用来申请一些数据结构的内存。</p>
+
+  <p class="ziti3">❑mtr：事务的底层实现。</p>
+
+  <p class="ziti3">❑os：封装一些对于操作系统的操作。</p>
+
+  <p class="ziti3">❑page：页的实现。</p>
+
+  <p class="ziti3">❑row：对于各种类型行数据的操作。</p>
+
+  <p class="ziti3">❑srv：对于InnoDB存储引擎参数的设计。</p>
+
+  <p class="ziti3">❑sync：InnoDB存储引擎互斥量（Mutex）的实现。</p>
+
+  <p class="ziti3">❑thr：InnoDB储存引擎封装的可移植的线程库。</p>
+
+  <p class="ziti3">❑trx：事务的实现。</p>
+
+  <p class="ziti3">❑ut：工具类。</p>
+</body></html>

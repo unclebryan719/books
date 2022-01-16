@@ -1,0 +1,27 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.8　锁升级</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3Q2800-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">6.8　锁升级</h2>
+
+  <p class="ziti3">锁升级（Lock Escalation）是指将当前锁的粒度降低。举例来说，数据库可以把一个表的1000个行锁升级为一个页锁，或者将页锁升级为表锁。如果在数据库的设计中认为锁是一种稀有资源，而且想避免锁的开销，那数据库中会频繁出现锁升级现象。</p>
+
+  <p class="ziti3">Microsoft SQL Server数据库的设计认为锁是一种稀有的资源，在适合的时候会自动地将行、键或分页锁升级为更粗粒度的表级锁。这种升级保护了系统资源，防止系统使用太多的内存来维护锁，在一定程度上提高了效率。</p>
+
+  <p class="ziti3">即使在Microsoft SQL Server 2005版本之后，SQL Server数据库支持了行锁，但是其设计和InnoDB存储引擎完全不同，在以下情况下依然可能发生锁升级：</p>
+
+  <p class="ziti3">❑由一句单独的SQL语句在一个对象上持有的锁的数量超过了阈值，默认这个阈值为5000。值得注意的是，如果是不同对象，则不会发生锁升级</p>
+
+  <p class="ziti3">❑锁资源占用的内存超过了激活内存的40%时就会发生锁升级</p>
+
+  <p class="ziti3">在Microsoft SQL Server数据库中，由于锁是一种稀有的资源，因此锁升级会带来一定的效率提高。但是锁升级带来的一个问题却是因为锁粒度的降低而导致并发性能的降低。</p>
+
+  <p class="ziti3">InnoDB存储引擎不存在锁升级的问题。因为其不是根据每个记录来产生行锁的，相反，其根据每个事务访问的每个页对锁进行管理的，采用的是位图的方式。因此不管一个事务锁住页中一个记录还是多个记录，其开销通常都是一致的。</p>
+
+  <p class="ziti3">假设一张表有3 000 000个数据页，每个页大约有100条记录，那么总共有300 000 000条记录。若有一个事务执行全表更新的SQL语句，则需要对所有记录加X锁。若根据每行记录产生锁对象进行加锁，并且每个锁占用10字节，则仅对锁管理就需要差不多需要3GB的内存。而InnoDB存储引擎根据页进行加锁，并采用位图方式，假设每个页存储的锁信息占用30个字节，则锁对象仅需90MB的内存。由此可见两者对于锁资源开销的差距之大。</p>
+</body></html>

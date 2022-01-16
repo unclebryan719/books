@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>1.3.8　其他存储引擎</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="H5A40-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">1.3.8　其他存储引擎</h3>
+
+  <p class="ziti3">除了上面提到的7种存储引擎外，MySQL数据库还有很多其他的存储引擎，包括Merge、CSV、Sphinx和Infobright，它们都有各自使用的场合，这里不再一一介绍。在了解MySQL数据库拥有这么多存储引擎后，现在我可以回答1.2节中提到的问题了。</p>
+
+  <p class="ziti3">❑为什么MySQL数据库不支持全文索引？不！MySQL支持，MyISAM、InnoDB（1.2版本）和Sphinx存储引擎都支持全文索引。</p>
+
+  <p class="ziti3">❑MySQL数据库速度快是因为不支持事务？错！虽然MySQL的MyISAM存储引擎不支持事务，但是InnoDB支持。“快”是相对于不同应用来说的，对于ETL这种操作，MyISAM会有其优势，但在OLTP环境中，InnoDB存储引擎的效率更好。</p>
+
+  <p class="ziti3">❑当表的数据量大于1000万时MySQL的性能会急剧下降吗？不！MySQL是数据库，不是文件，随着数据行数的增加，性能当然会有所下降，但是这些下降不是线性的，如果用户选择了正确的存储引擎，以及正确的配置，再多的数据量MySQL也能承受。如官方手册上提及的，Mytrix和Inc.在InnoDB上存储超过1 TB的数据，还有一些其他网站使用InnoDB存储引擎，处理插入/更新的操作平均800次/秒。</p>
+</body></html>

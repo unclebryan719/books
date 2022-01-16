@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>第9章　性能调优</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4QFR40-878f632495a744b2a24ea2205f162355" class="calibre">
+<h2 class="p4" id="heading_id_3"><a id="bw1" class="pcalibre calibre1"></a>9.1　选择合适的CPU</h2>
+
+  <p class="ziti3">用户首先需要清楚当前数据库的应用类型。一般而言，可分为两大类：OLTP（Online Transaction Processing，在线事务处理）和OLAP（Online Analytical Processing，在线分析处理）。这是两种截然不同的数据库应用。OLAP多用在数据仓库或数据集市中，一般需要执行复杂的SQL语句来进行查询；OLTP多用在日常的事物处理应用中，如银行交易、在线商品交易、Blog、网络游戏等应用。相对于OLAP，数据库的容量较小。</p>
+
+  <p class="ziti3">InnoDB存储引擎一般都应用于OLTP的数据库应用，这种应用的特点如下：</p>
+
+  <p class="ziti3">❑用户操作的并发量大</p>
+
+  <p class="ziti3">❑事务处理的时间一般比较短</p>
+
+  <p class="ziti3">❑查询的语句较为简单，一般都走索引</p>
+
+  <p class="ziti3">❑复杂的查询较少</p>
+
+  <p class="ziti3">可以看出，OLTP的数据库应用本身对CPU的要求并不是很高，因为复杂的查询可能需要执行比较、排序、连接等非常耗CPU的操作，这些操作在OLTP的数据库应用中较少发生。因此，可以说OLAP是CPU密集型的操作，而OLTP是IO密集型的操作。建议在采购设备时，将更多的注意力放在提高IO的配置上。</p>
+
+  <p class="ziti3">此外，为了获得更多内存的支持，用户采购的CPU必须支持64位，否则无法支持64位操作系统的安装。因此，为新的应用选择64位的CPU是必要的前提。现在4核的CPU已经非常普遍，如今Intel和AMD又相继推出了8核的CPU，将来随着操作系统的升级我们还可能看到128核的CPU，这都需要数据库更好地对其提供支持。</p>
+
+  <p class="ziti3">从InnoDB存储引擎的设计架构上来看，其主要的后台操作都是在一个单独的master thread中完成的，因此并不能很好地支持多核的应用。当然，开源社区已经通过多种方法来改变这种局面，而InnoDB1.0版本在各种测试下已经显示出对多核CPU的处理性能的支持有了极大的提高，而InnoDB 1.2版本又支持多个purge线程，以及将刷新操作从master thread中分离出来。因此，若用户的CPU支持多核，InnoDB的版本应该选择1.1或更高版本。另外，如果CPU是多核的，可以通过修改参数innodb_read_io_threads和innodb_write_io_threads来增大IO的线程，这样也能更充分有效地利用CPU的多核性能。</p>
+
+  <p class="ziti3">在当前的MySQL数据库版本中，一条SQL查询语句只能在一个CPU中工作，并不支持多CPU的处理。OLTP的数据库应用操作一般都很简单，因此对OLTP应用的影响并不是很大。但是，多个CPU或多核CPU对处理大并发量的请求还是会有帮助。</p>
+</body></html>

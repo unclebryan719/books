@@ -1,0 +1,173 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.8.3　使用自动回滚</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="49AH00-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">7.8.3　使用自动回滚</h3>
+
+  <p class="ziti3">InnoDB存储引擎支持通过定义一个HANDLER来进行自动事务的回滚操作，如在一个存储过程中发生了错误会自动对其进行回滚操作。因此我发现很多开发人员喜欢在应用程序的存储过程中使用自动回滚操作，例如下面所示的一个存储过程：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE PROCEDURE sp_auto_rollback_demo()</p>
+
+  <p class="ziti4">BEGIN</p>
+
+  <p class="ziti4">DECLARE EXIT HANDLER FOR SQLEXCEPTION ROLLBACK;</p>
+
+  <p class="ziti4">START TRANSACTION;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 1;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 2;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 1;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 3;</p>
+
+  <p class="ziti4">COMMIT;</p>
+
+  <p class="ziti4">END;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">存储过程sp_auto_rollback_demo首先定义了一个exit类型的HANDLER，当捕获到错误时进行回滚。结构如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW CREATE TABLE b\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Table:b</p>
+
+  <p class="ziti4">Create Table:CREATE TABLE'b'(</p>
+
+  <p class="ziti4">'a'int(11)NOT NULL DEFAULT'0',</p>
+
+  <p class="ziti4">PRIMARY KEY('a')</p>
+
+  <p class="ziti4">)ENGINE=InnoDB DEFAULT CHARSET=latin1</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">因此插入第二个记录1时会发生错误，但是因为启用了自动回滚的操作，因此这个存储过程的执行结果如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CALL sp_auto_rollback_demo;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.06 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM b;</p>
+
+  <p class="ziti4">Empty set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">看起来运行没有问题，非常正常。但是，执行sp_auto_rollback_demo这个存储过程的结果到底是正确的还是错误的？对于同样的存储过程sp_auto_rollback_demo，为了得到执行正确与否的结果，开发人员可能会进行这样的处理：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE PROCEDURE sp_auto_rollback_demo()</p>
+
+  <p class="ziti4">BEGIN</p>
+
+  <p class="ziti4">DECLARE EXIT HANDLER FOR SQLEXCEPTION BEGIN ROLLBACK;SELECT-1;END;</p>
+
+  <p class="ziti4">START TRANSACTION;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 1;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 2;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 1;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 3;</p>
+
+  <p class="ziti4">COMMIT;</p>
+
+  <p class="ziti4">SELECT 1;</p>
+
+  <p class="ziti4">END;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">当发生错误时，先回滚然后返回-1，表示运行有错误。运行正常返回值1。因此这次运行的结果就会变成：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CALL sp_auto_rollback_demo()\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">-1:-1</p>
+
+  <p class="ziti4">1 row in set(0.04 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM b;</p>
+
+  <p class="ziti4">Empty set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">看起来用户可以得到运行是否准确的信息。但问题还没有最终解决，对于开发人员来说，重要的不仅是知道发生了错误，而是发生了什么样的错误。因此自动回滚存在这样的一个问题。</p>
+
+  <p class="ziti3">习惯使用自动回滚的人大多是以前使用Microsoft SQL Server数据库的开发人员。在Microsoft SQL Server数据库中，可以使用SET XABORT ON来自动回滚一个事务。但是Microsoft SQL Server数据库不仅会自动回滚当前的事务，还会抛出异常，开发人员可以捕获到这个异常。因此，Microsoft SQL Server数据库和MySQL数据库在这方面是有所不同的。</p>
+
+  <p class="ziti3">就像之前小节中所讲到的，对事务的BEGIN、COMMIT和ROLLBACK操作应该交给程序端来完成，存储过程需要完成的只是一个逻辑的操作，即对逻辑进行封装。下面演示用Python语言编写的程序调用一个存储过程sp_rollback_demo，这里的存储过程sp_rollback_demo和之前的存储过程sp_auto_rollback_demo在逻辑上完成的内容大致相同：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE PROCEDURE sp_rollback_demo()</p>
+
+  <p class="ziti4">BEGIN</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 1;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 2;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 1;</p>
+
+  <p class="ziti4">INSERT INTO b SELECT 3;</p>
+
+  <p class="ziti4">END;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">和sp_auto_rollback_demo存储过程不同的是，在sp_rollback_demo存储过程中去掉了对于事务的控制语句，将这些操作都交由程序来完成。接着来看test_demo.py的程序源代码：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#!/usr/bin/env python</p>
+
+  <p class="ziti4">#encoding=utf-8</p>
+
+  <p class="ziti4">import MySQLdb</p>
+
+  <p class="ziti4">try:</p>
+
+  <p class="ziti4">conn=</p>
+
+  <p class="ziti4">MySQLdb.connect(host="192.168.8.7",user="root",passwd="xx",db="test")</p>
+
+  <p class="ziti4">cur=conn.cursor()</p>
+
+  <p class="ziti4">cur.execute("SET autocommit=0")</p>
+
+  <p class="ziti4">cur.execute("CALL sp_rollback_demo")</p>
+
+  <p class="ziti4">cur.execute("COMMIT")</p>
+
+  <p class="ziti4">except Exception,e:</p>
+
+  <p class="ziti4">cur.execute("ROLLBACK")</p>
+
+  <p class="ziti4">print e</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">观察运行test_demo.py这个程序的结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nineyou0-43～]#python test_demo.py</p>
+
+  <p class="ziti4">starting rollback</p>
+
+  <p class="ziti4">(1062,"Duplicate entry'1'for key'PRIMARY'")</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在程序中控制事务的好处是，用户可以得知发生错误的原因。如在上述这个例子中，我们知道是因为发生了1062这个错误，错误的提示内容是Duplicate entry'1'for key'PRIMARY'，即发生了主键重复的错误。然后可以根据发生的原因来进一步调试程序。</p>
+</body></html>

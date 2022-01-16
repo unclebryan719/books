@@ -1,0 +1,17 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>9.6　不同的文件系统对数据库性能的影响</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="523VK0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">9.6　不同的文件系统对数据库性能的影响</h2>
+
+  <p class="ziti3">每个操作系统都默认支持一种文件系统并推荐用户使用，如Windows默认支持NTFS，Solaris默认支持ZFS。而对于Linux这样的操作系统，不同发行版本默认支持的文件系统各不相同，有的默认支持EXT3，有的是ReiserFS，有的是EXT4，有的是XFS。</p>
+
+  <p class="ziti3">虽然不同特性的文件系统有很多，但是在实际使用过程中从未感觉到文件系统的性能差异有多大。网上有多个关于XFS文件系统的“神话”，认为其是多么地适合数据库应用，性能较之EXT3有极大的提升。但是在实际测试和使用后发现，它的性能和EXT3在整体上没有大的差距。因此，DBA首先应该把更多的注意力放到数据库上，而不是纠结于文件系统。</p>
+
+  <p class="ziti3">文件系统可提供的功能也许是DBA需要关注的，例如ZFS文件系统本身就可以支持快照，因此就不需要LVM这样的逻辑卷管理工具。此外，可能还需要知道mount的参数，这些参数在每个文件系统中可能有所不同。</p>
+</body></html>

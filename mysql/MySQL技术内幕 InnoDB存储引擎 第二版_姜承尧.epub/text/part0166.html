@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>9.4　合理地设置RAID</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4U9TC0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">9.4　合理地设置RAID</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>9.4.1　RAID类型</h3>
+
+  <p class="ziti3">RAID（Redundant Array of Independent Disks，独立磁盘冗余数组）的基本思想就是把多个相对便宜的硬盘组合起来，成为一个磁盘数组，使性能达到甚至超过一个价格昂贵、容量巨大的硬盘。由于将多个硬盘组合成为一个逻辑扇区，RAID看起来就像一个单独的硬盘或逻辑存储单元，因此操作系统只会把它当作一个硬盘。</p>
+
+  <p class="ziti3">RAID的作用是：</p>
+
+  <p class="ziti3">❑增强数据集成度</p>
+
+  <p class="ziti3">❑增强容错功能</p>
+
+  <p class="ziti3">❑增加处理量或容量</p>
+
+  <p class="ziti3">根据不同磁盘的组合方式，常见的RAID组合方式可分为RAID 0、RAID 1、RAID 5、RAID 10和RAID 50等。</p>
+
+  <p class="ziti3">RAID 0：将多个磁盘合并成一个大的磁盘，不会有冗余，并行I/O，速度最快。RAID 0亦称为带区集，它将多个磁盘并列起来，使之成为一个大磁盘，如图9-4所示。在存放数据时，其将数据按磁盘的个数进行分段，同时将这些数据写进这些盘中。所以，在所有的级别中，RAID 0的速度是最快的。但是RAID 0没有冗余功能，如果一个磁盘（物理）损坏，则所有的数据都会丢失。理论上，多磁盘的效能就等于（单一磁盘效能）×（磁盘数），但实际上受限于总线I/O瓶颈及其他因素的影响，RAID效能会随边际递减。也就是说，假设一个磁盘的效能是50MB/s，两个磁盘的RAID 0效能约96MB/s，三个磁盘的RAID 0也许是130MB/s而不是150MB/s。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00149.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　9-4　RAID 0结构
+  </div>
+
+  <p class="ziti3">RAID 1：两组以上的N个磁盘相互作为镜像（如图9-5所示），在一些多线程操作系统中能有很好的读取速度，但写入速度略有降低。除非拥有相同数据的主磁盘与镜像同时损坏，否则只要一个磁盘正常即可维持运作，可靠性最高。RAID 1就是镜像，其原理为在主硬盘上存放数据的同时也在镜像硬盘上写相同的数据。当主硬盘（物理）损坏时，镜像硬盘则代替主硬盘的工作。因为有镜像硬盘做数据备份，所以RAID 1的数据安全性在所有的RAID级别上来说是最好的。但是，无论用多少磁盘作为RAID 1，仅算一个磁盘的容量，是所有RAID中磁盘利用率最低的一个级别。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00150.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　9-5　RAID 1结构
+  </div>
+
+  <p class="ziti3">RAID 5：是一种存储性能、数据安全和存储成本兼顾的存储解决方案。它使用的是Disk Striping（硬盘分区）技术。RAID 5至少需要三个硬盘，RAID 5不对存储的数据进行备份，而是把数据和相对应的奇偶校验信息存储到组成RAID 5的各个磁盘上，并且奇偶校验信息和相对应的数据分别存储于不同的磁盘上。当RAID 5的一个磁盘数据发生损坏后，利用剩下的数据和相应的奇偶校验信息去恢复被损坏的数据。RAID 5可以理解为是RAID 0和RAID 1的折中方案。RAID 5可以为系统提供数据安全保障，但保障程度要比镜像低而磁盘空间利用率要比镜像高。RAID 5具有和RAID 0相近似的数据读取速度，只是多了一个奇偶校验信息，写入数据的速度相当慢，若使用Write Back可以让性能改善不少。同时，由于多个数据对应一个奇偶校验信息，RAID 5的磁盘空间利用率要比RAID 1高，存储成本相对较低。RAID 5的结构如图9-6所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00151.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　9-6　RAID 5结构
+  </div>
+
+  <p class="ziti3">RAID 10和RAID 01：RAID 10是先镜像再分区数据，将所有硬盘分为两组，视为RAID 0的最低组合，然后将这两组各自视为RAID 1运作。RAID 10有着不错的读取速度，而且拥有比RAID 0更高的数据保护性。RAID 01则与RAID 10的程序相反，先分区再将数据镜射到两组硬盘。RAID 01将所有的硬盘分为两组，变成RAID 1的最低组合，而将两组硬盘各自视为RAID 0运作。RAID 01比RAID 10有着更快的读写速度，不过也多了一些会让整个硬盘组停止运转的几率，因为只要同一组的硬盘全部损毁，RAID 01就会停止运作，而RAID 10可以在牺牲RAID 0的优势下正常运作。RAID 10巧妙地利用了RAID 0的速度及RAID 1的安全（保护）两种特性，它的缺点是需要较多的硬盘，因为至少必须拥有四个以上的偶数硬盘才能使用。RAID 10和RAID 01的结构如图9-7所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00152.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　9-7　RAID 10和RAID 01结构
+  </div>
+
+  <p class="ziti3">RAID 50：RAID 50也被称为镜像阵列条带，由至少六块硬盘组成，像RAID 0一样，数据被分区成条带，在同一时间内向多块磁盘写入；像RAID 5一样，也是以数据的校验位来保证数据的安全，且校验条带均匀分布在各个磁盘上，其目的在于提高RAID 5的读写性能。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00153.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　9-8　RAID 50结构
+  </div>
+
+  <p class="ziti3">对于数据库应用来说，RAID 10是最好的选择，它同时兼顾了RAID 1和RAID 0的特性。但是，当一个磁盘失效时，性能可能会受到很大的影响，因为条带（strip）会成为瓶颈。我曾在生产环境下遇到过的情况是，两台负载基本相同的数据库，一台正常的服务器磁盘IO负载为20%左右，而另一台服务器IO负载却高达90%。</p>
+</body></html>

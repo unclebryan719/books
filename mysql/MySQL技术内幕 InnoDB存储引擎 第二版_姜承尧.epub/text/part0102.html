@@ -1,0 +1,121 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.6.6　Multi-Range Read优化</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="318PC0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.6.6　Multi-Range Read优化</h3>
+
+  <p class="ziti3">MySQL5.6版本开始支持Multi-Range Read（MRR）优化。Multi-Range Read优化的目的就是为了减少磁盘的随机访问，并且将随机访问转化为较为顺序的数据访问，这对于IO-bound类型的SQL查询语句可带来性能极大的提升。Multi-Range Read优化可适用于range，ref，eq_ref类型的查询。</p>
+
+  <p class="ziti3">MRR优化有以下几个好处：</p>
+
+  <p class="ziti3">❑MRR使数据访问变得较为顺序。在查询辅助索引时，首先根据得到的查询结果，按照主键进行排序，并按照主键排序的顺序进行书签查找。</p>
+
+  <p class="ziti3">❑减少缓冲池中页被替换的次数。</p>
+
+  <p class="ziti3">❑批量处理对键值的查询操作。</p>
+
+  <p class="ziti3">对于InnoDB和MyISAM存储引擎的范围查询和JOIN查询操作，MRR的工作方式如下：</p>
+
+  <p class="ziti3">❑将查询得到的辅助索引键值存放于一个缓存中，这时缓存中的数据是根据辅助索引键值排序的。</p>
+
+  <p class="ziti3">❑将缓存中的键值根据RowID进行排序。</p>
+
+  <p class="ziti3">❑根据RowID的排序顺序来访问实际的数据文件。</p>
+
+  <p class="ziti3">此外，若InnoDB存储引擎或者MyISAM存储引擎的缓冲池不是足够大，即不能存放下一张表中的所有数据，此时频繁的离散读操作还会导致缓存中的页被替换出缓冲池，然后又不断地被读入缓冲池。若是按照主键顺序进行访问，则可以将此重复行为降为最低。如下面这句SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM salaries WHERE salary＞10000 AND salary＜40000;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">salary上有一个辅助索引idx_s，因此除了通过辅助索引查找键值外，还需要通过书签查找来进行对整行数据的查询。当不启用Multi-Range Read特性时，看到的执行计划如图5-34所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00066.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-34　不启用Multi-Range Read的执行计划
+  </div>
+
+  <p class="ziti3">若启用Mulit-Range Read特性，则除了会在列Extra看到Using index condition外，还会看见Using MRR选项，如图5-35所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00067.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-35　启用Multi-Range Read的执行计划
+  </div>
+
+  <p class="ziti3">而在实际的执行中会体会到两个的执行时间差别非常巨大，如表5-4所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00068.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">在我的笔记本电脑上，上述两句语句的执行时间相差10倍之多。可见Multi-Range Read将访问数据转化为顺序后查询性能得到提高。</p>
+
+  <p class="ziti3">注意　上述测试都是在MySQL数据库启动后直接执行SQL查询语句，此时需确保缓冲池中没有被预热，以及需要查询的数据并不包含在缓冲池中。</p>
+
+  <p class="ziti3">此外，Multi-Range Read还可以将某些范围查询，拆分为键值对，以此来进行批量的数据查询。这样做的好处是可以在拆分过程中，直接过滤一些不符合查询条件的数据，例如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM t</p>
+
+  <p class="ziti4">WHERE key_part1＞=1000 AND key_part1＜2000</p>
+
+  <p class="ziti4">AND key_part2=10000;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">表t有（key_part1，key_part2）的联合索引，因此索引根据key_part1，key_part2的位置关系进行排序。若没有Multi-Read Range，此时查询类型为Range，SQL优化器会先将key_part1大于1000且小于2000的数据都取出，即使key_part2不等于1000。待取出行数据后再根据key_part2的条件进行过滤。这会导致无用数据被取出。如果有大量的数据且其key_part2不等于1000，则启用Mulit-Range Read优化会使性能有巨大的提升。</p>
+
+  <p class="ziti3">倘若启用了Multi-Range Read优化，优化器会先将查询条件进行拆分，然后再进行数据查询。就上述查询语句而言，优化器会将查询条件拆分为（1000，1000），（1001，1000），（1002，1000），…，（1999，1000），最后再根据这些拆分出的条件进行数据的查询。</p>
+
+  <p class="ziti3">可以来看一个实际的例子，查询如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM salaries</p>
+
+  <p class="ziti4">WHERE(from_date between'1986-01-01'AND'1995-01-01')</p>
+
+  <p class="ziti4">AND(salary between 38000 and 40000);</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">若启用了Multi-Range Read优化，则执行计划如图5-36所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00069.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-36　启用Multi-Range Read的执行计划
+  </div>
+
+  <p class="ziti3">表salaries上有对于salary的索引idx_s，在执行上述SQL语句时，因为启用了Multi-Range Read优化，所以会对查询条件进行拆分，这样在列Extra中可以看到Using MRR选项。</p>
+
+  <p class="ziti3">是否启用Multi-Range Read优化可以通过参数optimizer_switch中的标记（flag）来控制。当mrr为on时，表示启用Multi-Range Read优化。mrr_cost_based标记表示是否通过cost based的方式来选择是否启用mrr。若将mrr设为on，mrr_cost_based设为off，则总是启用Multi-Range Read优化。例如，下述语句可以将Multi-Range Read优化总是设为开启状态：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET@@optimizer_switch='mrr=on,mrr_cost_based=off';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">参数read_rnd_buffer_size用来控制键值的缓冲区大小，当大于该值时，则执行器对已经缓存的数据根据RowID进行排序，并通过RowID来取得行数据。该值默认为256K：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT@@read_rnd_buffer_size\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">@@read_rnd_buffer_size:262144</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

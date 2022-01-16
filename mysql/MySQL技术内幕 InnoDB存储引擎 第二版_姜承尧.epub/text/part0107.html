@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.8　全文检索</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="361C60-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">5.8　全文检索</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>5.8.1　概述</h3>
+
+  <p class="ziti3">通过前面章节的介绍，已经知道B+树索引的特点，可以通过索引字段的前缀（prefix）进行查找。例如，对于下面的查询B+树索引是支持的：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM blog WHERE content like'xxx%'</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述SQL语句可以查询博客内容以xxx开头的文章，并且只要content添加了B+树索引，就能利用索引进行快速查询。然而实际这种查询不符合用户的要求，因为在更多的情况下，用户需要查询的是博客内容包含单词xxx的文章，即：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM blog WHERE content like'%xxx%'</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">根据B+树索引的特性，上述SQL语句即便添加了B+树索引也是需要进行索引的扫描来得到结果。类似这样的需求在互联网应用中还有很多。例如，搜索引擎需要根据用户输入的关键字进行全文查找，电子商务网站需要根据用户的查询条件，在可能需要在商品的详细介绍中进行查找，这些都不是B+树索引所能很好地完成的工作。</p>
+
+  <p class="ziti3">全文检索（Full-Text Search）是将存储于数据库中的整本书或整篇文章中的任意内容信息查找出来的技术。它可以根据需要获得全文中有关章、节、段、句、词等信息，也可以进行各种统计和分析。</p>
+
+  <p class="ziti3">在之前的MySQL数据库中，InnoDB存储引擎并不支持全文检索技术。大多数的用户转向MyISAM存储引擎，这可能需要进行表的拆分，并将需要进行全文检索的数据存储为MyISAM表。这样的确能够解决逻辑业务的需求，但是却丧失了InnoDB存储引擎的事务性，而这在生产环境应用中同样是非常关键的。</p>
+
+  <p class="ziti3">从InnoDB 1.2.x版本开始，InnoDB存储引擎开始支持全文检索，其支持MyISAM存储引擎的全部功能，并且还支持其他的一些特性，这些将在后面的小节中进行介绍。</p>
+</body></html>

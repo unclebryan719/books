@@ -1,0 +1,1365 @@
+<?xml version='1.0' encoding='utf-8'?>
+<ncx xmlns="http://www.daisy.org/z3986/2005/ncx/" version="2005-1" xml:lang="zho">
+  <head>
+    <meta content="638f3984-5df6-406c-9a09-e4316936d717" name="dtb:uid"/>
+    <meta content="4" name="dtb:depth"/>
+    <meta content="calibre (2.34.0)" name="dtb:generator"/>
+    <meta content="0" name="dtb:totalPageCount"/>
+    <meta content="0" name="dtb:maxPageNumber"/>
+  </head>
+  <docTitle>
+    <text>MySQL技术内幕：InnoDB存储引擎 第2版</text>
+  </docTitle>
+  <navMap>
+    <navPoint class="chapter" id="num_1" playOrder="0">
+      <navLabel>
+        <text>推荐序</text>
+      </navLabel>
+      <content src="text/part0002.html#1T140-878f632495a744b2a24ea2205f162355"/>
+    </navPoint>
+    <navPoint class="chapter" id="num_2" playOrder="1">
+      <navLabel>
+        <text>前言</text>
+      </navLabel>
+      <content src="text/part0003.html#2RHM0-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_3" playOrder="1">
+        <navLabel>
+          <text>为什么要写这本书</text>
+        </navLabel>
+        <content src="text/part0003.html#heading_id_3"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_4" playOrder="3">
+        <navLabel>
+          <text>第1版与第2版的区别</text>
+        </navLabel>
+        <content src="text/part0004.html#3Q280-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_5" playOrder="4">
+        <navLabel>
+          <text>读者对象</text>
+        </navLabel>
+        <content src="text/part0005.html#4OIQ0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_6" playOrder="5">
+        <navLabel>
+          <text>如何阅读本书</text>
+        </navLabel>
+        <content src="text/part0006.html#5N3C0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_7" playOrder="6">
+        <navLabel>
+          <text>勘误和支持</text>
+        </navLabel>
+        <content src="text/part0007.html#6LJU0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_8" playOrder="7">
+        <navLabel>
+          <text>致谢</text>
+        </navLabel>
+        <content src="text/part0008.html#7K4G0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+    <navPoint class="chapter" id="num_9" playOrder="2">
+      <navLabel>
+        <text>第1章 MySQL体系结构和存储引擎</text>
+      </navLabel>
+      <content src="text/part0009_split_000.html#8IL20-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_10" playOrder="3">
+        <navLabel>
+          <text>1.1 定义数据库和实例</text>
+        </navLabel>
+        <content src="text/part0009_split_001.html"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_11" playOrder="10">
+        <navLabel>
+          <text>1.2 MySQL体系结构</text>
+        </navLabel>
+        <content src="text/part0010.html#9H5K0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_12" playOrder="11">
+        <navLabel>
+          <text>1.3 MySQL存储引擎</text>
+        </navLabel>
+        <content src="text/part0011.html#AFM60-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_13" playOrder="4">
+          <navLabel>
+            <text>1.3.1 InnoDB存储引擎</text>
+          </navLabel>
+          <content src="text/part0011.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_14" playOrder="13">
+          <navLabel>
+            <text>1.3.2 MyISAM存储引擎</text>
+          </navLabel>
+          <content src="text/part0012.html#BE6O0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_15" playOrder="14">
+          <navLabel>
+            <text>1.3.3 NDB存储引擎</text>
+          </navLabel>
+          <content src="text/part0013.html#CCNA0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_16" playOrder="15">
+          <navLabel>
+            <text>1.3.4 Memory存储引擎</text>
+          </navLabel>
+          <content src="text/part0014.html#DB7S0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_17" playOrder="16">
+          <navLabel>
+            <text>1.3.5 Archive存储引擎</text>
+          </navLabel>
+          <content src="text/part0015.html#E9OE0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_18" playOrder="17">
+          <navLabel>
+            <text>1.3.6 Federated存储引擎</text>
+          </navLabel>
+          <content src="text/part0016.html#F8900-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_19" playOrder="18">
+          <navLabel>
+            <text>1.3.7 Maria存储引擎</text>
+          </navLabel>
+          <content src="text/part0017.html#G6PI0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_20" playOrder="19">
+          <navLabel>
+            <text>1.3.8 其他存储引擎</text>
+          </navLabel>
+          <content src="text/part0018.html#H5A40-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_21" playOrder="20">
+        <navLabel>
+          <text>1.4 各存储引擎之间的比较</text>
+        </navLabel>
+        <content src="text/part0019.html#I3QM0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_22" playOrder="21">
+        <navLabel>
+          <text>1.5 连接MySQL</text>
+        </navLabel>
+        <content src="text/part0020.html#J2B80-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_23" playOrder="5">
+          <navLabel>
+            <text>1.5.1 TCP/IP</text>
+          </navLabel>
+          <content src="text/part0020.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_24" playOrder="23">
+          <navLabel>
+            <text>1.5.2 命名管道和共享内存</text>
+          </navLabel>
+          <content src="text/part0021.html#K0RQ0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_25" playOrder="24">
+          <navLabel>
+            <text>1.5.3 UNIX域套接字</text>
+          </navLabel>
+          <content src="text/part0022.html#KVCC0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_26" playOrder="25">
+        <navLabel>
+          <text>1.6 小结</text>
+        </navLabel>
+        <content src="text/part0023.html#LTSU0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+    <navPoint class="chapter" id="num_27" playOrder="6">
+      <navLabel>
+        <text>第2章 InnoDB存储引擎</text>
+      </navLabel>
+      <content src="text/part0024_split_000.html#MSDG0-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_28" playOrder="7">
+        <navLabel>
+          <text>2.1 InnoDB存储引擎概述</text>
+        </navLabel>
+        <content src="text/part0024_split_001.html"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_29" playOrder="28">
+        <navLabel>
+          <text>2.2 InnoDB存储引擎的版本</text>
+        </navLabel>
+        <content src="text/part0025.html#NQU20-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_30" playOrder="29">
+        <navLabel>
+          <text>2.3 InnoDB体系架构</text>
+        </navLabel>
+        <content src="text/part0026.html#OPEK0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_31" playOrder="8">
+          <navLabel>
+            <text>2.3.1 后台线程</text>
+          </navLabel>
+          <content src="text/part0026.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_32" playOrder="31">
+          <navLabel>
+            <text>2.3.2 内存</text>
+          </navLabel>
+          <content src="text/part0027.html#PNV60-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_33" playOrder="32">
+        <navLabel>
+          <text>2.4 Checkpoint技术</text>
+        </navLabel>
+        <content src="text/part0028.html#QMFO0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_34" playOrder="33">
+        <navLabel>
+          <text>2.5 Master Thread工作方式</text>
+        </navLabel>
+        <content src="text/part0029.html#RL0A0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_35" playOrder="9">
+          <navLabel>
+            <text>2.5.1 InnoDB 1.0.x版本之前的Master Thread</text>
+          </navLabel>
+          <content src="text/part0029.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_36" playOrder="35">
+          <navLabel>
+            <text>2.5.2 InnoDB1.2.x版本之前的Master Thread</text>
+          </navLabel>
+          <content src="text/part0030.html#SJGS0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_37" playOrder="36">
+          <navLabel>
+            <text>2.5.3 InnoDB 1.2.x版本的Master Thread</text>
+          </navLabel>
+          <content src="text/part0031.html#TI1E0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_38" playOrder="37">
+        <navLabel>
+          <text>2.6 InnoDB关键特性</text>
+        </navLabel>
+        <content src="text/part0032.html#UGI00-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_39" playOrder="10">
+          <navLabel>
+            <text>2.6.1 插入缓冲</text>
+          </navLabel>
+          <content src="text/part0032.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_40" playOrder="39">
+          <navLabel>
+            <text>2.6.2 两次写</text>
+          </navLabel>
+          <content src="text/part0033.html#VF2I0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_41" playOrder="40">
+          <navLabel>
+            <text>2.6.3 自适应哈希索引</text>
+          </navLabel>
+          <content src="text/part0034.html#10DJ40-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_42" playOrder="41">
+          <navLabel>
+            <text>2.6.4 异步IO</text>
+          </navLabel>
+          <content src="text/part0035.html#11C3M0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_43" playOrder="42">
+          <navLabel>
+            <text>2.6.5 刷新邻接页</text>
+          </navLabel>
+          <content src="text/part0036.html#12AK80-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_44" playOrder="43">
+        <navLabel>
+          <text>2.7 启动、关闭与恢复</text>
+        </navLabel>
+        <content src="text/part0037.html#1394Q0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_45" playOrder="44">
+        <navLabel>
+          <text>2.8 小结</text>
+        </navLabel>
+        <content src="text/part0038.html#147LC0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+    <navPoint class="chapter" id="num_46" playOrder="11">
+      <navLabel>
+        <text>第3章 文件</text>
+      </navLabel>
+      <content src="text/part0039_split_000.html#1565U0-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_47" playOrder="12">
+        <navLabel>
+          <text>3.1 参数文件</text>
+        </navLabel>
+        <content src="text/part0039_split_001.html"/>
+        <navPoint class="chapter" id="num_48" playOrder="13">
+          <navLabel>
+            <text>3.1.1 什么是参数</text>
+          </navLabel>
+          <content src="text/part0039_split_001.html#heading_id_4"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_49" playOrder="48">
+          <navLabel>
+            <text>3.1.2 参数类型</text>
+          </navLabel>
+          <content src="text/part0040.html#164MG0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_50" playOrder="49">
+        <navLabel>
+          <text>3.2 日志文件</text>
+        </navLabel>
+        <content src="text/part0041.html#173720-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_51" playOrder="14">
+          <navLabel>
+            <text>3.2.1 错误日志</text>
+          </navLabel>
+          <content src="text/part0041.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_52" playOrder="51">
+          <navLabel>
+            <text>3.2.2 慢查询日志</text>
+          </navLabel>
+          <content src="text/part0042.html#181NK0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_53" playOrder="52">
+          <navLabel>
+            <text>3.2.3 查询日志</text>
+          </navLabel>
+          <content src="text/part0043.html#190860-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_54" playOrder="53">
+          <navLabel>
+            <text>3.2.4 二进制日志</text>
+          </navLabel>
+          <content src="text/part0044.html#19UOO0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_55" playOrder="54">
+        <navLabel>
+          <text>3.3 套接字文件</text>
+        </navLabel>
+        <content src="text/part0045.html#1AT9A0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_56" playOrder="55">
+        <navLabel>
+          <text>3.4 pid文件</text>
+        </navLabel>
+        <content src="text/part0046.html#1BRPS0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_57" playOrder="56">
+        <navLabel>
+          <text>3.5 表结构定义文件</text>
+        </navLabel>
+        <content src="text/part0047.html#1CQAE0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_58" playOrder="57">
+        <navLabel>
+          <text>3.6 InnoDB存储引擎文件</text>
+        </navLabel>
+        <content src="text/part0048.html#1DOR00-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_59" playOrder="15">
+          <navLabel>
+            <text>3.6.1 表空间文件</text>
+          </navLabel>
+          <content src="text/part0048.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_60" playOrder="59">
+          <navLabel>
+            <text>3.6.2 重做日志文件</text>
+          </navLabel>
+          <content src="text/part0049.html#1ENBI0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_61" playOrder="60">
+        <navLabel>
+          <text>3.7 小结</text>
+        </navLabel>
+        <content src="text/part0050.html#1FLS40-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+    <navPoint class="chapter" id="num_62" playOrder="16">
+      <navLabel>
+        <text>第4章 表</text>
+      </navLabel>
+      <content src="text/part0051_split_000.html#1GKCM0-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_63" playOrder="17">
+        <navLabel>
+          <text>4.1 索引组织表</text>
+        </navLabel>
+        <content src="text/part0051_split_001.html"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_64" playOrder="63">
+        <navLabel>
+          <text>4.2 InnoDB逻辑存储结构</text>
+        </navLabel>
+        <content src="text/part0052.html#1HIT80-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_65" playOrder="18">
+          <navLabel>
+            <text>4.2.1 表空间</text>
+          </navLabel>
+          <content src="text/part0052.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_66" playOrder="65">
+          <navLabel>
+            <text>4.2.2 段</text>
+          </navLabel>
+          <content src="text/part0053.html#1IHDQ0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_67" playOrder="66">
+          <navLabel>
+            <text>4.2.3 区</text>
+          </navLabel>
+          <content src="text/part0054.html#1JFUC0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_68" playOrder="67">
+          <navLabel>
+            <text>4.2.4 页</text>
+          </navLabel>
+          <content src="text/part0055.html#1KEEU0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_69" playOrder="68">
+          <navLabel>
+            <text>4.2.5 行</text>
+          </navLabel>
+          <content src="text/part0056.html#1LCVG0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_70" playOrder="69">
+        <navLabel>
+          <text>4.3 InnoDB行记录格式</text>
+        </navLabel>
+        <content src="text/part0057.html#1MBG20-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_71" playOrder="19">
+          <navLabel>
+            <text>4.3.1 Compact行记录格式</text>
+          </navLabel>
+          <content src="text/part0057.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_72" playOrder="71">
+          <navLabel>
+            <text>4.3.2 Redundant行记录格式</text>
+          </navLabel>
+          <content src="text/part0058.html#1NA0K0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_73" playOrder="72">
+          <navLabel>
+            <text>4.3.3 行溢出数据</text>
+          </navLabel>
+          <content src="text/part0059.html#1O8H60-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_74" playOrder="73">
+          <navLabel>
+            <text>4.3.4 Compressed和Dynamic行记录格式</text>
+          </navLabel>
+          <content src="text/part0060.html#1P71O0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_75" playOrder="74">
+          <navLabel>
+            <text>4.3.5 CHAR的行结构存储</text>
+          </navLabel>
+          <content src="text/part0061.html#1Q5IA0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_76" playOrder="75">
+        <navLabel>
+          <text>4.4 InnoDB数据页结构</text>
+        </navLabel>
+        <content src="text/part0062.html#1R42S0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_77" playOrder="20">
+          <navLabel>
+            <text>4.4.1 File Header</text>
+          </navLabel>
+          <content src="text/part0062.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_78" playOrder="77">
+          <navLabel>
+            <text>4.4.2 Page Header</text>
+          </navLabel>
+          <content src="text/part0063.html#1S2JE0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_79" playOrder="78">
+          <navLabel>
+            <text>4.4.3 Infimum和Supremum Record</text>
+          </navLabel>
+          <content src="text/part0064.html#1T1400-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_80" playOrder="79">
+          <navLabel>
+            <text>4.4.4 User Record和Free Space</text>
+          </navLabel>
+          <content src="text/part0065.html#1TVKI0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_81" playOrder="80">
+          <navLabel>
+            <text>4.4.5 Page Directory</text>
+          </navLabel>
+          <content src="text/part0066.html#1UU540-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_82" playOrder="81">
+          <navLabel>
+            <text>4.4.6 File Trailer</text>
+          </navLabel>
+          <content src="text/part0067.html#1VSLM0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_83" playOrder="82">
+          <navLabel>
+            <text>4.4.7 InnoDB数据页结构示例分析</text>
+          </navLabel>
+          <content src="text/part0068.html#20R680-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_84" playOrder="83">
+        <navLabel>
+          <text>4.5 Named File Formats机制</text>
+        </navLabel>
+        <content src="text/part0069.html#21PMQ0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_85" playOrder="84">
+        <navLabel>
+          <text>4.6 约束</text>
+        </navLabel>
+        <content src="text/part0070.html#22O7C0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_86" playOrder="21">
+          <navLabel>
+            <text>4.6.1 数据完整性</text>
+          </navLabel>
+          <content src="text/part0070.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_87" playOrder="86">
+          <navLabel>
+            <text>4.6.2 约束的创建和查找</text>
+          </navLabel>
+          <content src="text/part0071.html#23MNU0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_88" playOrder="87">
+          <navLabel>
+            <text>4.6.3 约束和索引的区别</text>
+          </navLabel>
+          <content src="text/part0072.html#24L8G0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_89" playOrder="88">
+          <navLabel>
+            <text>4.6.4 对错误数据的约束</text>
+          </navLabel>
+          <content src="text/part0073.html#25JP20-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_90" playOrder="89">
+          <navLabel>
+            <text>4.6.5 ENUM和SET约束</text>
+          </navLabel>
+          <content src="text/part0074.html#26I9K0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_91" playOrder="90">
+          <navLabel>
+            <text>4.6.6 触发器与约束</text>
+          </navLabel>
+          <content src="text/part0075.html#27GQ60-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_92" playOrder="91">
+          <navLabel>
+            <text>4.6.7 外键约束</text>
+          </navLabel>
+          <content src="text/part0076.html#28FAO0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_93" playOrder="92">
+        <navLabel>
+          <text>4.7 视图</text>
+        </navLabel>
+        <content src="text/part0077.html#29DRA0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_94" playOrder="22">
+          <navLabel>
+            <text>4.7.1 视图的作用</text>
+          </navLabel>
+          <content src="text/part0077.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_95" playOrder="94">
+          <navLabel>
+            <text>4.7.2 物化视图</text>
+          </navLabel>
+          <content src="text/part0078.html#2ACBS0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_96" playOrder="95">
+        <navLabel>
+          <text>4.8 分区表</text>
+        </navLabel>
+        <content src="text/part0079.html#2BASE0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_97" playOrder="23">
+          <navLabel>
+            <text>4.8.1 分区概述</text>
+          </navLabel>
+          <content src="text/part0079.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_98" playOrder="97">
+          <navLabel>
+            <text>4.8.2 分区类型</text>
+          </navLabel>
+          <content src="text/part0080.html#2C9D00-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_99" playOrder="98">
+          <navLabel>
+            <text>4.8.3 子分区</text>
+          </navLabel>
+          <content src="text/part0081.html#2D7TI0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_100" playOrder="99">
+          <navLabel>
+            <text>4.8.4 分区中的NULL值</text>
+          </navLabel>
+          <content src="text/part0082.html#2E6E40-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_101" playOrder="100">
+          <navLabel>
+            <text>4.8.5 分区和性能</text>
+          </navLabel>
+          <content src="text/part0083.html#2F4UM0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_102" playOrder="101">
+          <navLabel>
+            <text>4.8.6 在表和分区间交换数据</text>
+          </navLabel>
+          <content src="text/part0084.html#2G3F80-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_103" playOrder="102">
+        <navLabel>
+          <text>4.9 小结</text>
+        </navLabel>
+        <content src="text/part0085.html#2H1VQ0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+    <navPoint class="chapter" id="num_104" playOrder="24">
+      <navLabel>
+        <text>第5章 索引与算法</text>
+      </navLabel>
+      <content src="text/part0086_split_000.html#2I0GC0-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_105" playOrder="25">
+        <navLabel>
+          <text>5.1 InnoDB存储引擎索引概述</text>
+        </navLabel>
+        <content src="text/part0086_split_001.html"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_106" playOrder="105">
+        <navLabel>
+          <text>5.2 数据结构与算法</text>
+        </navLabel>
+        <content src="text/part0087.html#2IV0U0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_107" playOrder="26">
+          <navLabel>
+            <text>5.2.1 二分查找法</text>
+          </navLabel>
+          <content src="text/part0087.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_108" playOrder="107">
+          <navLabel>
+            <text>5.2.2 二叉查找树和平衡二叉树</text>
+          </navLabel>
+          <content src="text/part0088.html#2JTHG0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_109" playOrder="108">
+        <navLabel>
+          <text>5.3 B+树</text>
+        </navLabel>
+        <content src="text/part0089.html#2KS220-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_110" playOrder="27">
+          <navLabel>
+            <text>5.3.1 B+树的插入操作</text>
+          </navLabel>
+          <content src="text/part0089.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_111" playOrder="110">
+          <navLabel>
+            <text>5.3.2 B+树的删除操作</text>
+          </navLabel>
+          <content src="text/part0090.html#2LQIK0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_112" playOrder="111">
+        <navLabel>
+          <text>5.4 B+树索引</text>
+        </navLabel>
+        <content src="text/part0091.html#2MP360-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_113" playOrder="28">
+          <navLabel>
+            <text>5.4.1 聚集索引</text>
+          </navLabel>
+          <content src="text/part0091.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_114" playOrder="113">
+          <navLabel>
+            <text>5.4.2 辅助索引</text>
+          </navLabel>
+          <content src="text/part0092.html#2NNJO0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_115" playOrder="114">
+          <navLabel>
+            <text>5.4.3 B+树索引的分裂</text>
+          </navLabel>
+          <content src="text/part0093.html#2OM4A0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_116" playOrder="115">
+          <navLabel>
+            <text>5.4.4 B+树索引的管理</text>
+          </navLabel>
+          <content src="text/part0094.html#2PKKS0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_117" playOrder="116">
+        <navLabel>
+          <text>5.5 Cardinality值</text>
+        </navLabel>
+        <content src="text/part0095.html#2QJ5E0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_118" playOrder="29">
+          <navLabel>
+            <text>5.5.1 什么是Cardinality</text>
+          </navLabel>
+          <content src="text/part0095.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_119" playOrder="118">
+          <navLabel>
+            <text>5.5.2 InnoDB存储引擎的Cardinality统计</text>
+          </navLabel>
+          <content src="text/part0096.html#2RHM00-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_120" playOrder="119">
+        <navLabel>
+          <text>5.6 B+树索引的使用</text>
+        </navLabel>
+        <content src="text/part0097.html#2SG6I0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_121" playOrder="30">
+          <navLabel>
+            <text>5.6.1 不同应用中B+树索引的使用</text>
+          </navLabel>
+          <content src="text/part0097.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_122" playOrder="121">
+          <navLabel>
+            <text>5.6.2 联合索引</text>
+          </navLabel>
+          <content src="text/part0098.html#2TEN40-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_123" playOrder="122">
+          <navLabel>
+            <text>5.6.3 覆盖索引</text>
+          </navLabel>
+          <content src="text/part0099.html#2UD7M0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_124" playOrder="123">
+          <navLabel>
+            <text>5.6.4 优化器选择不使用索引的情况</text>
+          </navLabel>
+          <content src="text/part0100.html#2VBO80-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_125" playOrder="124">
+          <navLabel>
+            <text>5.6.5 索引提示</text>
+          </navLabel>
+          <content src="text/part0101.html#30A8Q0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_126" playOrder="125">
+          <navLabel>
+            <text>5.6.6 Multi-Range Read优化</text>
+          </navLabel>
+          <content src="text/part0102.html#318PC0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_127" playOrder="126">
+          <navLabel>
+            <text>5.6.7 Index Condition Pushdown（ICP）优化</text>
+          </navLabel>
+          <content src="text/part0103.html#3279U0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_128" playOrder="127">
+        <navLabel>
+          <text>5.7 哈希算法</text>
+        </navLabel>
+        <content src="text/part0104.html#335QG0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_129" playOrder="31">
+          <navLabel>
+            <text>5.7.1 哈希表</text>
+          </navLabel>
+          <content src="text/part0104.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_130" playOrder="129">
+          <navLabel>
+            <text>5.7.2 InnoDB存储引擎中的哈希算法</text>
+          </navLabel>
+          <content src="text/part0105.html#344B20-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_131" playOrder="130">
+          <navLabel>
+            <text>5.7.3 自适应哈希索引</text>
+          </navLabel>
+          <content src="text/part0106.html#352RK0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_132" playOrder="131">
+        <navLabel>
+          <text>5.8 全文检索</text>
+        </navLabel>
+        <content src="text/part0107.html#361C60-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_133" playOrder="32">
+          <navLabel>
+            <text>5.8.1 概述</text>
+          </navLabel>
+          <content src="text/part0107.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_134" playOrder="133">
+          <navLabel>
+            <text>5.8.2 倒排索引</text>
+          </navLabel>
+          <content src="text/part0108.html#36VSO0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_135" playOrder="134">
+          <navLabel>
+            <text>5.8.3 InnoDB全文检索</text>
+          </navLabel>
+          <content src="text/part0109.html#37UDA0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_136" playOrder="135">
+          <navLabel>
+            <text>5.8.4 全文检索</text>
+          </navLabel>
+          <content src="text/part0110.html#38STS0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_137" playOrder="136">
+        <navLabel>
+          <text>5.9 小结</text>
+        </navLabel>
+        <content src="text/part0111.html#39REE0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+    <navPoint class="chapter" id="num_138" playOrder="33">
+      <navLabel>
+        <text>第6章 锁</text>
+      </navLabel>
+      <content src="text/part0112_split_000.html#3APV00-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_139" playOrder="34">
+        <navLabel>
+          <text>6.1 什么是锁</text>
+        </navLabel>
+        <content src="text/part0112_split_001.html"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_140" playOrder="139">
+        <navLabel>
+          <text>6.2 lock与latch</text>
+        </navLabel>
+        <content src="text/part0113.html#3BOFI0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_141" playOrder="140">
+        <navLabel>
+          <text>6.3 InnoDB存储引擎中的锁</text>
+        </navLabel>
+        <content src="text/part0114.html#3CN040-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_142" playOrder="35">
+          <navLabel>
+            <text>6.3.1 锁的类型</text>
+          </navLabel>
+          <content src="text/part0114.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_143" playOrder="142">
+          <navLabel>
+            <text>6.3.2 一致性非锁定读</text>
+          </navLabel>
+          <content src="text/part0115.html#3DLGM0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_144" playOrder="143">
+          <navLabel>
+            <text>6.3.3 一致性锁定读</text>
+          </navLabel>
+          <content src="text/part0116.html#3EK180-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_145" playOrder="144">
+          <navLabel>
+            <text>6.3.4 自增长与锁</text>
+          </navLabel>
+          <content src="text/part0117.html#3FIHQ0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_146" playOrder="145">
+          <navLabel>
+            <text>6.3.5 外键和锁</text>
+          </navLabel>
+          <content src="text/part0118.html#3GH2C0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_147" playOrder="146">
+        <navLabel>
+          <text>6.4 锁的算法</text>
+        </navLabel>
+        <content src="text/part0119.html#3HFIU0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_148" playOrder="36">
+          <navLabel>
+            <text>6.4.1 行锁的3种算法</text>
+          </navLabel>
+          <content src="text/part0119.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_149" playOrder="148">
+          <navLabel>
+            <text>6.4.2 解决Phantom Problem</text>
+          </navLabel>
+          <content src="text/part0120.html#3IE3G0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_150" playOrder="149">
+        <navLabel>
+          <text>6.5 锁问题</text>
+        </navLabel>
+        <content src="text/part0121.html#3JCK20-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_151" playOrder="37">
+          <navLabel>
+            <text>6.5.1 脏读</text>
+          </navLabel>
+          <content src="text/part0121.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_152" playOrder="151">
+          <navLabel>
+            <text>6.5.2 不可重复读</text>
+          </navLabel>
+          <content src="text/part0122.html#3KB4K0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_153" playOrder="152">
+          <navLabel>
+            <text>6.5.3 丢失更新</text>
+          </navLabel>
+          <content src="text/part0123.html#3L9L60-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_154" playOrder="153">
+        <navLabel>
+          <text>6.6 阻塞</text>
+        </navLabel>
+        <content src="text/part0124.html#3M85O0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_155" playOrder="154">
+        <navLabel>
+          <text>6.7 死锁</text>
+        </navLabel>
+        <content src="text/part0125.html#3N6MA0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_156" playOrder="38">
+          <navLabel>
+            <text>6.7.1 死锁的概念</text>
+          </navLabel>
+          <content src="text/part0125.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_157" playOrder="156">
+          <navLabel>
+            <text>6.7.2 死锁概率</text>
+          </navLabel>
+          <content src="text/part0126.html#3O56S0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_158" playOrder="157">
+          <navLabel>
+            <text>6.7.3 死锁的示例</text>
+          </navLabel>
+          <content src="text/part0127.html#3P3NE0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_159" playOrder="158">
+        <navLabel>
+          <text>6.8 锁升级</text>
+        </navLabel>
+        <content src="text/part0128.html#3Q2800-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_160" playOrder="159">
+        <navLabel>
+          <text>6.9 小结</text>
+        </navLabel>
+        <content src="text/part0129.html#3R0OI0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+    <navPoint class="chapter" id="num_161" playOrder="39">
+      <navLabel>
+        <text>第7章 事务</text>
+      </navLabel>
+      <content src="text/part0130_split_000.html#3RV940-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_162" playOrder="40">
+        <navLabel>
+          <text>7.1 认识事务</text>
+        </navLabel>
+        <content src="text/part0130_split_001.html"/>
+        <navPoint class="chapter" id="num_163" playOrder="41">
+          <navLabel>
+            <text>7.1.1 概述</text>
+          </navLabel>
+          <content src="text/part0130_split_001.html#heading_id_4"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_164" playOrder="163">
+          <navLabel>
+            <text>7.1.2 分类</text>
+          </navLabel>
+          <content src="text/part0131.html#3STPM0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_165" playOrder="164">
+        <navLabel>
+          <text>7.2 事务的实现</text>
+        </navLabel>
+        <content src="text/part0132.html#3TSA80-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_166" playOrder="42">
+          <navLabel>
+            <text>7.2.1 redo</text>
+          </navLabel>
+          <content src="text/part0132.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_167" playOrder="166">
+          <navLabel>
+            <text>7.2.2 undo</text>
+          </navLabel>
+          <content src="text/part0133.html#3UQQQ0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_168" playOrder="167">
+          <navLabel>
+            <text>7.2.3 purge</text>
+          </navLabel>
+          <content src="text/part0134.html#3VPBC0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_169" playOrder="168">
+          <navLabel>
+            <text>7.2.4 group commit</text>
+          </navLabel>
+          <content src="text/part0135.html#40NRU0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_170" playOrder="169">
+        <navLabel>
+          <text>7.3 事务控制语句</text>
+        </navLabel>
+        <content src="text/part0136.html#41MCG0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_171" playOrder="170">
+        <navLabel>
+          <text>7.4 隐式提交的SQL语句</text>
+        </navLabel>
+        <content src="text/part0137.html#42KT20-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_172" playOrder="171">
+        <navLabel>
+          <text>7.5 对于事务操作的统计</text>
+        </navLabel>
+        <content src="text/part0138.html#43JDK0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_173" playOrder="172">
+        <navLabel>
+          <text>7.6 事务的隔离级别</text>
+        </navLabel>
+        <content src="text/part0139.html#44HU60-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_174" playOrder="173">
+        <navLabel>
+          <text>7.7 分布式事务</text>
+        </navLabel>
+        <content src="text/part0140.html#45GEO0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_175" playOrder="43">
+          <navLabel>
+            <text>7.7.1 MySQL数据库分布式事务</text>
+          </navLabel>
+          <content src="text/part0140.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_176" playOrder="175">
+          <navLabel>
+            <text>7.7.2 内部XA事务</text>
+          </navLabel>
+          <content src="text/part0141.html#46EVA0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_177" playOrder="176">
+        <navLabel>
+          <text>7.8 不好的事务习惯</text>
+        </navLabel>
+        <content src="text/part0142.html#47DFS0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_178" playOrder="44">
+          <navLabel>
+            <text>7.8.1 在循环中提交</text>
+          </navLabel>
+          <content src="text/part0142.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_179" playOrder="178">
+          <navLabel>
+            <text>7.8.2 使用自动提交</text>
+          </navLabel>
+          <content src="text/part0143.html#48C0E0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_180" playOrder="179">
+          <navLabel>
+            <text>7.8.3 使用自动回滚</text>
+          </navLabel>
+          <content src="text/part0144.html#49AH00-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_181" playOrder="180">
+        <navLabel>
+          <text>7.9 长事务</text>
+        </navLabel>
+        <content src="text/part0145.html#4A91I0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_182" playOrder="181">
+        <navLabel>
+          <text>7.10 小结</text>
+        </navLabel>
+        <content src="text/part0146.html#4B7I40-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+    <navPoint class="chapter" id="num_183" playOrder="45">
+      <navLabel>
+        <text>第8章 备份与恢复</text>
+      </navLabel>
+      <content src="text/part0147_split_000.html#4C62M0-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_184" playOrder="46">
+        <navLabel>
+          <text>8.1 备份与恢复概述</text>
+        </navLabel>
+        <content src="text/part0147_split_001.html"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_185" playOrder="184">
+        <navLabel>
+          <text>8.2 冷备</text>
+        </navLabel>
+        <content src="text/part0148.html#4D4J80-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_186" playOrder="185">
+        <navLabel>
+          <text>8.3 逻辑备份</text>
+        </navLabel>
+        <content src="text/part0149.html#4E33Q0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_187" playOrder="47">
+          <navLabel>
+            <text>8.3.1 mysqldump</text>
+          </navLabel>
+          <content src="text/part0149.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_188" playOrder="187">
+          <navLabel>
+            <text>8.3.2 SELECT...INTO OUTFILE</text>
+          </navLabel>
+          <content src="text/part0150.html#4F1KC0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_189" playOrder="188">
+          <navLabel>
+            <text>8.3.3 逻辑备份的恢复</text>
+          </navLabel>
+          <content src="text/part0151.html#4G04U0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_190" playOrder="189">
+          <navLabel>
+            <text>8.3.4 LOAD DATA INFILE</text>
+          </navLabel>
+          <content src="text/part0152.html#4GULG0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_191" playOrder="190">
+          <navLabel>
+            <text>8.3.5 mysqlimport</text>
+          </navLabel>
+          <content src="text/part0153.html#4HT620-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_192" playOrder="191">
+        <navLabel>
+          <text>8.4 二进制日志备份与恢复</text>
+        </navLabel>
+        <content src="text/part0154.html#4IRMK0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_193" playOrder="192">
+        <navLabel>
+          <text>8.5 热备</text>
+        </navLabel>
+        <content src="text/part0155.html#4JQ760-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_194" playOrder="48">
+          <navLabel>
+            <text>8.5.1 ibbackup</text>
+          </navLabel>
+          <content src="text/part0155.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_195" playOrder="194">
+          <navLabel>
+            <text>8.5.2 XtraBackup</text>
+          </navLabel>
+          <content src="text/part0156.html#4KONO0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_196" playOrder="195">
+          <navLabel>
+            <text>8.5.3 XtraBackup实现增量备份</text>
+          </navLabel>
+          <content src="text/part0157.html#4LN8A0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_197" playOrder="196">
+        <navLabel>
+          <text>8.6 快照备份</text>
+        </navLabel>
+        <content src="text/part0158.html#4MLOS0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_198" playOrder="197">
+        <navLabel>
+          <text>8.7 复制</text>
+        </navLabel>
+        <content src="text/part0159.html#4NK9E0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_199" playOrder="49">
+          <navLabel>
+            <text>8.7.1 复制的工作原理</text>
+          </navLabel>
+          <content src="text/part0159.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_200" playOrder="199">
+          <navLabel>
+            <text>8.7.2 快照+复制的备份架构</text>
+          </navLabel>
+          <content src="text/part0160.html#4OIQ00-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_201" playOrder="200">
+        <navLabel>
+          <text>8.8 小结</text>
+        </navLabel>
+        <content src="text/part0161.html#4PHAI0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+    <navPoint class="chapter" id="num_202" playOrder="50">
+      <navLabel>
+        <text>第9章 性能调优</text>
+      </navLabel>
+      <content src="text/part0162_split_000.html#4QFR40-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_203" playOrder="51">
+        <navLabel>
+          <text>9.1 选择合适的CPU</text>
+        </navLabel>
+        <content src="text/part0162_split_001.html"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_204" playOrder="203">
+        <navLabel>
+          <text>9.2 内存的重要性</text>
+        </navLabel>
+        <content src="text/part0163.html#4REBM0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_205" playOrder="204">
+        <navLabel>
+          <text>9.3 硬盘对数据库性能的影响</text>
+        </navLabel>
+        <content src="text/part0164.html#4SCS80-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_206" playOrder="52">
+          <navLabel>
+            <text>9.3.1 传统机械硬盘</text>
+          </navLabel>
+          <content src="text/part0164.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_207" playOrder="206">
+          <navLabel>
+            <text>9.3.2 固态硬盘</text>
+          </navLabel>
+          <content src="text/part0165.html#4TBCQ0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_208" playOrder="207">
+        <navLabel>
+          <text>9.4 合理地设置RAID</text>
+        </navLabel>
+        <content src="text/part0166.html#4U9TC0-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_209" playOrder="53">
+          <navLabel>
+            <text>9.4.1 RAID类型</text>
+          </navLabel>
+          <content src="text/part0166.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_210" playOrder="209">
+          <navLabel>
+            <text>9.4.2 RAID Write Back功能</text>
+          </navLabel>
+          <content src="text/part0167.html#4V8DU0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_211" playOrder="210">
+          <navLabel>
+            <text>9.4.3 RAID配置工具</text>
+          </navLabel>
+          <content src="text/part0168.html#506UG0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_212" playOrder="211">
+        <navLabel>
+          <text>9.5 操作系统的选择</text>
+        </navLabel>
+        <content src="text/part0169.html#515F20-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_213" playOrder="212">
+        <navLabel>
+          <text>9.6 不同的文件系统对数据库性能的影响</text>
+        </navLabel>
+        <content src="text/part0170.html#523VK0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_214" playOrder="213">
+        <navLabel>
+          <text>9.7 选择合适的基准测试工具</text>
+        </navLabel>
+        <content src="text/part0171.html#532G60-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_215" playOrder="54">
+          <navLabel>
+            <text>9.7.1 sysbench</text>
+          </navLabel>
+          <content src="text/part0171.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_216" playOrder="215">
+          <navLabel>
+            <text>9.7.2 mysql-tpcc</text>
+          </navLabel>
+          <content src="text/part0172.html#5410O0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_217" playOrder="216">
+        <navLabel>
+          <text>9.8 小结</text>
+        </navLabel>
+        <content src="text/part0173.html#54VHA0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+    <navPoint class="chapter" id="num_218" playOrder="55">
+      <navLabel>
+        <text>第10章 InnoDB存储引擎源代码的编译和调试</text>
+      </navLabel>
+      <content src="text/part0174_split_000.html#55U1S0-878f632495a744b2a24ea2205f162355"/>
+      <navPoint class="chapter" id="num_219" playOrder="56">
+        <navLabel>
+          <text>10.1 获取InnoDB存储引擎源代码</text>
+        </navLabel>
+        <content src="text/part0174_split_001.html"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_220" playOrder="219">
+        <navLabel>
+          <text>10.2 InnoDB源代码结构</text>
+        </navLabel>
+        <content src="text/part0175.html#56SIE0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_221" playOrder="220">
+        <navLabel>
+          <text>10.3 MySQL 5.1版本编译和调试InnoDB源代码</text>
+        </navLabel>
+        <content src="text/part0176.html#57R300-878f632495a744b2a24ea2205f162355"/>
+        <navPoint class="chapter" id="num_222" playOrder="57">
+          <navLabel>
+            <text>10.3.1 Windows下的调试</text>
+          </navLabel>
+          <content src="text/part0176.html#heading_id_3"/>
+        </navPoint>
+        <navPoint class="chapter" id="num_223" playOrder="222">
+          <navLabel>
+            <text>10.3.2 Linux下的调试</text>
+          </navLabel>
+          <content src="text/part0177.html#58PJI0-878f632495a744b2a24ea2205f162355"/>
+        </navPoint>
+      </navPoint>
+      <navPoint class="chapter" id="num_224" playOrder="223">
+        <navLabel>
+          <text>10.4 cmake方式编译和调试InnoDB存储引擎</text>
+        </navLabel>
+        <content src="text/part0178.html#59O440-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+      <navPoint class="chapter" id="num_225" playOrder="224">
+        <navLabel>
+          <text>10.5 小结</text>
+        </navLabel>
+        <content src="text/part0179.html#5AMKM0-878f632495a744b2a24ea2205f162355"/>
+      </navPoint>
+    </navPoint>
+  </navMap>
+</ncx>

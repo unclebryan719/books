@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.8.2　使用自动提交</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="48C0E0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">7.8.2　使用自动提交</h3>
+
+  <p class="ziti3">自动提交并不是一个好的习惯，因为这会使初级DBA容易犯错，另外还可能使一些开发人员产生错误的理解，如我们在前一小节中提到的循环提交问题。MySQL数据库默认设置使用自动提交（autocommit），可以使用如下语句来改变当前自动提交的方式：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET autocommit=0;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">也可以使用START TRANSACTION，BEGIN来显式地开启一个事务。在显式开启事务后，在默认设置下（即参数completion_type等于0），MySQL会自动地执行SET AUTOCOMMIT=0的命令，并在COMMIT或ROLLBACK结束一个事务后执行SET AUTOCOMMIT=1。</p>
+
+  <p class="ziti3">另外，对于不同语言的API，自动提交是不同的。MySQL C API默认的提交方式是自动提交，而MySQL Python API则会自动执行SET AUTOCOMMIT=0，以禁用自动提交。因此在选用不同的语言来编写数据库应用程序前，应该对连接MySQL的API做好研究。</p>
+
+  <p class="ziti3">我认为，在编写应用程序开发时，最好把事务的控制权限交给开发人员，即在程序端进行事务的开始和结束。同时，开发人员必须了解自动提交可能带来的问题。我曾经见过很多开发人员没有意识到自动提交这个特性，等到出现错误时应用就会遇到大麻烦。</p>
+</body></html>

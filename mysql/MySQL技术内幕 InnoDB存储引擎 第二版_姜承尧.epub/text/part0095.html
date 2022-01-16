@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.5　Cardinality值</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2QJ5E0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">5.5　Cardinality值</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>5.5.1　什么是Cardinality</h3>
+
+  <p class="ziti3">并不是在所有的查询条件中出现的列都需要添加索引。对于什么时候添加B+树索引，一般的经验是，在访问表中很少一部分时使用B+树索引才有意义。对于性别字段、地区字段、类型字段，它们可取值的范围很小，称为低选择性。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM student WHERE sex='M'</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">按性别进行查询时，可取值的范围一般只有'M'、'F'。因此上述SQL语句得到的结果可能是该表50%的数据（假设男女比例1∶1），这时添加B+树索引是完全没有必要的。相反，如果某个字段的取值范围很广，几乎没有重复，即属于高选择性，则此时使用B+树索引是最适合的。例如，对于姓名字段，基本上在一个应用中不允许重名的出现。</p>
+
+  <p class="ziti3">怎样查看索引是否是高选择性的呢？可以通过SHOW INDEX结果中的列Cardinality来观察。Cardinality值非常关键，表示索引中不重复记录数量的预估值。同时需要注意的是，Cardinality是一个预估值，而不是一个准确值，基本上用户也不可能得到一个准确的值。在实际应用中，Cardinality/n_rows_in_table应尽可能地接近1。如果非常小，那么用户需要考虑是否还有必要创建这个索引。故在访问高选择性属性的字段并从表中取出很少一部分数据时，对这个字段添加B+树索引是非常有必要的。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM member WHERE usernick='David'</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">表member大约有500万行数据。usernick字段上有一个唯一的索引。这时如果查找用户名为David的用户，将会得到如下的执行计划：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞EXPLAIN SELECT*FROM member</p>
+
+  <p class="ziti4">-＞WHERE usernick='David'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">id:1</p>
+
+  <p class="ziti4">select_type:SIMPLE</p>
+
+  <p class="ziti4">table:member</p>
+
+  <p class="ziti4">type:const</p>
+
+  <p class="ziti4">possible_keys:usernick</p>
+
+  <p class="ziti4">key:usernick</p>
+
+  <p class="ziti4">key_len:62</p>
+
+  <p class="ziti4">ref:const</p>
+
+  <p class="ziti4">rows:1</p>
+
+  <p class="ziti4">Extra:</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到使用了usernick这个索引，这也符合之前提到的高选择性，即SQL语句选取表中较少行的原则。</p>
+</body></html>

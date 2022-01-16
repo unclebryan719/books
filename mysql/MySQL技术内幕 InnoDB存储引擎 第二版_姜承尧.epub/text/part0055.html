@@ -1,0 +1,31 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.2.4　页</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1KEEU0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.2.4　页</h3>
+
+  <p class="ziti3">同大多数数据库一样，InnoDB有页（Page）的概念（也可以称为块），页是InnoDB磁盘管理的最小单位。在InnoDB存储引擎中，默认每个页的大小为16KB。而从InnoDB 1.2.x版本开始，可以通过参数innodb_page_size将页的大小设置为4K、8K、16K。若设置完成，则所有表中页的大小都为innodb_page_size，不可以对其再次进行修改。除非通过mysqldump导入和导出操作来产生新的库。</p>
+
+  <p class="ziti3">在InnoDB存储引擎中，常见的页类型有：</p>
+
+  <p class="ziti3">❑数据页（B-tree Node）</p>
+
+  <p class="ziti3">❑undo页（undo Log Page）</p>
+
+  <p class="ziti3">❑系统页（System Page）</p>
+
+  <p class="ziti3">❑事务数据页（Transaction system Page）</p>
+
+  <p class="ziti3">❑插入缓冲位图页（Insert Buffer Bitmap）</p>
+
+  <p class="ziti3">❑插入缓冲空闲列表页（Insert Buffer Free List）</p>
+
+  <p class="ziti3">❑未压缩的二进制大对象页（Uncompressed BLOB Page）</p>
+
+  <p class="ziti3">❑压缩的二进制大对象页（compressed BLOB Page）</p>
+</body></html>

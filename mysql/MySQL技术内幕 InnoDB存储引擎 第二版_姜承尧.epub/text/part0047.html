@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>3.5　表结构定义文件</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1CQAE0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">3.5　表结构定义文件</h2>
+
+  <p class="ziti3">因为MySQL插件式存储引擎的体系结构的关系，MySQL数据的存储是根据表进行的，每个表都会有与之对应的文件。但不论表采用何种存储引擎，MySQL都有一个以frm为后缀名的文件，这个文件记录了该表的表结构定义。</p>
+
+  <p class="ziti3">frm还用来存放视图的定义，如用户创建了一个v_a视图，那么对应地会产生一个v_a.frm文件，用来记录视图的定义，该文件是文本文件，可以直接使用cat命令进行查看：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server test]#cat v_a.frm</p>
+
+  <p class="ziti4">TYPE=VIEW</p>
+
+  <p class="ziti4">query=select'test'.'a'.'b'AS'b'from'test'.'a'</p>
+
+  <p class="ziti4">md5=4eda70387716a4d6c96f3042dd68b742</p>
+
+  <p class="ziti4">updatable=1</p>
+
+  <p class="ziti4">algorithm=0</p>
+
+  <p class="ziti4">definer_user=root</p>
+
+  <p class="ziti4">definer_host=localhost</p>
+
+  <p class="ziti4">suid=2</p>
+
+  <p class="ziti4">with_check_option=0</p>
+
+  <p class="ziti4">timestamp=2010-08-04 07:23:36</p>
+
+  <p class="ziti4">create-version=1</p>
+
+  <p class="ziti4">source=select*from a</p>
+
+  <p class="ziti4">client_cs_name=utf8</p>
+
+  <p class="ziti4">connection_cl_name=utf8_general_ci</p>
+
+  <p class="ziti4">view_body_utf8=select'test'.'a'.'b'AS'b'from'test'.'a'</p>
+  <hr class="calibre2"/>
+</body></html>

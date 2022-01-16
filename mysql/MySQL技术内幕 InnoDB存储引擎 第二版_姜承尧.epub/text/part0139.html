@@ -1,0 +1,243 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.6　事务的隔离级别</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="44HU60-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">7.6　事务的隔离级别</h2>
+
+  <p class="ziti3">令人惊讶的是，大部分数据库系统都没有提供真正的隔离性，最初或许是因为系统实现者并没有真正理解这些问题。如今这些问题已经弄清楚了，但是数据库实现者在正确性和性能之间做了妥协。ISO和ANIS SQL标准制定了四种事务隔离级别的标准，但是很少有数据库厂商遵循这些标准。比如Oracle数据库就不支持READ UNCOMMITTED和REPEATABLE READ的事务隔离级别。</p>
+
+  <p class="ziti3">SQL标准定义的四个隔离级别为：</p>
+
+  <p class="ziti3">❑READ UNCOMMITTED</p>
+
+  <p class="ziti3">❑READ COMMITTED</p>
+
+  <p class="ziti3">❑REPEATABLE READ</p>
+
+  <p class="ziti3">❑SERIALIZABLE</p>
+
+  <p class="ziti3">READ UNCOMMITTED称为浏览访问（browse access），仅仅针对事务而言的。READ COMMITTED称为游标稳定（cursor stability）。REPEATABLE READ是2.9999°的隔离，没有幻读的保护。SERIALIZABLE称为隔离，或3°的隔离。SQL和SQL2标准的默认事务隔离级别是SERIALIZABLE。</p>
+
+  <p class="ziti3">InnoDB存储引擎默认支持的隔离级别是REPEATABLE READ，但是与标准SQL不同的是，InnoDB存储引擎在REPEATABLE READ事务隔离级别下，使用Next-Key Lock锁的算法，因此避免幻读的产生。这与其他数据库系统（如Microsoft SQL Server数据库）是不同的。所以说，InnoDB存储引擎在默认的REPEATABLE READ的事务隔离级别下已经能完全保证事务的隔离性要求，即达到SQL标准的SERIALIZABLE隔离级别。</p>
+
+  <p class="ziti3">隔离级别越低，事务请求的锁越少或保持锁的时间就越短。这也是为什么大多数数据库系统默认的事务隔离级别是READ COMMITTED。</p>
+
+  <p class="ziti3">据了解，大部分的用户质疑SERIALIZABLE隔离级别带来的性能问题，但是根据Jim Gray在《Transaction Processing》一书中指出，两者的开销几乎是一样的，甚至SERIALIZABLE可能更优!!!因此在InnoDB存储引擎中选择REPEATABLE READ的事务隔离级别并不会有任何性能的损失。同样地，即使使用READ COMMITTED的隔离级别，用户也不会得到性能的大幅度提升。</p>
+
+  <p class="ziti3">在InnoDB存储引擎中，可以使用以下命令来设置当前会话或全局的事务隔离级别：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SET[GLOBAL|SESSION]TRANSACTION ISOLATION LEVEL</p>
+
+  <p class="ziti4">{</p>
+
+  <p class="ziti4">READ UNCOMMITTED</p>
+
+  <p class="ziti4">|READ COMMITTED</p>
+
+  <p class="ziti4">|REPEATABLE READ</p>
+
+  <p class="ziti4">|SERIALIZABLE</p>
+
+  <p class="ziti4">}</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果想在MySQL数据库启动时就设置事务的默认隔离级别，那就需要修改MySQL的配置文件，在[mysqld]中添加如下行：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[mysqld]</p>
+
+  <p class="ziti4">transaction-isolation=READ-COMMITTED</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">查看当前会话的事务隔离级别，可以使用：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT@@tx_isolation\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">@@tx_isolation:REPEATABLE-READ</p>
+
+  <p class="ziti4">1 row in set(0.01 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">查看全局的事务隔离级别，可以使用：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT@@global.tx_isolation\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">@@global.tx_isolation:REPEATABLE-READ</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在SERIALIABLE的事务隔离级别，InnoDB存储引擎会对每个SELECT语句后自动加上LOCK IN SHARE MODE，即为每个读取操作加一个共享锁。因此在这个事务隔离级别下，读占用了锁，对一致性的非锁定读不再予以支持。这时，事务隔离级别SERIALIZABLE符合数据库理论上的要求，即事务是well-formed的，并且是two-phrased的。有兴趣的读者可进一步研究。</p>
+
+  <p class="ziti3">因为InnoDB存储引擎在REPEATABLE READ隔离级别下就可以达到3°的隔离，因此一般不在本地事务中使用SERIALIABLE的隔离级别。SERIALIABLE的事务隔离级别主要用于InnoDB存储引擎的分布式事务。</p>
+
+  <p class="ziti3">在READ COMMITTED的事务隔离级别下，除了唯一性的约束检查及外键约束的检查需要gap lock，InnoDB存储引擎不会使用gap lock的锁算法。但是使用这个事务隔离级别需要注意一些问题。首先，在MySQL 5.1中，READ COMMITTED事务隔离级别默认只能工作在replication（复制）二进制日志为ROW的格式下。如果二进制日志工作在默认的STATEMENT下，则会出现如下的错误：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE a(</p>
+
+  <p class="ziti4">-＞b INT,PRIMARY KEY(b)</p>
+
+  <p class="ziti4">-＞)ENGINE=INNODB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.01 sec)</p>
+
+  <p class="ziti4">mysql＞SET@@tx_isolation='READ-COMMITTED';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT@@tx_isolation\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">@@tx_isolation:REPEATABLE-READ</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO a SELECT 1;</p>
+
+  <p class="ziti4">ERROR 1598(HY000):Binary logging not possible.Message:Transaction level'READ-COMMITTED'in InnoDB is not safe for binlog mode'STATEMENT'</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在MySQL 5.0版本以前，在不支持ROW格式的二进制日志时，也许有人知道通过将参数innodb_locks_unsafe_for_binlog设置为1可以在二进制日志为STATEMENT下使用READ COMMITTED的事务隔离级别：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELCT@@version\G</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">@@version:5.0.77-log</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_locks_unsafe_for_binlog'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_locks_unsafe_for_binlog</p>
+
+  <p class="ziti4">Value:ON</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SET@@tx_isolation='READ-COMMITTED';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO a SELECT 1;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞COMMIT;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM a\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">b:1</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">b:2</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">b:4</p>
+
+  <p class="ziti4">***************************4.row***************************</p>
+
+  <p class="ziti4">b:5</p>
+
+  <p class="ziti4">4 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着在master上开启一个会话A执行如下事务，并且不要提交：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#Session A on master</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞DELETE FROM a WHERE b＜=5;</p>
+
+  <p class="ziti4">Query OK,4 rows affected(0.01 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">同样，在master上开启另一个会话B，执行如下事务，并且提交：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#Session B on master</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO a SELECT 3;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.01 sec)</p>
+
+  <p class="ziti4">mysql＞COMMIT;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着会话A提交，并查看表a中的数据：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#Session A on master</p>
+
+  <p class="ziti4">mysql＞COMMIT;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM a\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">b:3</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">但是在slave上看到的结果却是：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#Slave</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM a;</p>
+
+  <p class="ziti4">Empty set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，数据产生了不一致。导致这个问题发生的原因有两点：</p>
+
+  <p class="ziti3">❑在READ COMMITTED事务隔离级别下，事务没有使用gap lock进行锁定，因此用户在会话B中可以在小于等于5的范围内插入一条记录；</p>
+
+  <p class="ziti3">❑STATEMENT格式记录的是master上产生的SQL语句，因此在master服务器上执行的顺序为先删后插，但是在STATEMENT格式中记录的却是先插后删，逻辑顺序上产生了不一致。</p>
+
+  <p class="ziti3">要避免主从不一致的问题，只需解决上述问题中的一个就能保证数据的同步了。如使用READ REPEATABLE的事务隔离级别可以避免上述第一种情况的发生，也就避免了master和slave数据不一致问题的产生。</p>
+
+  <p class="ziti3">在MySQL 5.1版本之后，因为支持了ROW格式的二进制日志记录格式，避免了第二种情况的发生，所以可以放心使用READ COMMITTED的事务隔离级别。但即使不使用READ COMMITTED的事务隔离级别，也应该考虑将二进制日志的格式更换成ROW，因为这个格式记录的是行的变更，而不是简单的SQL语句，所以可以避免一些不同步现象的产生，进一步保证数据的同步。InnoDB存储引擎的创始人HeikkiTuuri也在http:∥bugs.mysql.com/bug.php?id=33210这个帖子中建议使用ROW格式的二进制日志。</p>
+</body></html>

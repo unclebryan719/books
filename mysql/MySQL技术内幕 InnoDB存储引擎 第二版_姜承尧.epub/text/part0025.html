@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>2.2　InnoDB存储引擎的版本</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="NQU20-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">2.2　InnoDB存储引擎的版本</h2>
+
+  <p class="ziti3">InnoDB存储引擎被包含于所有MySQL数据库的二进制发行版本中。早期其版本随着MySQL数据库的更新而更新。从MySQL 5.1版本时，MySQL数据库允许存储引擎开发商以动态方式加载引擎，这样存储引擎的更新可以不受MySQL数据库版本的限制。所以在MySQL 5.1中，可以支持两个版本的InnoDB，一个是静态编译的InnoDB版本，可将其视为老版本的InnoDB；另一个是动态加载的InnoDB版本，官方称为InnoDB Plugin，可将其视为InnoDB 1.0.x版本。MySQL 5.5版本中又将InnoDB的版本升级到了1.1.x。而在最近的MySQL 5.6版本中InnoDB的版本也随着升级为1.2.x版本。表2-1显示了各个版本中InnoDB存储引擎的功能。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00003.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">在现实工作中我发现很多MySQL数据库还是停留在MySQL 5.1版本，并使用InnoDB Plugin。很多DBA错误地认为InnoDB Plugin和InnoDB 1.1版本之间是没有区别的。但从表2-1中还是可以发现，虽然都增加了对于compress和dynamic页的支持，但是InnoDB Plugin是不支持Linux Native AIO功能的。此外，由于不支持多回滚段，InnoDB Plugin支持的最大支持并发事务数量也被限制在1023。而且随着MySQL 5.5版本的发布，InnoDB Plugin也变成了一个历史产品。</p>
+</body></html>

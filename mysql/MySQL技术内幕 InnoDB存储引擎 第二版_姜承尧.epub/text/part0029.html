@@ -1,0 +1,269 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>2.5　Master Thread工作方式</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="RL0A0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">2.5　Master Thread工作方式</h2>
+
+  <p class="ziti3">在2.3节中我们知道了，InnoDB存储引擎的主要工作都是在一个单独的后台线程Master Thread中完成的，这一节将具体解释该线程的具体实现及该线程可能存在的问题。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>2.5.1　InnoDB 1.0.x版本之前的Master Thread</h3>
+
+  <p class="ziti3">Master Thread具有最高的线程优先级别。其内部由多个循环（loop）组成：主循环（loop）、后台循环（backgroup loop）、刷新循环（flush loop）、暂停循环（suspend loop）。Master Thread会根据数据库运行的状态在loop、background loop、flush loop和suspendloop中进行切换。</p>
+
+  <p class="ziti3">Loop被称为主循环，因为大多数的操作是在这个循环中，其中有两大部分的操作——每秒钟的操作和每10秒的操作。伪代码如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">void master_thread(){</p>
+
+  <p class="ziti4">loop：</p>
+
+  <p class="ziti4">for(int i=0;i＜10;i++){</p>
+
+  <p class="ziti4">do thing once per second</p>
+
+  <p class="ziti4">sleep 1 second if necessary</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">do things once per ten seconds</p>
+
+  <p class="ziti4">goto loop;</p>
+
+  <p class="ziti4">}</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，loop循环通过thread sleep来实现，这意味着所谓的每秒一次或每10秒一次的操作是不精确的。在负载很大的情况下可能会有延迟（delay），只能说大概在这个频率下。当然，InnoDB源代码中还通过了其他的方法来尽量保证这个频率。</p>
+
+  <p class="ziti3">每秒一次的操作包括：</p>
+
+  <p class="ziti3">❑日志缓冲刷新到磁盘，即使这个事务还没有提交（总是）；</p>
+
+  <p class="ziti3">❑合并插入缓冲（可能）；</p>
+
+  <p class="ziti3">❑至多刷新100个InnoDB的缓冲池中的脏页到磁盘（可能）；</p>
+
+  <p class="ziti3">❑如果当前没有用户活动，则切换到background loop（可能）。</p>
+
+  <p class="ziti3">即使某个事务还没有提交，InnoDB存储引擎仍然每秒会将重做日志缓冲中的内容刷新到重做日志文件。这一点是必须要知道的，因为这可以很好地解释为什么再大的事务提交（commit）的时间也是很短的。</p>
+
+  <p class="ziti3">合并插入缓冲（Insert Buffer）并不是每秒都会发生的。InnoDB存储引擎会判断当前一秒内发生的IO次数是否小于5次，如果小于5次，InnoDB认为当前的IO压力很小，可以执行合并插入缓冲的操作。</p>
+
+  <p class="ziti3">同样，刷新100个脏页也不是每秒都会发生的。InnoDB存储引擎通过判断当前缓冲池中脏页的比例（buf_get_modified_ratio_pct）是否超过了配置文件中innodb_max_dirty_pages_pct这个参数（默认为90，代表90%），如果超过了这个阈值，InnoDB存储引擎认为需要做磁盘同步的操作，将100个脏页写入磁盘中。</p>
+
+  <p class="ziti3">总结上述操作，伪代码可以进一步具体化，如下所示：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">void master_thread(){</p>
+
+  <p class="ziti4">goto loop;</p>
+
+  <p class="ziti4">loop：</p>
+
+  <p class="ziti4">for(int i=0;i＜10;i++){</p>
+
+  <p class="ziti4">thread_sleep(1)//sleep 1 second</p>
+
+  <p class="ziti4">do log buffer flush to disk</p>
+
+  <p class="ziti4">if(last_one_second_ios＜5)</p>
+
+  <p class="ziti4">do merge at most 5 insert buffer</p>
+
+  <p class="ziti4">if(buf_get_modified_ratio_pct＞innodb_max_dirty_pages_pct)</p>
+
+  <p class="ziti4">do buffer pool flush 100 dirty page</p>
+
+  <p class="ziti4">if(no user activity)</p>
+
+  <p class="ziti4">goto backgroud loop</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">do things once per ten seconds</p>
+
+  <p class="ziti4">background loop:</p>
+
+  <p class="ziti4">do something</p>
+
+  <p class="ziti4">goto loop:</p>
+
+  <p class="ziti4">}</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着来看每10秒的操作，包括如下内容：</p>
+
+  <p class="ziti3">❑刷新100个脏页到磁盘（可能的情况下）；</p>
+
+  <p class="ziti3">❑合并至多5个插入缓冲（总是）；</p>
+
+  <p class="ziti3">❑将日志缓冲刷新到磁盘（总是）；</p>
+
+  <p class="ziti3">❑删除无用的Undo页（总是）；</p>
+
+  <p class="ziti3">❑刷新100个或者10个脏页到磁盘（总是）。</p>
+
+  <p class="ziti3">在以上的过程中，InnoDB存储引擎会先判断过去10秒之内磁盘的IO操作是否小于200次，如果是，InnoDB存储引擎认为当前有足够的磁盘IO操作能力，因此将100个脏页刷新到磁盘。接着，InnoDB存储引擎会合并插入缓冲。不同于每秒一次操作时可能发生的合并插入缓冲操作，这次的合并插入缓冲操作总会在这个阶段进行。之后，InnoDB存储引擎会再进行一次将日志缓冲刷新到磁盘的操作。这和每秒一次时发生的操作是一样的。</p>
+
+  <p class="ziti3">接着InnoDB存储引擎会进行一步执行full purge操作，即删除无用的Undo页。对表进行update、delete这类操作时，原先的行被标记为删除，但是因为一致性读（consistent read）的关系，需要保留这些行版本的信息。但是在full purge过程中，InnoDB存储引擎会判断当前事务系统中已被删除的行是否可以删除，比如有时候可能还有查询操作需要读取之前版本的undo信息，如果可以删除，InnoDB会立即将其删除。从源代码中可以发现，InnoDB存储引擎在执行full purge操作时，每次最多尝试回收20个undo页。</p>
+
+  <p class="ziti3">然后，InnoDB存储引擎会判断缓冲池中脏页的比例（buf_get_modified_ratio_pct），如果有超过70%的脏页，则刷新100个脏页到磁盘，如果脏页的比例小于70%，则只需刷新10%的脏页到磁盘。</p>
+
+  <p class="ziti3">现在我们可以完整地把主循环（main loop）的伪代码写出来了，内容如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">void master_thread(){</p>
+
+  <p class="ziti4">goto loop;</p>
+
+  <p class="ziti4">loop：</p>
+
+  <p class="ziti4">for(int i=0;i＜10;i++){</p>
+
+  <p class="ziti4">thread_sleep(1)//sleep 1 second</p>
+
+  <p class="ziti4">do log buffer flush to disk</p>
+
+  <p class="ziti4">if(last_one_second_ios＜5)</p>
+
+  <p class="ziti4">do merge at most 5 insert buffer</p>
+
+  <p class="ziti4">if(buf_get_modified_ratio_pct＞innodb_max_dirty_pages_pct)</p>
+
+  <p class="ziti4">do buffer pool flush 100 dirty page</p>
+
+  <p class="ziti4">if(no user activity)</p>
+
+  <p class="ziti4">goto backgroud loop</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">if(last_ten_second_ios＜200)</p>
+
+  <p class="ziti4">do buffer pool flush 100 dirty page</p>
+
+  <p class="ziti4">do merge at most 5 insert buffer</p>
+
+  <p class="ziti4">do log buffer flush to disk</p>
+
+  <p class="ziti4">do full purge</p>
+
+  <p class="ziti4">if(buf_get_modified_ratio_pct＞70%)</p>
+
+  <p class="ziti4">do buffer pool flush 100 dirty page</p>
+
+  <p class="ziti4">else</p>
+
+  <p class="ziti4">buffer pool flush 10 dirty page</p>
+
+  <p class="ziti4">goto loop</p>
+
+  <p class="ziti4">background loop:</p>
+
+  <p class="ziti4">do something</p>
+
+  <p class="ziti4">goto loop:</p>
+
+  <p class="ziti4">}</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着来看background loop，若当前没有用户活动（数据库空闲时）或者数据库关闭（shutdown），就会切换到这个循环。background loop会执行以下操作：</p>
+
+  <p class="ziti3">❑删除无用的Undo页（总是）；</p>
+
+  <p class="ziti3">❑合并20个插入缓冲（总是）；</p>
+
+  <p class="ziti3">❑跳回到主循环（总是）；</p>
+
+  <p class="ziti3">❑不断刷新100个页直到符合条件（可能，跳转到flush loop中完成）。</p>
+
+  <p class="ziti3">若flush loop中也没有什么事情可以做了，InnoDB存储引擎会切换到suspend__loop，将Master Thread挂起，等待事件的发生。若用户启用（enable）了InnoDB存储引擎，却没有使用任何InnoDB存储引擎的表，那么Master Thread总是处于挂起的状态。</p>
+
+  <p class="ziti3">最后，Master Thread完整的伪代码如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">void master_thread(){</p>
+
+  <p class="ziti4">goto loop;</p>
+
+  <p class="ziti4">loop：</p>
+
+  <p class="ziti4">for(int i=0;i＜10;i++){</p>
+
+  <p class="ziti4">thread_sleep(1)//sleep 1 second</p>
+
+  <p class="ziti4">do log buffer flush to disk</p>
+
+  <p class="ziti4">if(last_one_second_ios＜5)</p>
+
+  <p class="ziti4">do merge at most 5 insert buffer</p>
+
+  <p class="ziti4">if(buf_get_modified_ratio_pct＞innodb_max_dirty_pages_pct)</p>
+
+  <p class="ziti4">do buffer pool flush 100 dirty page</p>
+
+  <p class="ziti4">if(no user activity)</p>
+
+  <p class="ziti4">goto backgroud loop</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">if(last_ten_second_ios＜200)</p>
+
+  <p class="ziti4">do buffer pool flush 100 dirty page</p>
+
+  <p class="ziti4">do merge at most 5 insert buffer</p>
+
+  <p class="ziti4">do log buffer flush to disk</p>
+
+  <p class="ziti4">do full purge</p>
+
+  <p class="ziti4">if(buf_get_modified_ratio_pct＞70%)</p>
+
+  <p class="ziti4">do buffer pool flush 100 dirty page</p>
+
+  <p class="ziti4">else</p>
+
+  <p class="ziti4">buffer pool flush 10 dirty page</p>
+
+  <p class="ziti4">goto loop</p>
+
+  <p class="ziti4">background loop:</p>
+
+  <p class="ziti4">do full purge</p>
+
+  <p class="ziti4">do merge 20 insert buffer</p>
+
+  <p class="ziti4">if not idle:</p>
+
+  <p class="ziti4">goto loop:</p>
+
+  <p class="ziti4">else:</p>
+
+  <p class="ziti4">goto flush loop</p>
+
+  <p class="ziti4">flush loop:</p>
+
+  <p class="ziti4">do buffer pool flush 100 dirty page</p>
+
+  <p class="ziti4">if(buf_get_modified_ratio_pct＞innodb_max_dirty_pages_pct)</p>
+
+  <p class="ziti4">goto flush loop</p>
+
+  <p class="ziti4">goto suspend loop</p>
+
+  <p class="ziti4">suspend loop:</p>
+
+  <p class="ziti4">suspend_thread()</p>
+
+  <p class="ziti4">waiting event</p>
+
+  <p class="ziti4">goto loop;</p>
+
+  <p class="ziti4">}</p>
+  <hr class="calibre2"/>
+</body></html>

@@ -1,0 +1,103 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>9.2　内存的重要性</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4REBM0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">9.2　内存的重要性</h2>
+
+  <p class="ziti3">内存的大小是最能直接反映数据库的性能。通过之前各个章节的介绍，已经了解到InnoDB存储引擎既缓存数据，又缓存索引，并且将它们缓存于一个很大的缓冲池中，即InnoDB Buffer Pool。因此，内存的大小直接影响了数据库的性能。Percona公司的CTO Vadim对此做了一次测试，以此反映内存的重要性，结果如图9-1所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00144.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　9-1　不同内存容量下InnoDB存储引擎的性能表现
+  </div>
+
+  <p class="ziti3">在上述测试中，数据和索引总大小为18GB，然后将缓冲池的大小分别设为2GB、4GB、6GB、8GB、10GB、12GB、14GB、16GB、18GB、20GB、22GB，再进行sysbench的测试。可以发现，随着缓冲池的增大，测试结果TPS（Transaction Per Second）会线性增长。当缓冲池增大到20GB和22GB时，数据库的性能有了极大的提高，因为这时缓冲池的大小已经大于数据文件本身的大小，所有对数据文件的操作都可以在内存中进行。因此这时的性能应该是最优的，再调大缓冲池并不能再提高数据库的性能。</p>
+
+  <p class="ziti3">所以，应该在开发应用前预估“活跃”数据库的大小是多少，并以此确定数据库服务器内存的大小。当然，要使用更多的内存还必须使用64位的操作系统。</p>
+
+  <p class="ziti3">如何判断当前数据库的内存是否已经达到瓶颈了呢？可以通过查看当前服务器的状态，比较物理磁盘的读取和内存读取的比例来判断缓冲池的命中率，通常InnoDB存储引擎的缓冲池的命中率不应该小于99%，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW GLOBAL STAUTS LIKE'innodb%read%'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:Innodb_buffer_pool_read_ahead</p>
+
+  <p class="ziti4">Value:0</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">Variable_name:Innodb_buffer_pool_read_ahead_evicted</p>
+
+  <p class="ziti4">Value:0</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">Variable_name:Innodb_buffer_pool_read_requests</p>
+
+  <p class="ziti4">Value:167051313</p>
+
+  <p class="ziti4">***************************4.row***************************</p>
+
+  <p class="ziti4">Variable_name:Innodb_buffer_pool_reads</p>
+
+  <p class="ziti4">Value:129236</p>
+
+  <p class="ziti4">***************************5.row***************************</p>
+
+  <p class="ziti4">Variable_name:Innodb_data_pending_reads</p>
+
+  <p class="ziti4">Value:0</p>
+
+  <p class="ziti4">***************************6.row***************************</p>
+
+  <p class="ziti4">Variable_name:Innodb_data_read</p>
+
+  <p class="ziti4">Value:2135642112</p>
+
+  <p class="ziti4">***************************7.row***************************</p>
+
+  <p class="ziti4">Variable_name:Innodb_data_reads</p>
+
+  <p class="ziti4">Value:130309</p>
+
+  <p class="ziti4">***************************8.row***************************</p>
+
+  <p class="ziti4">Variable_name:Innodb_pages_read</p>
+
+  <p class="ziti4">Value:130215</p>
+
+  <p class="ziti4">***************************9.row***************************</p>
+
+  <p class="ziti4">Variable_name:Innodb_rows_read</p>
+
+  <p class="ziti4">Value:17651085</p>
+
+  <p class="ziti4">9 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述参数的具体含义如表9-1所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00145.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">以下公式可以计算各种对缓冲池的操作：</p>
+
+  <div class="pic-l">
+    <img alt="" src="../images/00146.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">从上面的例子看，缓冲池命中率=167 051 313/（167 051 313+129 236+0）=99.92%。</p>
+
+  <p class="ziti3">即使缓冲池的大小已经大于数据库文件的大小，这也并不意味着没有磁盘操作。数据库的缓冲池只是一个用来存放热点的区域，后台的线程还负责将脏页异步地写入到磁盘。此外，每次事务提交时还需要将日志写入重做日志文件。</p>
+</body></html>

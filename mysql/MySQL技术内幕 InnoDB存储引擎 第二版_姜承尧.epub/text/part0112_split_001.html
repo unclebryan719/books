@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>第6章　锁</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3APV00-878f632495a744b2a24ea2205f162355" class="calibre">
+<h2 class="p4" id="heading_id_3"><a id="bw1" class="pcalibre calibre1"></a>6.1　什么是锁</h2>
+
+  <p class="ziti3">锁是数据库系统区别于文件系统的一个关键特性。锁机制用于管理对共享资源的并发访问<sup class="calibre4"><a id="ch1" href="part0112_split_001.html#ch1-back" class="pcalibre calibre1">[1]</a></sup>。InnoDB存储引擎会在行级别上对表数据上锁，这固然不错。不过InnoDB存储引擎也会在数据库内部其他多个地方使用锁，从而允许对多种不同资源提供并发访问。例如，操作缓冲池中的LRU列表，删除、添加、移动LRU列表中的元素，为了保证一致性，必须有锁的介入。数据库系统使用锁是为了支持对共享资源进行并发访问，提供数据的完整性和一致性。</p>
+
+  <p class="ziti3">另一点需要理解的是，虽然现在数据库系统做得越来越类似，但是有多少种数据库，就可能有多少种锁的实现方法。在SQL语法层面，因为SQL标准的存在，要熟悉多个关系数据库系统并不是一件难事。而对于锁，用户可能对某个特定的关系数据库系统的锁定模型有一定的经验，但这并不意味着知道其他数据库。在使用InnoDB存储引擎之前，我还使用过MySQL数据库的MyISAM和NDB Cluster存储引擎。在使用MySQL数据库之前，我还曾经使用过Microsoft SQL Server、Oracle等数据库，但它们各自对于锁的实现完全不同。</p>
+
+  <p class="ziti3">对于MyISAM引擎，其锁是表锁设计。并发情况下的读没有问题，但是并发插入时的性能就要差一些了，若插入是在“底部”，MyISAM存储引擎还是可以有一定的并发写入操作。对于Microsoft SQL Server数据库，在Microsoft SQL Server 2005版本之前其都是页锁的，相对表锁的MyISAM引擎来说，并发性能有所提高。页锁容易实现，然而对于热点数据页的并发问题依然无能为力。到2005版本，Microsoft SQL Server开始支持乐观并发和悲观并发，在乐观并发下开始支持行级锁，但是其实现方式与InnoDB存储引擎的实现方式完全不同。用户会发现在Microsoft SQL Server下，锁是一种稀有的资源，锁越多开销就越大，因此它会有锁升级。在这种情况下，行锁会升级到表锁，这时并发的性能又回到了以前。</p>
+
+  <p class="ziti3">InnoDB存储引擎锁的实现和Oracle数据库非常类似，提供一致性的非锁定读、行级锁支持。行级锁没有相关额外的开销，并可以同时得到并发性和一致性。</p>
+
+  <div class="fnote">
+    <a id="ch1-back" href="part0112_split_001.html#ch1" class="pcalibre calibre1">[1]</a>注意：这里说的是“共享资源”而不仅仅是“行记录”。
+  </div>
+</body></html>

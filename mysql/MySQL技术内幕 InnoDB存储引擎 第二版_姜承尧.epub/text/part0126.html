@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.7.2　死锁概率</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3O56S0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">6.7.2　死锁概率</h3>
+
+  <p class="ziti3">死锁应该非常少发生，若经常发生，则系统是不可用的。此外，死锁的次数应该还要少于等待，因为至少需要2次等待才会产生一次死锁。本节将从纯数学的概率角度来分析，死锁发生的概率是非常小的。</p>
+
+  <p class="ziti3">假设当前数据库中共有n+1个线程执行，即当前总共有n+1个事务。并假设每个事务所做的操作相同。若每个事务由r+1个操作组成，每个操作为从R行数据中随机地操作一行数据，并占用对象的锁。每个事务在执行完最后一个步骤释放所占用的所有锁资源。最后，假设nr＜＜R，即线程操作的数据只占所有数据的一小部分。</p>
+
+  <p class="ziti3">在上述的模型下，事务获得一个锁需要等待的概率是多少呢？当事务获得一个锁，其他任何一个事务获得锁的情况为：</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00102.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">由于每个操作为从R行数据中取一条数据，每行数据被取到的概率为1/R，因此，事务中每个操作需要等待的概率PW为：</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00103.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">事务是由r个操作所组成，因此事务发生等待的概率PW(T)为：</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00104.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">死锁是由于产生回路，也就是事务互相等待而发生的，若死锁的长度为2，即两个等待节点间发生死锁，那么其概率为：</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00105.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">由于大部分死锁发生的长度为2，因此上述公式基本代表了一个事务发生死锁的概率。从整个系统来看，任何一个事务发生死锁的概率为：</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00106.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">从上述的公式中可以发现，由于nr＜＜R，因此事务发生死锁的概率是非常低的。同时，事务发生死锁的概率与以下几点因素有关：</p>
+
+  <p class="ziti3">❑系统中事务的数量（n），数量越多发生死锁的概率越大。</p>
+
+  <p class="ziti3">❑每个事务操作的数量（r），每个事务操作的数量越多，发生死锁的概率越大。</p>
+
+  <p class="ziti3">❑操作数据的集合（R），越小则发生死锁的概率越大。</p>
+</body></html>

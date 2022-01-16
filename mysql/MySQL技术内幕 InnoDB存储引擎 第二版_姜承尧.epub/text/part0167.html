@@ -1,0 +1,67 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>9.4.2　RAID Write Back功能</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4V8DU0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">9.4.2　RAID Write Back功能</h3>
+
+  <p class="ziti3">RAID Write Back功能是指RAID控制器能够将写入的数据放入自身的缓存中，并把它们安排到后面再执行。这样做的好处是，不用等待物理磁盘实际写入的完成，因此写入变得更快了。对于数据库来说，这显得十分重要。例如，对重做日志的写入，在将sync_binlog设为1的情况下二进制日志的写入、脏页的刷新等都可以使性能得到明显的提升。</p>
+
+  <p class="ziti3">但是，当操作系统或数据库关机时，Write Back功能可能会破坏数据库的数据。这是由于已经写入的数据库可能还在RAID卡的缓存中，数据可能并没有完全写入磁盘，而这时故障发生了。为了解决这个问题，目前大部分的硬件RAID卡都提供了电池备份单元（BBU，Battery Backup Unit），因此可以放心地开启Write Back的功能。不过我发现每台服务器的出厂设置都不相同，应该将RAID设置要求告知服务器提供商，开启一些认为需要的参数。</p>
+
+  <p class="ziti3">如果没有启用Write Back功能，那么在RAID卡设置中显示的就是Write Through。Write Through没有缓冲写入，因此写入性能可能不是很好，但它却是最安全的写入。</p>
+
+  <p class="ziti3">即使用户开启了Write Back功能，RAID卡也可能只是在Write Through模式下工作。这是因为安全使用Write Back的前提是RAID卡有电池备份单元。为了确保电池的有效性，RAID卡会定期检查电池状态，并在电池电量不足时对其进行充电，在充电的这段时间内会将Write Back功能切换为最为安全的Write Through。</p>
+
+  <p class="ziti3">用户可以在没有电池备份单元的情况下强制启用Write Back功能，也可以在电池充电时强制使用Write Back功能，只是写入是不安全的。用户应该非常确信这点，否则不应该在没有电池备份单元的情况下启用Write Back。</p>
+
+  <p class="ziti3">可以通过插入20W的记录来比较Write Back和Write Through的性能差异：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t(a CHAR(2))Engine=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞DELIMITER//</p>
+
+  <p class="ziti4">mysql＞</p>
+
+  <p class="ziti4">mysql＞CREATE PROCEDURE p()</p>
+
+  <p class="ziti4">-＞BEGIN</p>
+
+  <p class="ziti4">-＞DECLARE v INT;</p>
+
+  <p class="ziti4">-＞SET v=0;</p>
+
+  <p class="ziti4">-＞WHILE v＜200000 DO</p>
+
+  <p class="ziti4">-＞INSERTINTO t VALUES('aa');</p>
+
+  <p class="ziti4">-＞SET v=v+1;</p>
+
+  <p class="ziti4">-＞END WHILE;</p>
+
+  <p class="ziti4">-＞END</p>
+
+  <p class="ziti4">-＞//</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.12 sec)</p>
+
+  <p class="ziti4">mysql＞DELIMITER;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">首先创建一个向表t插入20W记录的存储过程，并在Write Back和Write Through的设置下分别进行测试，最终测试结果如表9-2所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00154.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">由于批量插入不是在一个事务中完成的，而是直接用命令CALL P来运行的，因此数据库实际执行了20W次的事务。很明显可以看到，在Write Back模式下执行时间只需要43秒，而在Write Through模式下执行时间需要31分钟，大约有40多倍的差距。</p>
+
+  <p class="ziti3">当然，在Write Through模式下，通过将参数innodb_flush_log_at_trx_commit设置为0也可以提高执行存储过程P的性能，这时只需要68秒了。因为，在此设置下，重做日志的写入不是发生在每次事务提交时，而是发生在后台master线程每秒钟自动刷新的时候，因此减少了物理磁盘的写入请求，所以执行速度也可以有明显的提高。</p>
+</body></html>

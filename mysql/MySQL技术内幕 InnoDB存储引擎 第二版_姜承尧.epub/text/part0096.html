@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.5.2　InnoDB存储引擎的Cardinality统计</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2RHM00-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.5.2　InnoDB存储引擎的Cardinality统计</h3>
+
+  <p class="ziti3">上一小节介绍了Cardinality的重要性，并且告诉读者Cardinality表示选择性。建立索引的前提是列中的数据是高选择性的，这对数据库来说才具有实际意义。然而数据库是怎样来统计Cardinality信息的呢？因为MySQL数据库中有各种不同的存储引擎，而每种存储引擎对于B+树索引的实现又各不相同，所以对Cardinality的统计是放在存储引擎层进行的。</p>
+
+  <p class="ziti3">此外需要考虑到的是，在生产环境中，索引的更新操作可能是非常频繁的。如果每次索引在发生操作时就对其进行Cardinality的统计，那么将会给数据库带来很大的负担。另外需要考虑的是，如果一张表的数据非常大，如一张表有50G的数据，那么统计一次Cardinality信息所需要的时间可能非常长。这在生产环境下，也是不能接受的。因此，数据库对于Cardinality的统计都是通过采样（Sample）的方法来完成的。</p>
+
+  <p class="ziti3">在InnoDB存储引擎中，Cardinality统计信息的更新发生在两个操作中：INSERT和UPDATE。根据前面的叙述，不可能在每次发生INSERT和UPDATE时就去更新Cardinality信息，这样会增加数据库系统的负荷，同时对于大表的统计，时间上也不允许数据库这样去操作。因此，InnoDB存储引擎内部对更新Cardinality信息的策略为：</p>
+
+  <p class="ziti3">❑表中1/16的数据已发生过变化。</p>
+
+  <p class="ziti3">❑stat_modified_counter＞2 000 000 000。</p>
+
+  <p class="ziti3">第一种策略为自从上次统计Cardinality信息后，表中1/16的数据已经发生过变化，这时需要更新Cardinality信息。第二种情况考虑的是，如果对表中某一行数据频繁地进行更新操作，这时表中的数据实际并没有增加，实际发生变化的还是这一行数据，则第一种更新策略就无法适用这这种情况。故在InnoDB存储引擎内部有一个计数器stat_modified_counter，用来表示发生变化的次数，当stat_modified_counter大于2 000 000 000时，则同样需要更新Cardinality信息。</p>
+
+  <p class="ziti3">接着考虑InnoDB存储引擎内部是怎样来进行Cardinality信息的统计和更新操作的呢？同样是通过采样的方法。默认InnoDB存储引擎对8个叶子节点（Leaf　Page）进行采用。采样的过程如下：</p>
+
+  <p class="ziti3">❑取得B+树索引中叶子节点的数量，记为A。</p>
+
+  <p class="ziti3">❑随机取得B+树索引中的8个叶子节点。统计每个页不同记录的个数，即为P1，P2，…，P8。</p>
+
+  <p class="ziti3">❑根据采样信息给出Cardinality的预估值：Cardinality=（P1+P2+…+P8）*A/8。</p>
+
+  <p class="ziti3">通过上述的说明可以发现，在InnoDB存储引擎中，Cardinality值是通过对8个叶子节点预估而得的，不是一个实际精确的值。再者，每次对Cardinality值的统计，都是通过随机取8个叶子节点得到的，这同时又暗示了另一个Cardinality现象，即每次得到的Cardinality值可能是不同的。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SHOW INDEX FROM OrderDetails</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述这句SQL语句会触发MySQL数据库对于Cardinality值的统计，第一次运行得到的结果如图5-20所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00051.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-20　第一次运行SHOW INDEX FROM OrderDetails的结果
+  </div>
+
+  <p class="ziti3">在上述测试过程中，并没有通过INSERT、UPDATE这类操作来改变表OrderDetails中的内容，但是当第二次再运行SHOW INDEX FROM语句时，Cardinality值还是会发生变化，如图5-21所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00052.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-21　第二次运行SHOW INDEX FROM OrderDetails的结果
+  </div>
+
+  <p class="ziti3">可以看到，第二次运行SHOW INDEX FROM语句时，表OrderDetails中索引的Cardinality值都发生了变化，虽然表OrderDetails本身并没有发生任何的变化，但是，由于Cardinality是对随机取8个叶子节点进行分析，所以即使表没有发生变化，用户观察到的索引Cardinality值还是会发生变化，这本身并不是InnoDB存储引擎的Bug，只是随机采样而导致的结果。</p>
+
+  <p class="ziti3">当然，有一种情况可能使得用户每次观察到的索引Cardinality值都是一样的，那就是表足够小，表的叶子节点数小于或者等于8个。这时即使随机采样，也总是会采取到这些页，因此每次得到的Cardinality值是相同的。</p>
+
+  <p class="ziti3">在InnoDB 1.2版本之前，可以通过参数innodb_stats_sample_pages用来设置统计Cardinality时每次采样页的数量，默认值为8。同时，参数innodb_stats_method用来判断如何对待索引中出现的NULL值记录。该参数默认值为nulls_equal，表示将NULL值记录视为相等的记录。其有效值还有nulls_unequal，nulls_ignored，分别表示将NULL值记录视为不同的记录和忽略NULL值记录。例如某页中索引记录为NULL、NULL、1、2、2、3、3、3，在参数innodb_stats_method的默认设置下，该页的Cardinality为4；若参数innodb_stats_method为nulls_unequal，则该页的Caridinality为5；若参数innodb_stats_method为nulls_ignored，则Cardinality为3。</p>
+
+  <p class="ziti3">当执行SQL语句ANALYZE TABLE、SHOW TABLE STATUS、SHOW INDEX以及访问INFORMATION_SCHEMA架构下的表TABLES和STATISTICS时会导致InnoDB存储引擎去重新计算索引的Cardinality值。若表中的数据量非常大，并且表中存在多个辅助索引时，执行上述这些操作可能会非常慢。虽然用户可能并不希望去更新Cardinality值。</p>
+
+  <p class="ziti3">InnoDB1.2版本提供了更多的参数对Cardinality统计进行设置，这些参数如表5-3所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00053.jpeg" class="calibre3"/>
+  </div>
+</body></html>

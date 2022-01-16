@@ -1,0 +1,165 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>2.4　Checkpoint技术</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="QMFO0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">2.4　Checkpoint技术</h2>
+
+  <p class="ziti3">前面已经讲到了，缓冲池的设计目的为了协调CPU速度与磁盘速度的鸿沟。因此页的操作首先都是在缓冲池中完成的。如果一条DML语句，如Update或Delete改变了页中的记录，那么此时页是脏的，即缓冲池中的页的版本要比磁盘的新。数据库需要将新版本的页从缓冲池刷新到磁盘。</p>
+
+  <p class="ziti3">倘若每次一个页发生变化，就将新页的版本刷新到磁盘，那么这个开销是非常大的。若热点数据集中在某几个页中，那么数据库的性能将变得非常差。同时，如果在从缓冲池将页的新版本刷新到磁盘时发生了宕机，那么数据就不能恢复了。为了避免发生数据丢失的问题，当前事务数据库系统普遍都采用了Write Ahead Log策略，即当事务提交时，先写重做日志，再修改页。当由于发生宕机而导致数据丢失时，通过重做日志来完成数据的恢复。这也是事务ACID中D（Durability持久性）的要求。</p>
+
+  <p class="ziti3">思考下面的场景，如果重做日志可以无限地增大，同时缓冲池也足够大，能够缓冲所有数据库的数据，那么是不需要将缓冲池中页的新版本刷新回磁盘。因为当发生宕机时，完全可以通过重做日志来恢复整个数据库系统中的数据到宕机发生的时刻。但是这需要两个前提条件：</p>
+
+  <p class="ziti3">❑缓冲池可以缓存数据库中所有的数据；</p>
+
+  <p class="ziti3">❑重做日志可以无限增大。</p>
+
+  <p class="ziti3">对于第一个前提条件，有经验的用户都知道，当数据库刚开始创建时，表中没有任何数据。缓冲池的确可以缓存所有的数据库文件。然而随着市场的推广，用户的增加，产品越来越受到关注，使用量也越来越大。这时负责后台存储的数据库的容量必定会不断增大。当前3TB的MySQL数据库已并不少见，但是3 TB的内存却非常少见。目前Oracle Exadata旗舰数据库一体机也就只有2 TB的内存。因此第一个假设对于生产环境应用中的数据库是很难得到保证的。</p>
+
+  <p class="ziti3">再来看第二个前提条件：重做日志可以无限增大。也许是可以的，但是这对成本的要求太高，同时不便于运维。DBA或SA不能知道什么时候重做日志是否已经接近于磁盘可使用空间的阈值，并且要让存储设备支持可动态扩展也是需要一定的技巧和设备支持的。</p>
+
+  <p class="ziti3">好的，即使上述两个条件都满足，那么还有一个情况需要考虑：宕机后数据库的恢复时间。当数据库运行了几个月甚至几年时，这时发生宕机，重新应用重做日志的时间会非常久，此时恢复的代价也会非常大。</p>
+
+  <p class="ziti3">因此Checkpoint（检查点）技术的目的是解决以下几个问题：</p>
+
+  <p class="ziti3">❑缩短数据库的恢复时间；</p>
+
+  <p class="ziti3">❑缓冲池不够用时，将脏页刷新到磁盘；</p>
+
+  <p class="ziti3">❑重做日志不可用时，刷新脏页。</p>
+
+  <p class="ziti3">当数据库发生宕机时，数据库不需要重做所有的日志，因为Checkpoint之前的页都已经刷新回磁盘。故数据库只需对Checkpoint后的重做日志进行恢复。这样就大大缩短了恢复的时间。</p>
+
+  <p class="ziti3">此外，当缓冲池不够用时，根据LRU算法会溢出最近最少使用的页，若此页为脏页，那么需要强制执行Checkpoint，将脏页也就是页的新版本刷回磁盘。</p>
+
+  <p class="ziti3">重做日志出现不可用的情况是因为当前事务数据库系统对重做日志的设计都是循环使用的，并不是让其无限增大的，这从成本及管理上都是比较困难的。重做日志可以被重用的部分是指这些重做日志已经不再需要，即当数据库发生宕机时，数据库恢复操作不需要这部分的重做日志，因此这部分就可以被覆盖重用。若此时重做日志还需要使用，那么必须强制产生Checkpoint，将缓冲池中的页至少刷新到当前重做日志的位置。</p>
+
+  <p class="ziti3">对于InnoDB存储引擎而言，其是通过LSN（Log Sequence Number）来标记版本的。而LSN是8字节的数字，其单位是字节。每个页有LSN，重做日志中也有LSN，Checkpoint也有LSN。可以通过命令SHOW ENGINE INNODB STATUS来观察：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">......</p>
+
+  <p class="ziti4">---</p>
+
+  <p class="ziti4">LOG</p>
+
+  <p class="ziti4">---</p>
+
+  <p class="ziti4">Log sequence number 92561351052</p>
+
+  <p class="ziti4">Log flushed up to 92561351052</p>
+
+  <p class="ziti4">Last checkpoint at 92561351052</p>
+
+  <p class="ziti4">......</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在InnoDB存储引擎中，Checkpoint发生的时间、条件及脏页的选择等都非常复杂。而Checkpoint所做的事情无外乎是将缓冲池中的脏页刷回到磁盘。不同之处在于每次刷新多少页到磁盘，每次从哪里取脏页，以及什么时间触发Checkpoint。在InnoDB存储引擎内部，有两种Checkpoint，分别为：</p>
+
+  <p class="ziti3">❑Sharp Checkpoint</p>
+
+  <p class="ziti3">❑Fuzzy Checkpoint</p>
+
+  <p class="ziti3">Sharp Checkpoint发生在数据库关闭时将所有的脏页都刷新回磁盘，这是默认的工作方式，即参数innodb_fast_shutdown=1。</p>
+
+  <p class="ziti3">但是若数据库在运行时也使用Sharp Checkpoint，那么数据库的可用性就会受到很大的影响。故在InnoDB存储引擎内部使用Fuzzy Checkpoint进行页的刷新，即只刷新一部分脏页，而不是刷新所有的脏页回磁盘。</p>
+
+  <p class="ziti3">这里笔者进行了概括，在InnoDB存储引擎中可能发生如下几种情况的Fuzzy Checkpoint：</p>
+
+  <p class="ziti3">❑Master Thread Checkpoint</p>
+
+  <p class="ziti3">❑FLUSH_LRU_LIST Checkpoint</p>
+
+  <p class="ziti3">❑Async/Sync Flush Checkpoint</p>
+
+  <p class="ziti3">❑Dirty Page too much Checkpoint</p>
+
+  <p class="ziti3">对于Master Thread（2.5节会详细介绍各个版本中Master Thread的实现）中发生的Checkpoint，差不多以每秒或每十秒的速度从缓冲池的脏页列表中刷新一定比例的页回磁盘。这个过程是异步的，即此时InnoDB存储引擎可以进行其他的操作，用户查询线程不会阻塞。</p>
+
+  <p class="ziti3">FLUSH_LRU_LIST Checkpoint是因为InnoDB存储引擎需要保证LRU列表中需要有差不多100个空闲页可供使用。在InnoDB1.1.x版本之前，需要检查LRU列表中是否有足够的可用空间操作发生在用户查询线程中，显然这会阻塞用户的查询操作。倘若没有100个可用空闲页，那么InnoDB存储引擎会将LRU列表尾端的页移除。如果这些页中有脏页，那么需要进行Checkpoint，而这些页是来自LRU列表的，因此称为FLUSH_LRU_LIST Checkpoint。</p>
+
+  <p class="ziti3">而从MySQL 5.6版本，也就是InnoDB1.2.x版本开始，这个检查被放在了一个单独的Page Cleaner线程中进行，并且用户可以通过参数innodb_lru_scan_depth控制LRU列表中可用页的数量，该值默认为1024，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_lru_scan_depth'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_lru_scan_depth</p>
+
+  <p class="ziti4">Value:1024</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">Async/Sync Flush Checkpoint指的是重做日志文件不可用的情况，这时需要强制将一些页刷新回磁盘，而此时脏页是从脏页列表中选取的。若将已经写入到重做日志的LSN记为redo_lsn，将已经刷新回磁盘最新页的LSN记为checkpoint_lsn，则可定义：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">checkpoint_age=redo_lsn-checkpoint_lsn</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">再定义以下的变量：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">async_water_mark=75%*total_redo_log_file_size</p>
+
+  <p class="ziti4">sync_water_mark=90%*total_redo_log_file_size</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">若每个重做日志文件的大小为1GB，并且定义了两个重做日志文件，则重做日志文件的总大小为2GB。那么async_water_mark=1.5GB，sync_water_mark=1.8GB。则：</p>
+
+  <p class="ziti3">❑当checkpoint_age＜async_water_mark时，不需要刷新任何脏页到磁盘；</p>
+
+  <p class="ziti3">❑当async_water_mark＜checkpoint_age＜sync_water_mark时触发Async Flush，从Flush列表中刷新足够的脏页回磁盘，使得刷新后满足checkpoint_age＜async_water_mark；</p>
+
+  <p class="ziti3">❑checkpoint_age＞sync_water_mark这种情况一般很少发生，除非设置的重做日志文件太小，并且在进行类似LOAD DATA的BULK INSERT操作。此时触发Sync Flush操作，从Flush列表中刷新足够的脏页回磁盘，使得刷新后满足checkpoint_age＜async_water_mark。</p>
+
+  <p class="ziti3">可见，Async/Sync Flush Checkpoint是为了保证重做日志的循环使用的可用性。在InnoDB 1.2.x版本之前，Async Flush Checkpoint会阻塞发现问题的用户查询线程，而Sync Flush Checkpoint会阻塞所有的用户查询线程，并且等待脏页刷新完成。从InnoDB 1.2.x版本开始——也就是MySQL 5.6版本，这部分的刷新操作同样放入到了单独的Page Cleaner Thread中，故不会阻塞用户查询线程。</p>
+
+  <p class="ziti3">MySQL官方版本并不能查看刷新页是从Flush列表中还是从LRU列表中进行Checkpoint的，也不知道因为重做日志而产生的Async/Sync Flush的次数。但是InnoSQL版本提供了方法，可以通过命令SHOW ENGINE INNODB STATUS来观察，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Type:InnoDB</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">LRU len:112902,unzip_LRU len:0</p>
+
+  <p class="ziti4">I/O sum[0]:cur[0],unzip sum[0]:cur[0]</p>
+
+  <p class="ziti4">Async Flush:0,Sync Flush:0,LRU List Flush:0,Flush List Flush:111736</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">1 row in set(0.01 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">根据上述的信息，还可以对InnoDB存储引擎做更为深入的调优，这部分将在第9章中讲述。</p>
+
+  <p class="ziti3">最后一种Checkpoint的情况是Dirty Page too much，即脏页的数量太多，导致InnoDB存储引擎强制进行Checkpoint。其目的总的来说还是为了保证缓冲池中有足够可用的页。其可由参数innodb_max_dirty_pages_pct控制：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_max_dirty_pages_pct'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_max_dirty_pages_pct</p>
+
+  <p class="ziti4">Value:75</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">innodb_max_dirty_pages_pct值为75表示，当缓冲池中脏页的数量占据75%时，强制进行Checkpoint，刷新一部分的脏页到磁盘。在InnoDB 1.0.x版本之前，该参数默认值为90，之后的版本都为75。</p>
+</body></html>

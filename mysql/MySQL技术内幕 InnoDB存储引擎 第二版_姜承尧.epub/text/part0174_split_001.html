@@ -1,0 +1,77 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>第10章　InnoDB存储引擎源代码的编译和调试</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="55U1S0-878f632495a744b2a24ea2205f162355" class="calibre">
+<h2 class="p4" id="heading_id_3"><a id="bw1" class="pcalibre calibre1"></a>10.1　获取InnoDB存储引擎源代码</h2>
+
+  <p class="ziti3">InnoDB存储引擎的源代码被包含在MySQL数据库的源代码中，在MySQL的官方网站<sup class="calibre4"><a id="ch1" href="part0174_split_001.html#ch1-back" class="pcalibre calibre1">[1]</a></sup>上下载MySQL数据库的源代码即可，如图10-1所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00157.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-1　MySQL源代码下载
+  </div>
+
+  <p class="ziti3">可以看到，这里有不同操作系统下的源代码可供下载，一般只需下载Generic Linux的版本即可。通过MySQL官网首页的Download链接可以迅速地找到GA版本的下载，但是如果想要下载目前正在开发的MySQL版本，如MySQL 5.5.5（现在是milestone的版本，离GA版本还有很长的开发时间），用户可能在官网找了很久都找不到链接，这时只要把下载的链接从www换到dev即可，如http://dev.mysql.com/downloads/mysql，在这里就可以找到开发中的MySQL版本的源代码了，如图10-2所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00158.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-2　MySQL开发中版本的源代码下载
+  </div>
+
+  <p class="ziti3">单击“Download”下载标签后可以进入到下载页面，当然，有mysql.com账号的用户可以进行登录，MySQL官方提供了大量的镜像用来分流下载，用户可以根据所在的位置选择下载速度最快的地址。中国用户一般可以在“Asia”这里镜像下载，如图10-3所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00159.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-3　MySQL亚洲下载镜像
+  </div>
+
+  <p class="ziti3">如果下载的文件是tar.gz结尾的文件，可以通过Linux的tar命令，Windows的WinRAR工具来进行解压，解压后得到一个文件夹，其中包含了MySQL数据库的所有源代码。源代码的结构如图10-4所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00160.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-4　MySQL源代码目录结构
+  </div>
+
+  <p class="ziti3">所有存储引擎的源代码都被放在storage的文件夹下，其源代码结构如图10-5所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00161.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-5　存储引擎源代码文件夹
+  </div>
+
+  <p class="ziti3">可以看到所有存储引擎的源代码都在这里，文件夹名一般就是存储引擎的名称，如archive、blackhole、csv、fedorated、heap、ibmdb2i、myisam、innobase。从MySQL 5.5版本开始，InnoDB Plugin已经作为默认的InnoDB存储引擎版本，而在MySQL 5.1的源代码中，应该可以看到两个版本的InnoDB存储引擎源代码，如图10-6所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00162.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-6　MySQL 5.1存储引擎目录结构
+  </div>
+
+  <p class="ziti3">可以看到有innobase和innodb_plugin两个文件夹，innobase文件夹是旧的InnoDB存储引擎的源代码，innodb_plugin文件夹是InnoDB Plugin存储引擎的源代码。如果想将InnoDB Plugin直接静态编译到MySQL数据库中，那么需要删除innobase文件夹，再将innodb_plugin文件夹重命名为innobase。</p>
+
+  <div class="fnote">
+    <a id="ch1-back" href="part0174_split_001.html#ch1" class="pcalibre calibre1">[1]</a>链接为：http:∥www.mysql.com/downloads/mysql/。
+  </div>
+</body></html>

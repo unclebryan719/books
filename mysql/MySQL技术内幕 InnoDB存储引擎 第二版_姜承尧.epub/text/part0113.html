@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.2　lock与latch</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3BOFI0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">6.2　lock与latch</h2>
+
+  <p class="ziti3">这里还要区分锁中容易令人混淆的概念lock与latch。在数据库中，lock与latch都可以被称为“锁”。但是两者有着截然不同的含义，本章主要关注的是lock。</p>
+
+  <p class="ziti3">latch一般称为闩锁（轻量级的锁），因为其要求锁定的时间必须非常短。若持续的时间长，则应用的性能会非常差。在InnoDB存储引擎中，latch又可以分为mutex（互斥量）和rwlock（读写锁）。其目的是用来保证并发线程操作临界资源的正确性，并且通常没有死锁检测的机制。</p>
+
+  <p class="ziti3">lock的对象是事务，用来锁定的是数据库中的对象，如表、页、行。并且一般lock的对象仅在事务commit或rollback后进行释放（不同事务隔离级别释放的时间可能不同）。此外，lock，正如在大多数数据库中一样，是有死锁机制的。表6-1显示了lock与latch的不同。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00078.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">对于InnoDB存储引擎中的latch，可以通过命令SHOW ENGINE INNODB MUTEX来进行查看，如图6-1所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00079.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　6-1　通过命令SHOW ENGINE INNODB MUTEX查看latch
+  </div>
+
+  <p class="ziti3">在Debug版本下，通过命令SHOW ENGINE INNODB MUTEX可以看到latch的更多信息，如图6-2所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00080.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　6-2　在Debug版本下查看到的latch
+  </div>
+
+  <p class="ziti3">通过上述的例子可以看出，列Type显示的总是InnoDB，列Name显示的是latch的信息以及所在源码的位置（行数）。列Status比较复杂，在Debug模式下，除了显示os_waits，还会显示count、spin_waits、spin_rounds、os_yields、os_wait_times等信息。其具体含义见表6-2。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00081.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">上述所有的这些信息都是比较底层的，一般仅供开发人员参考。但是用户还是可以通过这些参数进行调优。</p>
+
+  <p class="ziti3">相对于latch的查看，lock信息就显得直观多了。用户可以通过命令SHOW ENGINE INNODB STATUS及information_schema架构下的表INNODB_TRX、INNODB_LOCKS、INNODB_LOCK_WAITS来观察锁的信息。这将在下节中进行详细的介绍。</p>
+</body></html>

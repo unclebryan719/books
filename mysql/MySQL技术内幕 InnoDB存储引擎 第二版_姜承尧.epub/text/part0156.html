@@ -1,0 +1,155 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>8.5.2　XtraBackup</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4KONO0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">8.5.2　XtraBackup</h3>
+
+  <p class="ziti3">XtraBackup备份工具是由Percona公司开发的开源热备工具。支持MySQL5.0以上的版本。XtraBackup在GPL v2开源下发布，官网地址是：https://launchpad.net/percona-xtrabackup。</p>
+
+  <p class="ziti3">xtrabackup命令的使用方法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">xtrabackup--backup|--prepare[OPTIONS]</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">xtrabackup命令的可选参数如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">(The defaults options should be given as the first argument)</p>
+
+  <p class="ziti4">--print-defaults Prints the program's argument list and exit.</p>
+
+  <p class="ziti4">--no-defaults Don't read the default options from any file.</p>
+
+  <p class="ziti4">--defaults-file=Read the default options from this file.</p>
+
+  <p class="ziti4">--defaults-extra-file=Read this file after the global options files have been read.</p>
+
+  <p class="ziti4">--target-dir=The destination directory for backups.</p>
+
+  <p class="ziti4">--backup Make a backup of a mysql instance.</p>
+
+  <p class="ziti4">--stats Calculate the statistic of the datadir(it is recommended you take mysqld offline).</p>
+
+  <p class="ziti4">--prepare Prepare a backup so you can start mysql server with your restore.</p>
+
+  <p class="ziti4">--export Create files to import to another database after it has been prepared.</p>
+
+  <p class="ziti4">--print-param Print the parameters of mysqld that you will need for a forcopyback.</p>
+
+  <p class="ziti4">--use-memory=This value is used instead of buffer_pool_size.</p>
+
+  <p class="ziti4">--suspend-at-end Creates a file called xtrabackup_suspended and waits until the user deletes that file at the end of the backup.</p>
+
+  <p class="ziti4">--throttle=(use with--backup)Limits the IO operations(pairs of reads and writes)per second to the values set here.</p>
+
+  <p class="ziti4">--log-stream outputs the contents of the xtrabackup_logfile to stdout.</p>
+
+  <p class="ziti4">--incremental-lsn=(use with--backup)Copy only.ibd pages newer than the specified LSN high:low.##ATTENTION##:checkpoint lsn*must*be used.Be Careful!</p>
+
+  <p class="ziti4">--incremental-basedir=(use with--backup)Copy only.ibd pages newer than the existing backup at the specified directory.</p>
+
+  <p class="ziti4">--incremental-dir=(use with--prepare)Apply.delta files and logfiles located in the specified directory.</p>
+
+  <p class="ziti4">--tables=name Regular Expression list of table names to be backed up.</p>
+
+  <p class="ziti4">--create-ib-logfile(NOT CURRENTLY IMPLEMENTED)will create ib_logfile*after a--prepare.</p>
+
+  <p class="ziti4">###If you want to create ib_logfile*only re-execute this</p>
+
+  <p class="ziti4">command using the same options.###</p>
+
+  <p class="ziti4">--datadir=name Path to the database root.</p>
+
+  <p class="ziti4">--tmpdir=name Path for temporary files.Several paths may be specified as a colon(:)separated string.</p>
+
+  <p class="ziti4">If you specify multiple paths they are used round-robin.</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果用户要做一个完全备份，可以执行如下命令：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#./xtrabackup--backup</p>
+
+  <p class="ziti4">./xtrabackup Ver alpha-0.2 for 5.0.75 unknown-linux-gnu(x86_64)</p>
+
+  <p class="ziti4">＞＞log scanned up to(0 1009910580)</p>
+
+  <p class="ziti4">Copying./ibdata1</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp2/ibdata1</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">Copying./tpcc/stock.ibd</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp2/tpcc/stock.ibd</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">Copying./tpcc/new_orders.ibd</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp2/tpcc/new_orders.ibd</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">Copying./tpcc/history.ibd</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp2/tpcc/history.ibd</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">Copying./tpcc/customer.ibd</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp2/tpcc/customer.ibd</p>
+
+  <p class="ziti4">＞＞log scanned up to(0 1010561109)</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">Copying./tpcc/district.ibd</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp2/tpcc/district.ibd</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">Copying./tpcc/item.ibd</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp2/tpcc/item.ibd</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">Copying./tpcc/order_line.ibd</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp2/tpcc/order_line.ibd</p>
+
+  <p class="ziti4">＞＞log scanned up to(0 1012047066)</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">Copying./tpcc/orders.ibd</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp2/tpcc/orders.ibd</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">Copying./tpcc/warehouse.ibd</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp2/tpcc/warehouse.ibd</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">＞＞log scanned up to(0 1014592707)</p>
+
+  <p class="ziti4">Stopping log copying thread..</p>
+
+  <p class="ziti4">Transaction log of lsn(0 1009910580)to(0 1014592707)was copied.</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到在开始备份时，xtrabackup首先记录了重做日志的位置，在上述示例中为（0 1009910580）。然后对备份的InnoDB存储引擎表的物理文件，即共享表空间和独立表空间进行copy操作，这里可以看到输出有Copying…to…。最后记录备份完成后的重做日志位置（0 1014592707）。</p>
+</body></html>

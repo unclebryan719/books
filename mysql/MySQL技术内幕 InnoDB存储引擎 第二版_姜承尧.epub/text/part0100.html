@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.6.4　优化器选择不使用索引的情况</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2VBO80-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.6.4　优化器选择不使用索引的情况</h3>
+
+  <p class="ziti3">在某些情况下，当执行EXPLAIN命令进行SQL语句的分析时，会发现优化器并没有选择索引去查找数据，而是通过扫描聚集索引，也就是直接进行全表的扫描来得到数据。这种情况多发生于范围查找、JOIN链接操作等情况下。例如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM orderdetails</p>
+
+  <p class="ziti4">WHERE orderid＞10000 and orderid＜102000;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述这句SQL语句查找订单号大于10000的订单详情，通过命令SHOW INDEX FROM orderdetails，可观察到的索引如图5-28所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00060.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-28　表orderdetails的索引详情
+  </div>
+
+  <p class="ziti3">可以看到表orderdetails有（OrderID，ProductID）的联合主键，此外还有对于列OrderID的单个索引。上述这句SQL显然是可以通过扫描OrderID上的索引进行数据的查找。然而通过EXPLAIN命令，用户会发现优化器并没有按照OrderID上的索引来查找数据，如图5-29所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00061.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-29　上述范围查询的SQL执行计划
+  </div>
+
+  <p class="ziti3">在possible_keys一列可以看到查询可以使用PRIMARY、OrderID、OrdersOrder_Details三个索引，但是在最后的索引使用中，优化器选择了PRIMARY聚集索引，也就是表扫描（table scan），而非OrderID辅助索引扫描（index scan）。</p>
+
+  <p class="ziti3">这是为什么呢？原因在于用户要选取的数据是整行信息，而OrderID索引不能覆盖到我们要查询的信息，因此在对OrderID索引查询到指定数据后，还需要一次书签访问来查找整行数据的信息。虽然OrderID索引中数据是顺序存放的，但是再一次进行书签查找的数据则是无序的，因此变为了磁盘上的离散读操作。如果要求访问的数据量很小，则优化器还是会选择辅助索引，但是当访问的数据占整个表中数据的蛮大一部分时（一般是20%左右），优化器会选择通过聚集索引来查找数据。因为之前已经提到过，顺序读要远远快于离散读。</p>
+
+  <p class="ziti3">因此对于不能进行索引覆盖的情况，优化器选择辅助索引的情况是，通过辅助索引查找的数据是少量的。这是由当前传统机械硬盘的特性所决定的，即利用顺序读来替换随机读的查找。若用户使用的磁盘是固态硬盘，随机读操作非常快，同时有足够的自信来确认使用辅助索引可以带来更好的性能，那么可以使用关键字FORCE INDEX来强制使用某个索引，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM orderdetails FORCE INDEX(OrderID)</p>
+
+  <p class="ziti4">WHERE orderid＞10000 and orderid＜102000;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这时的执行计划如图5-30所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00062.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-30　强制使用辅助索引
+  </div>
+</body></html>

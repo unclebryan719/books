@@ -1,0 +1,605 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.2.2　undo</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3UQQQ0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">7.2.2　undo</h3>
+
+  <p class="yanse">1.基本概念</p>
+
+  <p class="ziti3">重做日志记录了事务的行为，可以很好地通过其对页进行“重做”操作。但是事务有时还需要进行回滚操作，这时就需要undo。因此在对数据库进行修改时，InnoDB存储引擎不但会产生redo，还会产生一定量的undo。这样如果用户执行的事务或语句由于某种原因失败了，又或者用户用一条ROLLBACK语句请求回滚，就可以利用这些undo信息将数据回滚到修改之前的样子。</p>
+
+  <p class="ziti3">redo存放在重做日志文件中，与redo不同，undo存放在数据库内部的一个特殊段（segment）中，这个段称为undo段（undo segment）。undo段位于共享表空间内。可以通过py_innodb_page_info.py工具来查看当前共享表空间中undo的数量。如下代码显示当前的共享表空间ibdata1内有2222个undo页。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#python py_innodb_page_info.py/usr/local/mysql/data/ibdata1</p>
+
+  <p class="ziti4">Total number of page:46208:</p>
+
+  <p class="ziti4">Insert Buffer Free List:13093</p>
+
+  <p class="ziti4">Insert Buffer Bitmap:3</p>
+
+  <p class="ziti4">System Page:5</p>
+
+  <p class="ziti4">Transaction system Page:1</p>
+
+  <p class="ziti4">Freshly Allocated Page:4579</p>
+
+  <p class="ziti4">undo Log Page:2222</p>
+
+  <p class="ziti4">File Segment inode:6</p>
+
+  <p class="ziti4">B-tree Node:26296</p>
+
+  <p class="ziti4">File Space Header:1</p>
+
+  <p class="ziti4">扩展描述页:2</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">用户通常对undo有这样的误解：undo用于将数据库物理地恢复到执行语句或事务之前的样子——但事实并非如此。undo是逻辑日志，因此只是将数据库逻辑地恢复到原来的样子。所有修改都被逻辑地取消了，但是数据结构和页本身在回滚之后可能大不相同。这是因为在多用户并发系统中，可能会有数十、数百甚至数千个并发事务。数据库的主要任务就是协调对数据记录的并发访问。比如，一个事务在修改当前一个页中某几条记录，同时还有别的事务在对同一个页中另几条记录进行修改。因此，不能将一个页回滚到事务开始的样子，因为这样会影响其他事务正在进行的工作。</p>
+
+  <p class="ziti3">例如，用户执行了一个INSERT 10W条记录的事务，这个事务会导致分配一个新的段，即表空间会增大。在用户执行ROLLBACK时，会将插入的事务进行回滚，但是表空间的大小并不会因此而收缩。因此，当InnoDB存储引擎回滚时，它实际上做的是与先前相反的工作。对于每个INSERT，InnoDB存储引擎会完成一个DELETE；对于每个DELETE，InnoDB存储引擎会执行一个INSERT；对于每个UPDATE，InnoDB存储引擎会执行一个相反的UPDATE，将修改前的行放回去。</p>
+
+  <p class="ziti3">除了回滚操作，undo的另一个作用是MVCC，即在InnoDB存储引擎中MVCC的实现是通过undo来完成。当用户读取一行记录时，若该记录已经被其他事务占用，当前事务可以通过undo读取之前的行版本信息，以此实现非锁定读取。</p>
+
+  <p class="ziti3">最后也是最为重要的一点是，undo log会产生redo log，也就是undo log的产生会伴随着redo log的产生，这是因为undo log也需要持久性的保护。</p>
+
+  <p class="yanse">2.undo存储管理</p>
+
+  <p class="ziti3">InnoDB存储引擎对undo的管理同样采用段的方式。但是这个段和之前介绍的段有所不同。首先InnoDB存储引擎有rollback segment，每个回滚段种记录了1024个undo log segment，而在每个undo log segment段中进行undo页的申请。共享表空间偏移量为5的页（0，5）记录了所有rollback segment header所在的页，这个页的类型为FIL_PAGE_TYPE_SYS。</p>
+
+  <p class="ziti3">在InnoDB1.1版本之前（不包括1.1版本），只有一个rollback segment，因此支持同时在线的事务限制为1024。虽然对绝大多数的应用来说都已经够用，但不管怎么说这是一个瓶颈。从1.1版本开始InnoDB支持最大128个rollback segment，故其支持同时在线的事务限制提高到了128*1024。</p>
+
+  <p class="ziti3">虽然InnoDB1.1版本支持了128个rollback segment，但是这些rollback segment都存储于共享表空间中。从InnoDB1.2版本开始，可通过参数对rollback segment做进一步的设置。这些参数包括：</p>
+
+  <p class="ziti3">❑innodb_undo_directory</p>
+
+  <p class="ziti3">❑innodb_undo_logs</p>
+
+  <p class="ziti3">❑innodb_undo_tablespaces</p>
+
+  <p class="ziti3">参数innodb_undo_directory用于设置rollback segment文件所在的路径。这意味着rollback segment可以存放在共享表空间以外的位置，即可以设置为独立表空间。该参数的默认值为“.”，表示当前InnoDB存储引擎的目录。</p>
+
+  <p class="ziti3">参数innodb_undo_logs用来设置rollback segment的个数，默认值为128。在InnoDB1.2版本中，该参数用来替换之前版本的参数innodb_rollback_segments。</p>
+
+  <p class="ziti3">参数innodb_undo_tablespaces用来设置构成rollback segment文件的数量，这样rollback segment可以较为平均地分布在多个文件中。设置该参数后，会在路径innodb_undo_directory看到undo为前缀的文件，该文件就代表rollback segment文件。图7-13的示例显示了由3个文件组成的rollback segment。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00126.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-13　由3个文件组成的rollback segment
+  </div>
+
+  <p class="ziti3">需要特别注意的是，事务在undo log segment分配页并写入undo log的这个过程同样需要写入重做日志。当事务提交时，InnoDB存储引擎会做以下两件事情：</p>
+
+  <p class="ziti3">❑将undo log放入列表中，以供之后的purge操作</p>
+
+  <p class="ziti3">❑判断undo log所在的页是否可以重用，若可以分配给下个事务使用</p>
+
+  <p class="ziti3">事务提交后并不能马上删除undo log及undo log所在的页。这是因为可能还有其他事务需要通过undo log来得到行记录之前的版本。故事务提交时将undo log放入一个链表中，是否可以最终删除undo log及undo log所在页由purge线程来判断。</p>
+
+  <p class="ziti3">此外，若为每一个事务分配一个单独的undo页会非常浪费存储空间，特别是对于OLTP的应用类型。因为在事务提交时，可能并不能马上释放页。假设某应用的删除和更新操作的TPS（transaction per second）为1000，为每个事务分配一个undo页，那么一分钟就需要1000*60个页，大约需要的存储空间为1GB。若每秒的purge页的数量为20，这样的设计对磁盘空间有着相当高的要求。因此，在InnoDB存储引擎的设计中对undo页可以进行重用。具体来说，当事务提交时，首先将undo log放入链表中，然后判断undo页的使用空间是否小于3/4，若是则表示该undo页可以被重用，之后新的undo log记录在当前undo log的后面。由于存放undo log的列表是以记录进行组织的，而undo页可能存放着不同事务的undo log，因此purge操作需要涉及磁盘的离散读取操作，是一个比较缓慢的过程。</p>
+
+  <p class="ziti3">可以通过命令SHOW ENGINE INNODB STATUS来查看链表中undo log的数量，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">......</p>
+
+  <p class="ziti4">------------</p>
+
+  <p class="ziti4">TRANSACTIONS</p>
+
+  <p class="ziti4">------------</p>
+
+  <p class="ziti4">Trx id counter 3000</p>
+
+  <p class="ziti4">Purge done for trx's n:o＜2C03 undo n:o＜0</p>
+
+  <p class="ziti4">History list length 12</p>
+
+  <p class="ziti4">LIST OF TRANSACTIONS FOR EACH SESSION:</p>
+
+  <p class="ziti4">---TRANSACTION 0,not started</p>
+
+  <p class="ziti4">MySQL thread id 1,OS thread handle 0x1500f1000,query id 4 localhost root</p>
+
+  <p class="ziti4">show engine innodb status</p>
+
+  <p class="ziti4">......</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">History list length就代表了undo log的数量，这里为12。purge操作会减少该值。然而由于undo log所在的页可以被重用，因此即使操作发生，History list length的值也可以不为0。</p>
+
+  <p class="yanse">3.undo log格式</p>
+
+  <p class="ziti3">在InnoDB存储引擎中，undo log分为：</p>
+
+  <p class="ziti3">❑insert undo log</p>
+
+  <p class="ziti3">❑update undo log</p>
+
+  <p class="ziti3">insert undo log是指在insert操作中产生的undo log。因为insert操作的记录，只对事务本身可见，对其他事务不可见（这是事务隔离性的要求），故该undo log可以在事务提交后直接删除。不需要进行purge操作。insert undo log的格式如图7-14所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00127.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-14　insert undo log的格式
+  </div>
+
+  <p class="ziti3">图7-14显示了insert undo log的格式，其中*表示对存储的字段进行了压缩。insert undo log开始的前两个字节next记录的是下一个undo log的位置，通过该next的字节可以知道一个undo log所占的空间字节数。类似地，尾部的两个字节记录的是undo log的开始位置。type_cmpl占用一个字节，记录的是undo的类型，对于insert undo log，该值总是为11。undo_no记录事务的ID，table_id记录undo log所对应的表对象。这两个值都是在压缩后保存的。接着的部分记录了所有主键的列和值。在进行rollback操作时，根据这些值可以定位到具体的记录，然后进行删除即可。</p>
+
+  <p class="ziti3">update undo log记录的是对delete和update操作产生的undo log。该undo log可能需要提供MVCC机制，因此不能在事务提交时就进行删除。提交时放入undo log链表，等待purge线程进行最后的删除。update undo log的结构如图7-15所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00128.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-15　update undo log格式
+  </div>
+
+  <p class="ziti3">update undo log相对于之前介绍的insert undo log，记录的内容更多，所需占用的空间也更大。next、start、undo_no、table_id与之前介绍的insert undo log部分相同。这里的type_cmpl，由于update undo log本身还有分类，故其可能的值如下：</p>
+
+  <p class="ziti3">❑12 TRX_UNDO_UPD_EXIST_REC更新non-delete-mark的记录</p>
+
+  <p class="ziti3">❑13 TRX_UNDO_UPD_DEL_REC将delete的记录标记为not delete</p>
+
+  <p class="ziti3">❑14 TRX_UNDO_DEL_MARK_REC将记录标记为delete</p>
+
+  <p class="ziti3">接着的部分记录update_vector信息，update_vector表示update操作导致发生改变的列。每个修改的列信息都要记录的undo log中。对于不同的undo log类型，可能还需要记录对索引列所做的修改。</p>
+
+  <p class="yanse">4.查看undo信息</p>
+
+  <p class="ziti3">Oracle和Microsoft SQL Server数据库都由内部的数据字典来观察当前undo的信息，InnoDB存储引擎在这方面做得还不够，DBA只能通过原理和经验来进行判断。InnoSQL对information_schema进行了扩展，添加了两张数据字典表，这样用户可以非常方便和快捷地查看undo的信息。</p>
+
+  <p class="ziti3">首先增加的数据字典表为INNODB_TRX_ROLLBACK_SEGMENT。顾名思义，这个数据字典表用来查看rollback segment，其表结构如图7-16所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00129.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-16　INNODB_TRX_ROLLBACK_SEGMENT的结构
+  </div>
+
+  <p class="ziti3">例如，可以通过如下的命令来查看rollback segment所在的页：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT segment_id,space,page_no</p>
+
+  <p class="ziti4">-＞FROM INNODB_TRX_ROLLBACK_SEGMENT;</p>
+
+  <p class="ziti4">+------------+-------+---------+</p>
+
+  <p class="ziti4">|segment_id|space|page_no|</p>
+
+  <p class="ziti4">+------------+-------+---------+</p>
+
+  <p class="ziti4">|0|0|6|</p>
+
+  <p class="ziti4">|1|0|45|</p>
+
+  <p class="ziti4">|2|0|46|</p>
+
+  <p class="ziti4">......</p>
+
+  <p class="ziti4">128 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">另一张数据字典表为INNODB_TRX_UNDO，用来记录事务对应的undo log，方便DBA和开发人员详细了解每个事务产生的undo量。下面将演示如何使用INNODB_TRX_UNDO表，首先根据如下代码创建测试表t。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE t(</p>
+
+  <p class="ziti4">a INT,</p>
+
+  <p class="ziti4">b VARCHAR(32),</p>
+
+  <p class="ziti4">PRIMARY KEY(a),</p>
+
+  <p class="ziti4">KEY(b)</p>
+
+  <p class="ziti4">)ENGINE=InnoDB;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着插入一条记录，并尝试通过INNODB_TRX_UNDO观察该事务的undo log的情况：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞TBEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 1,'1';</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM information_schema.INNODB_TRX_UNDO\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">trx_id:3001</p>
+
+  <p class="ziti4">rseg_id:2</p>
+
+  <p class="ziti4">undo_rec_no:0</p>
+
+  <p class="ziti4">undo_rec_type:TRX_UNDO_INSERT_REC</p>
+
+  <p class="ziti4">size:12</p>
+
+  <p class="ziti4">space:0</p>
+
+  <p class="ziti4">page_no:334</p>
+
+  <p class="ziti4">offset:272</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过数据字典表可以看到，事务ID为3001，rollback segment的ID为2，因为是该条事务的第一个操作，故undo_rec_no为0。之后可以看到插入的类型为TRX_UNDO_INSERT_REC，表示是insert undo log。size表示undo log的大小，占用12字节。最后的space、page_no、offset表示undo log开始的位置。打开文件ibdata1，定位到页（334，272），并读取12字节，可得到如下内容：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">01 1c 0b 00 16 04 80 00 00 01 01 10</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述就是undo log实际的内容，根据上一小节对undo log格式的介绍，可以整理得到：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">01 1c#下一个undo log的位置272+12=0x011c</p>
+
+  <p class="ziti4">0b#undo log的类型，TRX_UNDO_INSERT_REC为11</p>
+
+  <p class="ziti4">00#undo log的记录，等同于undo_rec_no</p>
+
+  <p class="ziti4">16#表的ID</p>
+
+  <p class="ziti4">04#主键的长度</p>
+
+  <p class="ziti4">80 00 00 01#主键的内容</p>
+
+  <p class="ziti4">01 10#undo log开始的偏移量，272=0x0110</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">此外，由于知道该undo log所在的rollback segment的ID为2，用户还可以通过数据字典表INNODB_TRX_ROLLBACK_SEGMENT来查看当前rollback segment的信息，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT segment_id,insert_undo_list,insert_undo_cached</p>
+
+  <p class="ziti4">-＞FROM information_schema.INNODB_TRX_ROLLBACK_SEGMENT</p>
+
+  <p class="ziti4">-＞WHERE segment_id=2\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">segment_id:2</p>
+
+  <p class="ziti4">insert_undo_list:1</p>
+
+  <p class="ziti4">insert_undo_cached:0</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到insert_undo_list为1。若这时进行事务的COMMIT操作，再查看该数据字典表：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞COMMIT;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT segment_id,insert_undo_list,insert_undo_cached</p>
+
+  <p class="ziti4">-＞FROM information_schema.INNODB_TRX_ROLLBACK_SEGMENT</p>
+
+  <p class="ziti4">-＞WHERE segment_id=2\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">segment_id:2</p>
+
+  <p class="ziti4">insert_undo_list:0</p>
+
+  <p class="ziti4">insert_undo_cached:1</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以发现，insert_undo_list变为0，而insert_undo_cached增加为1。这就是前面所介绍的undo页重用。下次再有事务需要向该rollback segment申请undo页时，可以直接使用该页。</p>
+
+  <p class="ziti3">接着再来观察delete操作产生的undo log。进行如下操作：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞DELETE FROM t WHERE a=1;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM information_schema.INNODB_TRX_UNDO\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">trx_id:3201</p>
+
+  <p class="ziti4">rseg_id:2</p>
+
+  <p class="ziti4">undo_rec_no:0</p>
+
+  <p class="ziti4">undo_rec_type:TRX_UNDO_DEL_MARK_REC</p>
+
+  <p class="ziti4">size:37</p>
+
+  <p class="ziti4">space:0</p>
+
+  <p class="ziti4">page_no:326</p>
+
+  <p class="ziti4">offset:620</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">用上述同样的方法定位到页326，偏移量为620的位置，得到如下结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">0518260 00 00 00 00 00 00 00 00 00 00 00 00 02 91 0e 00</p>
+
+  <p class="ziti4">0518270 16 00 00 00 00 30 01 e0 82 00 00 01 4e 01 10 04</p>
+
+  <p class="ziti4">0518280 80 00 00 01 00 0b 00 04 80 00 00 01 03 01 31 02</p>
+
+  <p class="ziti4">0518290 6c 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着开始整理：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">02 91#下一个undo log开始位置的偏移量</p>
+
+  <p class="ziti4">0e#undo log类型，TRX_UNDO_DEL_MARK_REC为14</p>
+
+  <p class="ziti4">00#undo no</p>
+
+  <p class="ziti4">16#table id</p>
+
+  <p class="ziti4">00#info bits</p>
+
+  <p class="ziti4">00 00 00 30 01 e0#rec事务id</p>
+
+  <p class="ziti4">82 00 00 01 4e 01 10#rec回滚指针</p>
+
+  <p class="ziti4">04#主键长度</p>
+
+  <p class="ziti4">80 00 00 01#主键值</p>
+
+  <p class="ziti4">00 0b#之后部分的长度</p>
+
+  <p class="ziti4">00#列的位置</p>
+
+  <p class="ziti4">04#列的长度</p>
+
+  <p class="ziti4">80 00 00 01#列的值</p>
+
+  <p class="ziti4">03#列的位置，前00～02为系统列</p>
+
+  <p class="ziti4">01#列的长度</p>
+
+  <p class="ziti4">31#列b，插入的字符串'1'的十六进制</p>
+
+  <p class="ziti4">02 6c#开始位置的偏移量</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">观察rollback segment信息，可以看到：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT segment_id,update_undo_list,update_undo_cached</p>
+
+  <p class="ziti4">-＞FROM information_schema.INNODB_TRX_ROLLBACK_SEGMENT</p>
+
+  <p class="ziti4">-＞WHERE segment_id=2\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">segment_id:2</p>
+
+  <p class="ziti4">update_undo_list:1</p>
+
+  <p class="ziti4">update_undo_cached:0</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">同样的，在事务提交后，undo页会放入cache列表以供下次重用：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞COMMIT;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT segment_id,update_undo_list,update_undo_cached</p>
+
+  <p class="ziti4">-＞FROM information_schema.INNODB_TRX_ROLLBACK_SEGMENT</p>
+
+  <p class="ziti4">-＞WHERE segment_id=2\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">segment_id:2</p>
+
+  <p class="ziti4">update_undo_list:0</p>
+
+  <p class="ziti4">update_undo_cached:1</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过上面的例子可以看到，delete操作并不直接删除记录，而只是将记录标记为已删除，也就是将记录的delete flag设置为1。而记录最终的删除是在purge操作中完成的。</p>
+
+  <p class="ziti3">最后来看update操作产生的undo log情况。首先再次插入记录（1，'1'），然后进行update操作，同时通过数据字典表INNODB_TRX_UNDO观察undo log的情况：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 1,'1';</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞UPDATE t SET b='2'WHERE a=1;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Rows matched:1 Changed:1 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM information_schema.INNODB_TRX_UNDO\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">trx_id:3205</p>
+
+  <p class="ziti4">rseg_id:5</p>
+
+  <p class="ziti4">undo_rec_no:0</p>
+
+  <p class="ziti4">undo_rec_type:TRX_UNDO_UPD_EXIST_REC</p>
+
+  <p class="ziti4">size:41</p>
+
+  <p class="ziti4">space:0</p>
+
+  <p class="ziti4">page_no:318</p>
+
+  <p class="ziti4">offset:724</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">用上述同样的方法定位到页318，偏移量为724的位置，得到如下结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">04f82d0 00 00 00 00 02 fd 0c 00 16 00 00 00 00 32 04 e0</p>
+
+  <p class="ziti4">04f82e0 84 00 00 01 48 01 10 04 80 00 00 01 01 03 01 31</p>
+
+  <p class="ziti4">04f82f0 00 0b 00 04 80 00 00 01 03 01 31 02 d4 00 00 00</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">整理后得到：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">02 fd#下一个undo log的开始位置</p>
+
+  <p class="ziti4">0c#undo log类型，TRX_UNDO_UPD_DEL_REC为13</p>
+
+  <p class="ziti4">00#undo no</p>
+
+  <p class="ziti4">16#table id</p>
+
+  <p class="ziti4">00#info bits</p>
+
+  <p class="ziti4">00 00 00 32 04 e0#rec trx id</p>
+
+  <p class="ziti4">84 00 00 01 48 01 10#rec回滚指针</p>
+
+  <p class="ziti4">04#主键长度</p>
+
+  <p class="ziti4">80 00 00 01#主键值</p>
+
+  <p class="ziti4">01#update vector的数量</p>
+
+  <p class="ziti4">03#update vector列b的编号</p>
+
+  <p class="ziti4">01#update vector列的长度</p>
+
+  <p class="ziti4">31#update vector列的值，这里是'1'</p>
+
+  <p class="ziti4">00 0b#接下去部分占用的字节</p>
+
+  <p class="ziti4">00#列的位置</p>
+
+  <p class="ziti4">04#列的长度</p>
+
+  <p class="ziti4">80 00 00 01#列的值</p>
+
+  <p class="ziti4">03#列的长度</p>
+
+  <p class="ziti4">31#列的值</p>
+
+  <p class="ziti4">02 d4#undo log开始位置的偏移量</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上面的例子是更新一个非主键值，若更新的对象是一个主键值，那么其产生的undo log完全不同，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞ROLLBACK;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞UPDATE t SET a=2 WHERE a=1;</p>
+
+  <p class="ziti4">Rows matched:1 Changed:1 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM information_schema.INNODB_TRX_UNDO</p>
+
+  <p class="ziti4">-＞ORDER BY undo_rec_no\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">trx_id:320F</p>
+
+  <p class="ziti4">rseg_id:11</p>
+
+  <p class="ziti4">undo_rec_no:0</p>
+
+  <p class="ziti4">undo_rec_type:TRX_UNDO_DEL_MARK_REC</p>
+
+  <p class="ziti4">size:37</p>
+
+  <p class="ziti4">space:0</p>
+
+  <p class="ziti4">page_no:324</p>
+
+  <p class="ziti4">offset:492</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">trx_id:320F</p>
+
+  <p class="ziti4">rseg_id:11</p>
+
+  <p class="ziti4">undo_rec_no:1</p>
+
+  <p class="ziti4">undo_rec_type:TRX_UNDO_INSERT_REC</p>
+
+  <p class="ziti4">size:12</p>
+
+  <p class="ziti4">space:0</p>
+
+  <p class="ziti4">page_no:336</p>
+
+  <p class="ziti4">offset:272</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，update主键的操作其实分两步完成。首先将原主键记录标记为已删除，因此需要产生一个类型为TRX_UNDO_DEL_MARK_REC的undo log，之后插入一条新的记录，因此需要产生一个类型为TRX_UNDO_INSERT_REC的undo log。undo_rec_no显示了产生日志的步骤。对undo log不再详细进行分析，相关内容和之前介绍的并无不同。</p>
+
+  <p class="ziti3">总之，InnoSQL数据库提供的关于undo信息的数据字典表可以帮助DBA和开发人员更好地了解当前各个事务产生的undo信息。</p>
+</body></html>

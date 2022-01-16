@@ -1,0 +1,275 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>2.6　InnoDB关键特性</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="UGI00-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">2.6　InnoDB关键特性</h2>
+
+  <p class="ziti3">InnoDB存储引擎的关键特性包括：</p>
+
+  <p class="ziti3">❑插入缓冲（Insert Buffer）</p>
+
+  <p class="ziti3">❑两次写（Double Write）</p>
+
+  <p class="ziti3">❑自适应哈希索引（Adaptive Hash Index）</p>
+
+  <p class="ziti3">❑异步IO（Async IO）</p>
+
+  <p class="ziti3">❑刷新邻接页（Flush Neighbor Page）</p>
+
+  <p class="ziti3">上述这些特性为InnoDB存储引擎带来更好的性能以及更高的可靠性。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>2.6.1　插入缓冲</h3>
+
+  <p class="yanse">1.Insert Buffer</p>
+
+  <p class="ziti3">Insert Buffer可能是InnoDB存储引擎关键特性中最令人激动与兴奋的一个功能。不过这个名字可能会让人认为插入缓冲是缓冲池中的一个组成部分。其实不然，InnoDB缓冲池中有Insert Buffer信息固然不错，但是Insert Buffer和数据页一样，也是物理页的一个组成部分。</p>
+
+  <p class="ziti3">在InnoDB存储引擎中，主键是行唯一的标识符。通常应用程序中行记录的插入顺序是按照主键递增的顺序进行插入的。因此，插入聚集索引（Primary Key）一般是顺序的，不需要磁盘的随机读取。比如按下列SQL定义表：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE t(</p>
+
+  <p class="ziti4">a INT AUTO_INCREMENT,</p>
+
+  <p class="ziti4">b VARCHAR(30),</p>
+
+  <p class="ziti4">PRIMARY KEY(a)</p>
+
+  <p class="ziti4">);</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">其中a列是自增长的，若对a列插入NULL值，则由于其具有AUTO_INCREMENT属性，其值会自动增长。同时页中的行记录按a的值进行顺序存放。在一般情况下，不需要随机读取另一个页中的记录。因此，对于这类情况下的插入操作，速度是非常快的。</p>
+
+  <p class="ziti3">注意　并不是所有的主键插入都是顺序的。若主键类是UUID这样的类，那么插入和辅助索引一样，同样是随机的。即使主键是自增类型，但是插入的是指定的值，而不是NULL值，那么同样可能导致插入并非连续的情况。</p>
+
+  <p class="ziti3">但是不可能每张表上只有一个聚集索引，更多情况下，一张表上有多个非聚集的辅助索引（secondary index）。比如，用户需要按照b这个字段进行查找，并且b这个字段不是唯一的，即表是按如下的SQL语句定义的：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE t(</p>
+
+  <p class="ziti4">a INT AUTO_INCREMENT,</p>
+
+  <p class="ziti4">b VARCHAR(30),</p>
+
+  <p class="ziti4">PRIMARY KEY(a),</p>
+
+  <p class="ziti4">key(b)</p>
+
+  <p class="ziti4">);</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在这样的情况下产生了一个非聚集的且不是唯一的索引。在进行插入操作时，数据页的存放还是按主键a进行顺序存放的，但是对于非聚集索引叶子节点的插入不再是顺序的了，这时就需要离散地访问非聚集索引页，由于随机读取的存在而导致了插入操作性能下降。当然这并不是这个b字段上索引的错误，而是因为B+树的特性决定了非聚集索引插入的离散性。</p>
+
+  <p class="ziti3">需要注意的是，在某些情况下，辅助索引的插入依然是顺序的，或者说是比较顺序的，比如用户购买表中的时间字段。在通常情况下，用户购买时间是一个辅助索引，用来根据时间条件进行查询。但是在插入时却是根据时间的递增而插入的，因此插入也是“较为”顺序的。</p>
+
+  <p class="ziti3">InnoDB存储引擎开创性地设计了Insert Buffer，对于非聚集索引的插入或更新操作，不是每一次直接插入到索引页中，而是先判断插入的非聚集索引页是否在缓冲池中，若在，则直接插入；若不在，则先放入到一个Insert Buffer对象中，好似欺骗。数据库这个非聚集的索引已经插到叶子节点，而实际并没有，只是存放在另一个位置。然后再以一定的频率和情况进行Insert Buffer和辅助索引页子节点的merge（合并）操作，这时通常能将多个插入合并到一个操作中（因为在一个索引页中），这就大大提高了对于非聚集索引插入的性能。</p>
+
+  <p class="ziti3">然而Insert Buffer的使用需要同时满足以下两个条件：</p>
+
+  <p class="ziti3">❑索引是辅助索引（secondary index）；</p>
+
+  <p class="ziti3">❑索引不是唯一（unique）的。</p>
+
+  <p class="ziti3">当满足以上两个条件时，InnoDB存储引擎会使用Insert Buffer，这样就能提高插入操作的性能了。不过考虑这样一种情况：应用程序进行大量的插入操作，这些都涉及了不唯一的非聚集索引，也就是使用了Insert Buffer。若此时MySQL数据库发生了宕机，这时势必有大量的Insert Buffer并没有合并到实际的非聚集索引中去。因此这时恢复可能需要很长的时间，在极端情况下甚至需要几个小时。</p>
+
+  <p class="ziti3">辅助索引不能是唯一的，因为在插入缓冲时，数据库并不去查找索引页来判断插入的记录的唯一性。如果去查找肯定又会有离散读取的情况发生，从而导致Insert Buffer失去了意义。</p>
+
+  <p class="ziti3">用户可以通过命令SHOW ENGINE INNODB STATUS来查看插入缓冲的信息：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Type:InnoDB</p>
+
+  <p class="ziti4">Name:</p>
+
+  <p class="ziti4">Status:</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">100727 22:21:48 INNODB MONITOR OUTPUT</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">Per second averages calculated from the last 44 seconds</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">-------------------------------------</p>
+
+  <p class="ziti4">INSERT BUFFER AND ADAPTIVE HASH INDEX</p>
+
+  <p class="ziti4">-------------------------------------</p>
+
+  <p class="ziti4">Ibuf:size 7545,free list len 3790,seg size 11336,</p>
+
+  <p class="ziti4">8075308 inserts,7540969 merged recs,2246304 merges</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">----------------------------</p>
+
+  <p class="ziti4">END OF INNODB MONITOR OUTPUT</p>
+
+  <p class="ziti4">============================</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">seg size显示了当前Insert Buffer的大小为11336×16KB，大约为177MB；free list len代表了空闲列表的长度；size代表了已经合并记录页的数量。而黑体部分的第2行可能是用户真正关心的，因为它显示了插入性能的提高。Inserts代表了插入的记录数；merged recs代表了合并的插入记录数量；merges代表合并的次数，也就是实际读取页的次数。merges:merged recs大约为1∶3，代表了插入缓冲将对于非聚集索引页的离散IO逻辑请求大约降低了2/3。</p>
+
+  <p class="ziti3">正如前面所说的，目前Insert Buffer存在一个问题是：在写密集的情况下，插入缓冲会占用过多的缓冲池内存（innodb_buffer_pool），默认最大可以占用到1/2的缓冲池内存。以下是InnoDB存储引擎源代码中对于insert buffer的初始化操作：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">/**Buffer pool size per the maximum insert buffer size*/</p>
+
+  <p class="ziti4">#define IBUF_POOL_SIZE_PER_MAX_SIZE 2</p>
+
+  <p class="ziti4">ibuf-＞max_size=buf_pool_get_curr_size()/UNIV_PAGE_SIZE</p>
+
+  <p class="ziti4">/IBUF_POOL_SIZE_PER_MAX_SIZE;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这对于其他的操作可能会带来一定的影响。Percona上发布一些patch来修正插入缓冲占用太多缓冲池内存的情况，具体可以到Percona官网进行查找。简单来说，修改IBUF_POOL_SIZE_PER_MAX_SIZE就可以对插入缓冲的大小进行控制。比如将IBUF_POOL_SIZE_PER_MAX_SIZE改为3，则最大只能使用1/3的缓冲池内存。</p>
+
+  <p class="yanse">2.Change Buffer</p>
+
+  <p class="ziti3">InnoDB从1.0.x版本开始引入了Change Buffer，可将其视为Insert Buffer的升级。从这个版本开始，InnoDB存储引擎可以对DML操作——INSERT、DELETE、UPDATE都进行缓冲，他们分别是：Insert Buffer、Delete Buffer、Purge buffer。</p>
+
+  <p class="ziti3">当然和之前Insert Buffer一样，Change Buffer适用的对象依然是非唯一的辅助索引。</p>
+
+  <p class="ziti3">对一条记录进行UPDATE操作可能分为两个过程：</p>
+
+  <p class="ziti3">❑将记录标记为已删除；</p>
+
+  <p class="ziti3">❑真正将记录删除。</p>
+
+  <p class="ziti3">因此Delete Buffer对应UPDATE操作的第一个过程，即将记录标记为删除。Purge Buffer对应UPDATE操作的第二个过程，即将记录真正的删除。同时，InnoDB存储引擎提供了参数innodb_change_buffering，用来开启各种Buffer的选项。该参数可选的值为：inserts、deletes、purges、changes、all、none。inserts、deletes、purges就是前面讨论过的三种情况。changes表示启用inserts和deletes，all表示启用所有，none表示都不启用。该参数默认值为all。</p>
+
+  <p class="ziti3">从InnoDB 1.2.x版本开始，可以通过参数innodb_change_buffer_max_size来控制Change Buffer最大使用内存的数量：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_change_buffer_max_size'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_change_buffer_max_size</p>
+
+  <p class="ziti4">Value:25</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">innodb_change_buffer_max_size值默认为25，表示最多使用1/4的缓冲池内存空间。而需要注意的是，该参数的最大有效值为50。</p>
+
+  <p class="ziti3">在MySQL 5.5版本中通过命令SHOW ENGINE INNODB STATUS，可以观察到类似如下的内容：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Type:InnoDB</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">-------------------------------------</p>
+
+  <p class="ziti4">INSERT BUFFER AND ADAPTIVE HASH INDEX</p>
+
+  <p class="ziti4">-------------------------------------</p>
+
+  <p class="ziti4">Ibuf:size 1,free list len 34397,seg size 34399,10875 merges</p>
+
+  <p class="ziti4">merged operations:</p>
+
+  <p class="ziti4">insert 20462,delete mark 20158,delete 4215</p>
+
+  <p class="ziti4">discarded operations:</p>
+
+  <p class="ziti4">insert 0,delete mark 0,delete 0</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到这里显示了merged operations和discarded operation，并且下面具体显示Change Buffer中每个操作的次数。insert表示Insert Buffer；delete mark表示Delete Buffer；delete表示Purge Buffer；discarded operations表示当Change Buffer发生merge时，表已经被删除，此时就无需再将记录合并（merge）到辅助索引中了。</p>
+
+  <p class="yanse">3.Insert Buffer的内部实现</p>
+
+  <p class="ziti3">通过前一个小节读者应该已经知道了Insert Buffer的使用场景，即非唯一辅助索引的插入操作。但是对于Insert Buffer具体是什么，以及内部怎么实现可能依然模糊，这正是本节所要阐述的内容。</p>
+
+  <p class="ziti3">可能令绝大部分用户感到吃惊的是，Insert Buffer的数据结构是一棵B+树。在MySQL 4.1之前的版本中每张表有一棵Insert Buffer B+树。而在现在的版本中，全局只有一棵Insert Buffer B+树，负责对所有的表的辅助索引进行Insert Buffer。而这棵B+树存放在共享表空间中，默认也就是ibdata1中。因此，试图通过独立表空间ibd文件恢复表中数据时，往往会导致CHECK TABLE失败。这是因为表的辅助索引中的数据可能还在Insert Buffer中，也就是共享表空间中，所以通过ibd文件进行恢复后，还需要进行REPAIR TABLE操作来重建表上所有的辅助索引。</p>
+
+  <p class="ziti3">Insert Buffer是一棵B+树，因此其也由叶节点和非叶节点组成。非叶节点存放的是查询的search key（键值），其构造如图2-3所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00006.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　2-3　Insert Buffer非叶节点中的search key
+  </div>
+
+  <p class="ziti3">search key一共占用9个字节，其中space表示待插入记录所在表的表空间id，在InnoDB存储引擎中，每个表有一个唯一的space id，可以通过space id查询得知是哪张表。space占用4字节。marker占用1字节，它是用来兼容老版本的Insert Buffer。offset表示页所在的偏移量，占用4字节。</p>
+
+  <p class="ziti3">当一个辅助索引要插入到页（space，offset）时，如果这个页不在缓冲池中，那么InnoDB存储引擎首先根据上述规则构造一个search key，接下来查询Insert Buffer这棵B+树，然后再将这条记录插入到Insert Buffer B+树的叶子节点中。</p>
+
+  <p class="ziti3">对于插入到Insert Buffer B+树叶子节点的记录（如图2-4所示），并不是直接将待插入的记录插入，而是需要根据如下的规则进行构造：</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00007.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　2-4　Insert Buffer叶子节点中的记录
+  </div>
+
+  <p class="ziti3">space、marker、page_no字段和之前非叶节点中的含义相同，一共占用9字节。第4个字段metadata占用4字节，其存储的内容如表2-2所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00008.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">IBUF_REC_OFFSET_COUNT是保存两个字节的整数，用来排序每个记录进入Insert Buffer的顺序。因为从InnoDB1.0.x开始支持Change Buffer，所以这个值同样记录进入Insert Buffer的顺序。通过这个顺序回放（replay）才能得到记录的正确值。</p>
+
+  <p class="ziti3">从Insert Buffer叶子节点的第5列开始，就是实际插入记录的各个字段了。因此较之原插入记录，Insert Buffer B+树的叶子节点记录需要额外13字节的开销。</p>
+
+  <p class="ziti3">因为启用Insert Buffer索引后，辅助索引页（space，page_no）中的记录可能被插入到Insert Buffer B+树中，所以为了保证每次Merge Insert Buffer页必须成功，还需要有一个特殊的页用来标记每个辅助索引页（space，page_no）的可用空间。这个页的类型为Insert Buffer Bitmap。</p>
+
+  <p class="ziti3">每个Insert Buffer Bitmap页用来追踪16384个辅助索引页，也就是256个区（Extent）。每个Insert Buffer Bitmap页都在16384个页的第二个页中。关于Insert Buffer Bitmap页的作用会在下一小节中详细介绍。</p>
+
+  <p class="ziti3">每个辅助索引页在Insert Buffer Bitmap页中占用4位（bit），由表2-3中的三个部分组成。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00009.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="yanse">4.Merge Insert Buffer</p>
+
+  <p class="ziti3">通过前面的小节读者应该已经知道了Insert/Change Buffer是一棵B+树。若需要实现插入记录的辅助索引页不在缓冲池中，那么需要将辅助索引记录首先插入到这棵B+树中。但是Insert Buffer中的记录何时合并（merge）到真正的辅助索引中呢？这是本小节需要关注的重点。</p>
+
+  <p class="ziti3">概括地说，Merge Insert Buffer的操作可能发生在以下几种情况下：</p>
+
+  <p class="ziti3">❑辅助索引页被读取到缓冲池时；</p>
+
+  <p class="ziti3">❑Insert Buffer Bitmap页追踪到该辅助索引页已无可用空间时；</p>
+
+  <p class="ziti3">❑Master Thread。</p>
+
+  <p class="ziti3">第一种情况为当辅助索引页被读取到缓冲池中时，例如这在执行正常的SELECT查询操作，这时需要检查Insert Buffer Bitmap页，然后确认该辅助索引页是否有记录存放于Insert Buffer B+树中。若有，则将Insert Buffer B+树中该页的记录插入到该辅助索引页中。可以看到对该页多次的记录操作通过一次操作合并到了原有的辅助索引页中，因此性能会有大幅提高。</p>
+
+  <p class="ziti3">Insert Buffer Bitmap页用来追踪每个辅助索引页的可用空间，并至少有1/32页的空间。若插入辅助索引记录时检测到插入记录后可用空间会小于1/32页，则会强制进行一个合并操作，即强制读取辅助索引页，将Insert Buffer B+树中该页的记录及待插入的记录插入到辅助索引页中。这就是上述所说的第二种情况。</p>
+
+  <p class="ziti3">还有一种情况，之前在分析Master Thread时曾讲到，在Master Thread线程中每秒或每10秒会进行一次Merge Insert Buffer的操作，不同之处在于每次进行merge操作的页的数量不同。</p>
+
+  <p class="ziti3">在Master Thread中，执行merge操作的不止是一个页，而是根据srv_innodb_io_capactiy的百分比来决定真正要合并多少个辅助索引页。但InnoDB存储引擎又是根据怎样的算法来得知需要合并的辅助索引页呢？</p>
+
+  <p class="ziti3">在Insert Buffer B+树中，辅助索引页根据（space，offset）都已排序好，故可以根据（space，offset）的排序顺序进行页的选择。然而，对于Insert Buffer页的选择，InnoDB存储引擎并非采用这个方式，它随机地选择Insert Buffer B+树的一个页，读取该页中的space及之后所需要数量的页。该算法在复杂情况下应有更好的公平性。同时，若进行merge时，要进行merge的表已经被删除，此时可以直接丢弃已经被Insert/Change Buffer的数据记录。</p>
+</body></html>

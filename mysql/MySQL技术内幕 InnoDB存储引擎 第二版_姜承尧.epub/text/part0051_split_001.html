@@ -1,0 +1,105 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>第4章　表</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1GKCM0-878f632495a744b2a24ea2205f162355" class="calibre">
+<h2 class="p4" id="heading_id_3"><a id="bw1" class="pcalibre calibre1"></a>4.1　索引组织表</h2>
+
+  <p class="ziti3">在InnoDB存储引擎中，表都是根据主键顺序组织存放的，这种存储方式的表称为索引组织表（index organized table）。在InnoDB存储引擎表中，每张表都有个主键（Primary Key），如果在创建表时没有显式地定义主键，则InnoDB存储引擎会按如下方式选择或创建主键：</p>
+
+  <p class="ziti3">❑首先判断表中是否有非空的唯一索引（Unique NOT NULL），如果有，则该列即为主键。</p>
+
+  <p class="ziti3">❑如果不符合上述条件，InnoDB存储引擎自动创建一个6字节大小的指针。</p>
+
+  <p class="ziti3">当表中有多个非空唯一索引时，InnoDB存储引擎将选择建表时第一个定义的非空唯一索引为主键。这里需要非常注意的是，主键的选择根据的是定义索引的顺序，而不是建表时列的顺序。看下面的例子：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE z(</p>
+
+  <p class="ziti4">-＞a INT NOT NULL,</p>
+
+  <p class="ziti4">-＞b INT NULL,</p>
+
+  <p class="ziti4">-＞c INT NOT NULL,</p>
+
+  <p class="ziti4">-＞d INT NOT NULL,</p>
+
+  <p class="ziti4">-＞UNIQUE KEY(b),</p>
+
+  <p class="ziti4">-＞UNIQUE KEY(d),UNIQUE KEY(c));</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.02 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO z SELECT 1,2,3,4;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO z SELECT 5,6,7,8;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO z SELECT 9,10,11,12;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述示例创建了一张表z，有a、b、c、d四个列。b、c、d三列上都有唯一索引，不同的是b列允许NULL值。由于没有显式地定义主键，因此会选择非空的唯一索引，可以通过下面的SQL语句判断表的主键值：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT a,b,c,d,_rowid FROM z;</p>
+
+  <p class="ziti4">+---+------+----+----+--------+</p>
+
+  <p class="ziti4">|a|b|c|d|_rowid|</p>
+
+  <p class="ziti4">+---+------+----+----+--------+</p>
+
+  <p class="ziti4">|1|2|3|4|4|</p>
+
+  <p class="ziti4">|5|6|7|8|8|</p>
+
+  <p class="ziti4">|9|10|11|12|12|</p>
+
+  <p class="ziti4">+---+------+----+----+--------+</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">_rowid可以显示表的主键，因此通过上述查询可以找到表z的主键。此外，虽然c、d列都是非空唯一索引，都可以作为主键的候选，但是在定义的过程中，由于d列首先定义为唯一索引，故InnoDB存储引擎将其视为主键。</p>
+
+  <p class="ziti3">另外需要注意的是，_rowid只能用于查看单个列为主键的情况，对于多列组成的主键就显得无能为力了，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE a(</p>
+
+  <p class="ziti4">-＞a INT,</p>
+
+  <p class="ziti4">-＞b INT,</p>
+
+  <p class="ziti4">-＞PRIMARY KEY(a,b)</p>
+
+  <p class="ziti4">-＞)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.03 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO a SELECT 1,1;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.01 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT a,_rowid FROM a;</p>
+
+  <p class="ziti4">ERROR 1054(42S22):Unknown column'_rowid'in'field list'</p>
+  <hr class="calibre2"/>
+</body></html>

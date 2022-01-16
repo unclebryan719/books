@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.5　对于事务操作的统计</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="43JDK0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">7.5　对于事务操作的统计</h2>
+
+  <p class="ziti3">由于InnoDB存储引擎是支持事务的，因此InnoDB存储引擎的应用需要在考虑每秒请求数（Question Per Second，QPS）的同时，应该关注每秒事务处理的能力（Transaction Per Second，TPS）。</p>
+
+  <p class="ziti3">计算TPS的方法是（com_commit+com_rollback）/time。但是利用这种方法进行计算的前提是：所有的事务必须都是显式提交的，如果存在隐式地提交和回滚（默认autocommit=1），不会计算到com_commit和com_rollback变量中。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW GLOBAL STATUS LIKE'com_commit'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:Com_commit</p>
+
+  <p class="ziti4">Value:5</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 3;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">a:1</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">a:2</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">a:3</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW GLOBAL STATUS LIKE'com_commit'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:Com_commit</p>
+
+  <p class="ziti4">Value:5</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">MySQL数据库中另外还有两个参数handler_commit和handler_rollback用于事务的统计操作。但是我注意到这两个参数在MySQL 5.1中可以很好地用来统计InnoDB存储引擎显式和隐式的事务提交操作，但是在InnoDB Plugin中这两个参数的表现有些“怪异”，并不能很好地统计事务的次数。所以，如果用户的程序都是显式控制事务的提交和回滚，那么可以通过com_commit和com_rollback进行统计。如果不是，那么情况就显得有些复杂。</p>
+</body></html>

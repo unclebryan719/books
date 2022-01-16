@@ -1,0 +1,207 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.4.2　辅助索引</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2NNJO0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.4.2　辅助索引</h3>
+
+  <p class="ziti3">对于辅助索引（Secondary Index，也称非聚集索引），叶子节点并不包含行记录的全部数据。叶子节点除了包含键值以外，每个叶子节点中的索引行中还包含了一个书签（bookmark）。该书签用来告诉InnoDB存储引擎哪里可以找到与索引相对应的行数据。由于InnoDB存储引擎表是索引组织表，因此InnoDB存储引擎的辅助索引的书签就是相应行数据的聚集索引键。图5-15显示了InnoDB存储引擎中辅助索引与聚集索引的关系。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00046.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-15　辅助索引与聚集索引的关系
+  </div>
+
+  <p class="ziti3">辅助索引的存在并不影响数据在聚集索引中的组织，因此每张表上可以有多个辅助索引。当通过辅助索引来寻找数据时，InnoDB存储引擎会遍历辅助索引并通过叶级别的指针获得指向主键索引的主键，然后再通过主键索引来找到一个完整的行记录。举例来说，如果在一棵高度为3的辅助索引树中查找数据，那需要对这棵辅助索引树遍历3次找到指定主键，如果聚集索引树的高度同样为3，那么还需要对聚集索引树进行3次查找，最终找到一个完整的行数据所在的页，因此一共需要6次逻辑IO访问以得到最终的一个数据页。</p>
+
+  <p class="ziti3">对于其他的一些数据库，如Microsoft SQL Server数据库，其有一种称为堆表的表类型，即行数据的存储按照插入的顺序存放。这与MySQL数据库的MyISAM存储引擎有些类似。堆表的特性决定了堆表上的索引都是非聚集的，主键与非主键的区别只是是否唯一且非空（NOT NULL）。因此这时书签是一个行标识符（Row Identifiedr，RID），可以用如“文件号：页号：槽号”的格式来定位实际的行数据。</p>
+
+  <p class="ziti3">有的Microsoft SQL Server数据库DBA问过我这样的问题，为什么在Microsoft SQL Server数据库上还要使用索引组织表？堆表的书签使非聚集查找可以比主键书签方式更快，并且非聚集可能在一张表中存在多个，我们需要对多个非聚集索引进行查找。而且对于非聚集索引的离散读取，索引组织表上的非聚集索引会比堆表上的聚集索引慢一些。</p>
+
+  <p class="ziti3">当然，在一些情况下，使用堆表的确会比索引组织表更快，但是我觉得大部分原因是由于存在OLAP（On-Line Analytical Processing，在线分析处理）的应用。其次就是前面提到的，表中数据是否需要更新，并且更新是否影响到物理地址的变更。此外另一个不能忽视的是对于排序和范围查找，索引组织表通过B+树的中间节点就可以找到要查找的所有页，然后进行读取，而堆表的特性决定了这对其是不能实现的。最后，非聚集索引的离散读，的确存在上述的情况，但是一般的数据库都通过实现预读（read ahead）技术来避免多次的离散读操作。因此，具体是建堆表还是索引组织表，这取决于应用，不存在哪个更优的问题。这和InnoDB存储引擎好还是MyISAM存储引擎好这个问题的答案是一样的，It all depends。</p>
+
+  <p class="ziti3">接着通过阅读表空间文件来分析InnoDB存储引擎的非聚集索引的实际存储。还是分析上一小节所用的表t。不同的是，在表t上再建立一个列c，并对列c创建非聚集索引：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞ALTER TABLE t</p>
+
+  <p class="ziti4">-＞ADD c INT NOT NULL;</p>
+
+  <p class="ziti4">Query OK,4 rows affected(0.24 sec)</p>
+
+  <p class="ziti4">Records:4 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞UPDATE t SET c=0-a;</p>
+
+  <p class="ziti4">Query OK,4 rows affected(0.04 sec)</p>
+
+  <p class="ziti4">Rows matched:4 Changed:4 Warnings:0</p>
+
+  <p class="ziti4">mysql＞ALTER TALBE t ADDKEY idx_c(c);</p>
+
+  <p class="ziti4">Query OK,4 rows affected(0.28 sec)</p>
+
+  <p class="ziti4">Records:4 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SHOW INDEX FROM t\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Table:t</p>
+
+  <p class="ziti4">Non_unique:0</p>
+
+  <p class="ziti4">Key_name:PRIMARY</p>
+
+  <p class="ziti4">Seq_in_index:1</p>
+
+  <p class="ziti4">Column_name:a</p>
+
+  <p class="ziti4">Collation:A</p>
+
+  <p class="ziti4">Cardinality:2</p>
+
+  <p class="ziti4">Sub_part:NULL</p>
+
+  <p class="ziti4">Packed:NULL</p>
+
+  <p class="ziti4">Null:</p>
+
+  <p class="ziti4">Index_type:BTREE</p>
+
+  <p class="ziti4">Comment:</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">Table:t</p>
+
+  <p class="ziti4">Non_unique:1</p>
+
+  <p class="ziti4">Key_name:idx_c</p>
+
+  <p class="ziti4">Seq_in_index:1</p>
+
+  <p class="ziti4">Column_name:c</p>
+
+  <p class="ziti4">Collation:A</p>
+
+  <p class="ziti4">Cardinality:2</p>
+
+  <p class="ziti4">Sub_part:NULL</p>
+
+  <p class="ziti4">Packed:NULL</p>
+
+  <p class="ziti4">Null:</p>
+
+  <p class="ziti4">Index_type:BTREE</p>
+
+  <p class="ziti4">Comment:</p>
+
+  <p class="ziti4">2 rows in set（0.00 sec）</p>
+
+  <p class="ziti4">mysql＞select a,c from t;</p>
+
+  <p class="ziti4">+---+----+</p>
+
+  <p class="ziti4">|a|c|</p>
+
+  <p class="ziti4">+---+----+</p>
+
+  <p class="ziti4">|4|-4|</p>
+
+  <p class="ziti4">|3|-3|</p>
+
+  <p class="ziti4">|2|-2|</p>
+
+  <p class="ziti4">|1|-1|</p>
+
+  <p class="ziti4">+---+----+</p>
+
+  <p class="ziti4">4 rows in set（0.00 sec）</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">然后用py_innodb_page_info工具来分析表空间，可得：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nineyou0-43 mytest]#py_innodb_page_info.py-v t.ibd</p>
+
+  <p class="ziti4">page offset 00000000,page type＜File Space Header＞</p>
+
+  <p class="ziti4">page offset 00000001,page type＜Insert Buffer Bitmap＞</p>
+
+  <p class="ziti4">page offset 00000002,page type＜File Segment inode＞</p>
+
+  <p class="ziti4">page offset 00000003,page type＜B-tree Node＞,page level＜0001＞</p>
+
+  <p class="ziti4">page offset 00000004,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000005,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000006,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000007,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000000,page type＜Freshly Allocated Page＞</p>
+
+  <p class="ziti4">Total number of page:9:</p>
+
+  <p class="ziti4">Freshly Allocated Page:1</p>
+
+  <p class="ziti4">Insert Buffer Bitmap:1</p>
+
+  <p class="ziti4">File Space Header:1</p>
+
+  <p class="ziti4">B-tree Node:5</p>
+
+  <p class="ziti4">File Segment inode:1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">对比前一次分析，我们可以看到这次多了一个页。分析page offset为4的页，该页即为非聚集索引所在页，通过工具hexdump分析可得：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">00010000 b9 aa 8e d0 00 00 00 04 ff ff ff ff ff ff ff ff|................|</p>
+
+  <p class="ziti4">00010010 00 00 00 0a ec ea 4e 27 45 bf 00 00 00 00 00 00|......N'E.......|</p>
+
+  <p class="ziti4">00010020 00 00 00 00 01 02 00 02 00 ac 80 06 00 00 00 00|................|</p>
+
+  <p class="ziti4">00010030 00 a4 00 01 00 03 00 04 00 00 00 00 00 52 d4 8b|.............R..|</p>
+
+  <p class="ziti4">00010040 00 00 00 00 00 00 00 00 01 f2 00 00 01 02 00 00|................|</p>
+
+  <p class="ziti4">00010050 00 02 02 72 00 00 01 02 00 00 00 02 01 b2 01 00|...r............|</p>
+
+  <p class="ziti4">00010060 02 00 41 69 6e 66 69 6d 75 6d 00 05 00 0b 00 00|..Ainfimum......|</p>
+
+  <p class="ziti4">00010070 73 75 70 72 65 6d 75 6d 00 00 10 ff f3 7f ff ff|supremum........|</p>
+
+  <p class="ziti4">00010080 ff 80 00 00 01 00 00 18 ff f3 7f ff ff fe 80 00|................|</p>
+
+  <p class="ziti4">00010090 00 02 00 00 20 ff f3 7f ff ff fd 80 00 00 03 00|...............|</p>
+
+  <p class="ziti4">000100a0 00 28 ff f3 7f ff ff fc 80 00 00 04 00 00 00 00|.（..............|</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">00013ff0 00 00 00 00 00 70 00 63 f3 46 77 f2 ec ea 4e 27|.....p.c.Fw...N'|</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">由于只有4行数据，并且列c只有4字节，因此在一个非聚集索引页中即可完成，整理分析可得如图5-16所示的关系。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00047.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-16　辅助索引分析
+  </div>
+
+  <p class="ziti3">图5-16显示了表t中辅助索引idx_c和聚集索引的关系。可以看到辅助索引的叶子节点中包含了列c的值和主键的值。因为这里我特意将键值设为负值，所以会发现-1以7f ff ff ff的方式进行内部存储。7（0111）最高位为0，代表负值，实际的值应该取反后加1，即得-1。</p>
+</body></html>

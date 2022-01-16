@@ -1,0 +1,41 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.6　约束</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="22O7C0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">4.6　约束</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>4.6.1　数据完整性</h3>
+
+  <p class="ziti3">关系型数据库系统和文件系统的一个不同点是，关系数据库本身能保证存储数据的完整性，不需要应用程序的控制，而文件系统一般需要在程序端进行控制。当前几乎所有的关系型数据库都提供了约束（constraint）机制，该机制提供了一条强大而简易的途径来保证数据库中数据的完整性。一般来说，数据完整性有以下三种形式：</p>
+
+  <p class="ziti3">实体完整性保证表中有一个主键。在InnoDB存储引擎表中，用户可以通过定义Primary Key或Unique Key约束来保证实体的完整性。用户还可以通过编写一个触发器来保证数据完整性。</p>
+
+  <p class="ziti3">域完整性保证数据每列的值满足特定的条件。在InnoDB存储引擎表中，域完整性可以通过以下几种途径来保证：</p>
+
+  <p class="ziti3">❑选择合适的数据类型确保一个数据值满足特定条件。</p>
+
+  <p class="ziti3">❑外键（Foreign Key）约束。</p>
+
+  <p class="ziti3">❑编写触发器。</p>
+
+  <p class="ziti3">❑还可以考虑用DEFAULT约束作为强制域完整性的一个方面。</p>
+
+  <p class="ziti3">参照完整性保证两张表之间的关系。InnoDB存储引擎支持外键，因此允许用户定义外键以强制参照完整性，也可以通过编写触发器以强制执行。</p>
+
+  <p class="ziti3">对于InnoDB存储引擎本身而言，提供了以下几种约束：</p>
+
+  <p class="ziti3">❑Primary Key</p>
+
+  <p class="ziti3">❑Unique Key</p>
+
+  <p class="ziti3">❑Foreign Key</p>
+
+  <p class="ziti3">❑Default</p>
+
+  <p class="ziti3">❑NOT NULL</p>
+</body></html>

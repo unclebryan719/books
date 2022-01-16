@@ -1,0 +1,47 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.3.2　B+树的删除操作</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2LQIK0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.3.2　B+树的删除操作</h3>
+
+  <p class="ziti3">B+树使用填充因子（fill factor）来控制树的删除变化，50%是填充因子可设的最小值。B+树的删除操作同样必须保证删除后叶子节点中的记录依然排序，同插入一样，B+树的删除操作同样需要考虑以下表5-2中的三种情况，与插入不同的是，删除根据填充因子的变化来衡量。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00041.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">根据图5-9的B+树来进行删除操作。首先删除键值为70的这条记录，该记录符合表5-2讨论的第一种情况，删除后可得到图5-11。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00042.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-11　删除键值70
+  </div>
+
+  <p class="ziti3">接着删除键值为25的记录，这也是表5-2讨论的第一种情况，但是该值还是IndexPage中的值，因此在删除Leaf Page中的25后，还应将25的右兄弟节点的28更新到Page Index中，最后可得图5-12。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00043.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-12　删除键值25
+  </div>
+
+  <p class="ziti3">最后看删除键值为60的情况。删除Leaf Page中键值为60的记录后，Fill Factor小于50%，这时需要做合并操作，同样，在删除Index Page中相关记录后需要做Index Page的合并操作，最后得到图5-13。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00044.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-13　删除键值60
+  </div>
+</body></html>

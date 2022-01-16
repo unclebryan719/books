@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>1.5　连接MySQL</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="J2B80-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">1.5　连接MySQL</h2>
+
+  <p class="ziti3">本节将介绍连接MySQL数据库的常用方式。需要理解的是，连接MySQL操作是一个连接进程和MySQL数据库实例进行通信。从程序设计的角度来说，本质上是进程通信。如果对进程通信比较了解，可以知道常用的进程通信方式有管道、命名管道、命名字、TCP/IP套接字、UNIX域套接字。MySQL数据库提供的连接方式从本质上看都是上述提及的进程通信方式。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>1.5.1　TCP/IP</h3>
+
+  <p class="ziti3">TCP/IP套接字方式是MySQL数据库在任何平台下都提供的连接方式，也是网络中使用得最多的一种方式。这种方式在TCP/IP连接上建立一个基于网络的连接请求，一般情况下客户端（client）在一台服务器上，而MySQL实例（server）在另一台服务器上，这两台机器通过一个TCP/IP网络连接。例如用户可以在Windows服务器下请求一台远程Linux服务器下的MySQL实例，如下所示：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">C:\＞mysql-h192.168.0.101-u david-p</p>
+
+  <p class="ziti4">Enter password:</p>
+
+  <p class="ziti4">Welcome to the MySQL monitor.Commands end with;or\g.</p>
+
+  <p class="ziti4">Your MySQL connection id is 18358</p>
+
+  <p class="ziti4">Server version:5.0.77-log MySQL Community Server(GPL)</p>
+
+  <p class="ziti4">Type'help;'or'\h'for help.Type'\c'to clear the current input statement.</p>
+
+  <p class="ziti4">mysql＞</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这里的客户端是Windows，它向一台Host IP为192.168.0.101的MySQL实例发起了TCP/IP连接请求，并且连接成功。之后就可以对MySQL数据库进行一些数据库操作，如DDL和DML等。</p>
+
+  <p class="ziti3">这里需要注意的是，在通过TCP/IP连接到MySQL实例时，MySQL数据库会先检查一张权限视图，用来判断发起请求的客户端IP是否允许连接到MySQL实例。该视图在mysql架构下，表名为user，如下所示：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞USE mysql;</p>
+
+  <p class="ziti4">Database changed</p>
+
+  <p class="ziti4">mysql＞SELECT host,user,password FROM user;</p>
+
+  <p class="ziti4">***************************1.row*****************************</p>
+
+  <p class="ziti4">host:192.168.24.%</p>
+
+  <p class="ziti4">user:root</p>
+
+  <p class="ziti4">password:*75DBD4FA548120B54FE693006C41AA9A16DE8FBE</p>
+
+  <p class="ziti4">****************************2.row*****************************</p>
+
+  <p class="ziti4">host:nineyou0-43</p>
+
+  <p class="ziti4">user:root</p>
+
+  <p class="ziti4">password:*75DBD4FA548120B54FE693006C41AA9A16DE8FBE</p>
+
+  <p class="ziti4">****************************3.row*****************************</p>
+
+  <p class="ziti4">host:127.0.0.1</p>
+
+  <p class="ziti4">user:root</p>
+
+  <p class="ziti4">password:*75DBD4FA548120B54FE693006C41AA9A16DE8FBE</p>
+
+  <p class="ziti4">****************************4.row*****************************</p>
+
+  <p class="ziti4">host:192.168.0.100</p>
+
+  <p class="ziti4">user:zlm</p>
+
+  <p class="ziti4">password:*DAE0939275CC7CD8E0293812A31735DA9CF0953C</p>
+
+  <p class="ziti4">****************************5.row*****************************</p>
+
+  <p class="ziti4">host:%</p>
+
+  <p class="ziti4">user:david</p>
+
+  <p class="ziti4">password:</p>
+
+  <p class="ziti4">5 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">从这张权限表中可以看到，MySQL允许david这个用户在任何IP段下连接该实例，并且不需要密码。此外，还给出了root用户在各个网段下的访问控制权限。</p>
+</body></html>

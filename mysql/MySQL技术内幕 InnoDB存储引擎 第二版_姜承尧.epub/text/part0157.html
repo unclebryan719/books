@@ -1,0 +1,95 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>8.5.3　XtraBackup实现增量备份</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4LN8A0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">8.5.3　XtraBackup实现增量备份</h3>
+
+  <p class="ziti3">MySQL数据库本身提供的工具并不支持真正的增量备份，更准确地说，二进制日志的恢复应该是point-in-time的恢复而不是增量备份。而XtraBackup工具支持对于InnoDB存储引擎的增量备份，其工作原理如下：</p>
+
+  <p class="ziti3">1）首选完成一个全备，并记录下此时检查点的LSN。</p>
+
+  <p class="ziti3">2）在进行增量备份时，比较表空间中每个页的LSN是否大于上次备份时的LSN，如果是，则备份该页，同时记录当前检查点的LSN。</p>
+
+  <p class="ziti3">因此XtraBackup的备份和恢复的过程大致如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">(full backup)</p>
+
+  <p class="ziti4">#./xtrabackup--backup--target-dir=/backup/base</p>
+
+  <p class="ziti4">...</p>
+
+  <p class="ziti4">(incremental backup)</p>
+
+  <p class="ziti4">#./xtrabackup--backup--target-dir=/backup/delta--incremental-basedir=/backup/base</p>
+
+  <p class="ziti4">...</p>
+
+  <p class="ziti4">(prepare)</p>
+
+  <p class="ziti4">#./xtrabackup--prepare--target-dir=/backup/base</p>
+
+  <p class="ziti4">...</p>
+
+  <p class="ziti4">(apply incremental backup)</p>
+
+  <p class="ziti4">#./xtrabackup--prepare--target-dir=/backup/base--incremental-dir=/backup/delta</p>
+
+  <p class="ziti4">...</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在上述过程中，首先将全部文件备份到/backup/base目录下，增量备份产生的文件备份到/backup/delta。在恢复过程中，首先指定全备的路径，然后将增量的备份应用于该完全备份。以下显示了一个完整的增量备份过程：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#./xtrabackup--backup</p>
+
+  <p class="ziti4">./xtrabackup Ver beta-0.4 for 5.0.75 unknown-linux-gnu(x86_64)</p>
+
+  <p class="ziti4">＞＞log scanned up to(0 378161500)</p>
+
+  <p class="ziti4">...</p>
+
+  <p class="ziti4">The latest check point(for incremental):'0:377883685'＜=====使用这个LSN</p>
+
+  <p class="ziti4">＞＞log scanned up to(0 379294296)</p>
+
+  <p class="ziti4">Stopping log copying thread..</p>
+
+  <p class="ziti4">Transaction log of lsn(0 377883685)to(0 379294296)was copied.</p>
+
+  <p class="ziti4">(must do--prepare before the each incremental backup)</p>
+
+  <p class="ziti4">#./xtrabackup--prepare</p>
+
+  <p class="ziti4">...</p>
+
+  <p class="ziti4">#./xtrabackup--backup--incremental=0:377883685</p>
+
+  <p class="ziti4">incremental backup from 0:377883685 is enabled.</p>
+
+  <p class="ziti4">./xtrabackup Ver beta-0.4 for 5.0.75 unknown-linux-gnu(x86_64)</p>
+
+  <p class="ziti4">＞＞log scanned up to(0 379708047)</p>
+
+  <p class="ziti4">Copying./ibdata1</p>
+
+  <p class="ziti4">to/home/kinoyasu/xtrabackup_work/mysql-5.0.75/innobase/xtrabackup/tmp_diff/ibdata1.delta</p>
+
+  <p class="ziti4">...done</p>
+
+  <p class="ziti4">...</p>
+
+  <p class="ziti4">The latest check point(for incremental):'0:379438233'＜====下一个增量备份开始的LSN</p>
+
+  <p class="ziti4">＞＞log scanned up to(0 380663549)</p>
+
+  <p class="ziti4">Stopping log copying thread..</p>
+
+  <p class="ziti4">Transaction log of lsn(0 379438233)to(0 380663549)was copied.</p>
+  <hr class="calibre2"/>
+</body></html>

@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.4　隐式提交的SQL语句</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="42KT20-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">7.4　隐式提交的SQL语句</h2>
+
+  <p class="ziti3">以下这些SQL语句会产生一个隐式的提交操作，即执行完这些语句后，会有一个隐式的COMMIT操作。</p>
+
+  <p class="ziti3">❑DDL语句：ALTER DATABASE...UPGRADE DATA DIRECTORY NAME，ALTER EVENT，ALTER PROCEDURE，ALTER TABLE，ALTER VIEW，CREATE DATABASE，CREATE EVENT，CREATE INDEX，CREATE PROCEDURE，CREATE TABLE，CREATE TRIGGER，CREATE VIEW，DROP DATABASE，DROP EVENT，DROP INDEX，DROP PROCEDURE，DROP TABLE，DROP TRIGGER，DROP VIEW，RENAME TABLE，TRUNCATE TABLE。</p>
+
+  <p class="ziti3">❑用来隐式地修改MySQL架构的操作：CREATE USER、DROP USER、GRANT、RENAME USER、REVOKE、SET PASSWORD。</p>
+
+  <p class="ziti3">❑管理语句：ANALYZE TABLE、CACHE INDEX、CHECK TABLE、LOAD INDEX INTO CACHE、OPTIMIZE TABLE、REPAIR TABLE。</p>
+
+  <p class="ziti3">注意　我发现Microsoft SQL Server的数据库管理员或开发人员往往忽视对于DDL语句的隐式提交操作，因为在Microsoft SQL Server数据库中，即使是DDL也是可以回滚的。这和InnoDB存储引擎、Oracle这些数据库完全不同。</p>
+
+  <p class="ziti3">另外需要注意的是，TRUNCATE TABLE语句是DDL，因此虽然和对整张表执行DELETE的结果是一样的，但它是不能被回滚的（这又是和Microsoft SQL Server数据不同的地方）。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FRM t\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">a:1</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">a:2</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.01 sec)</p>
+
+  <p class="ziti4">mysql＞TRUNCATE TABLE t;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞ROLLBACK;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t;</p>
+
+  <p class="ziti4">Empty set(0.00 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

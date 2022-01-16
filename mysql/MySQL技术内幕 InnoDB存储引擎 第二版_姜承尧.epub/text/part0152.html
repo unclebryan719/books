@@ -1,0 +1,123 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>8.3.4　LOAD DATA INFILE</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4GULG0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">8.3.4　LOAD DATA INFILE</h3>
+
+  <p class="ziti3">若通过mysqldump-tab，或者通过SELECT INTO OUTFILE导出的数据需要恢复，这时可以通过命令LOAD DATA INFILE来进行导入。LOAD DATA INFILE的语法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">LOAD DATA INTO TABLE a IGNORE 1 LINES INFILE'/home/mysql/a.txt'</p>
+
+  <p class="ziti4">[REPLACE|IGNORE]</p>
+
+  <p class="ziti4">INTO TABLE tbl_name</p>
+
+  <p class="ziti4">[CHARACTER SET charset_name]</p>
+
+  <p class="ziti4">[{FIELDS|COLUMNS}</p>
+
+  <p class="ziti4">[TERMINATED BY'string']</p>
+
+  <p class="ziti4">[[OPTIONALLY]ENCLOSED BY'char']</p>
+
+  <p class="ziti4">[ESCAPED BY'char']</p>
+
+  <p class="ziti4">]</p>
+
+  <p class="ziti4">[LINES</p>
+
+  <p class="ziti4">[STARTING BY'string']</p>
+
+  <p class="ziti4">[TERMINATED BY'string']</p>
+
+  <p class="ziti4">]</p>
+
+  <p class="ziti4">[IGNORE number LINES]</p>
+
+  <p class="ziti4">[(col_name_or_user_var,...)]</p>
+
+  <p class="ziti4">[SET col_name=expr,...]</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">要对服务器文件使用LOAD DATA INFILE，必须拥有FILE权。其中对于导入格式的选项和之前介绍的SELECT INTO OUTFILE命令完全一样。IGNORE number LINES选项可以忽略导入的前几行。下面显示一个用LOAD DATA INFILE命令导入文件的示例，并忽略第一行的导入：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞load data infile'/home/mysql/a.txt'into table a;</p>
+
+  <p class="ziti4">Query OK,3 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:3 Deleted:0 Skipped:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">为了加快InnoDB存储引擎的导入，可能希望导入过程忽略对外键的检查，因此可以使用如下方式：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET@@foreign_key_checks=0;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞LOAD DATA INFILE'/home/mysql/a.txt'INTO TABLE a;</p>
+
+  <p class="ziti4">Query OK,4 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:4 Deleted:0 Skipped:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SET@@foreign_key_checks=1;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">另外可以针对指定的列进行导入，如将数据导入列a、b，而c列等于a、b列之和：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE b(</p>
+
+  <p class="ziti4">-＞a INT,</p>
+
+  <p class="ziti4">-＞b INT,</p>
+
+  <p class="ziti4">-＞c INT,</p>
+
+  <p class="ziti4">-＞PRIMARY KEY(a)</p>
+
+  <p class="ziti4">-＞)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.01 sec)</p>
+
+  <p class="ziti4">mysql＞LOAD DATA INFILE'/home/mysql/a.txt'</p>
+
+  <p class="ziti4">-＞INTO TABLE b FIELDS TERMINATED BY','(a,b)</p>
+
+  <p class="ziti4">-＞SET c=a+b;</p>
+
+  <p class="ziti4">Query OK,4 rows affected(0.01 sec)</p>
+
+  <p class="ziti4">Records:4 Deleted:0 Skipped:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM b;</p>
+
+  <p class="ziti4">+---+------+------+</p>
+
+  <p class="ziti4">|a|b|c|</p>
+
+  <p class="ziti4">+---+------+------+</p>
+
+  <p class="ziti4">|1|2|3|</p>
+
+  <p class="ziti4">|2|3|5|</p>
+
+  <p class="ziti4">|4|5|9|</p>
+
+  <p class="ziti4">|5|6|11|</p>
+
+  <p class="ziti4">+---+------+------+</p>
+
+  <p class="ziti4">4 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

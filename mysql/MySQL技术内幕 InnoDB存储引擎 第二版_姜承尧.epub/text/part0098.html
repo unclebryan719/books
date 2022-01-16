@@ -1,0 +1,137 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.6.2　联合索引</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2TEN40-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.6.2　联合索引</h3>
+
+  <p class="ziti3">联合索引是指对表上的多个列进行索引。前面讨论的情况都是只对表上的一个列进行索引。联合索引的创建方法与单个索引创建的方法一样，不同之处仅在于有多个索引列。例如，以下代码创建了一张t表，并且索引idx_a_b是联合索引，联合的列为（a，b）。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE t(</p>
+
+  <p class="ziti4">a INT,</p>
+
+  <p class="ziti4">b INT,</p>
+
+  <p class="ziti4">PRIMARY KEY(a),</p>
+
+  <p class="ziti4">KEY idx_a_b(a,b)</p>
+
+  <p class="ziti4">)ENGINE=INNODB</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">那么何时需要使用联合索引呢？在讨论这个问题之前，先来看一下联合索引内部的结果。从本质上来说，联合索引也是一棵B+树，不同的是联合索引的键值的数量不是1，而是大于等于2。接着来讨论两个整型列组成的联合索引，假定两个键值的名称分别为a、b，如图5-22所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00054.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-22　多个键值的B+树
+  </div>
+
+  <p class="ziti3">从图5-22可以观察到多个键值的B+树情况。其实和之前讨论的单个键值的B+树并没有什么不同，键值都是排序的，通过叶子节点可以逻辑上顺序地读出所有数据，就上面的例子来说，即（1，1）、（1，2）、（2，1）、（2，4）、（3，1）、（3，2）。数据按（a，b）的顺序进行了存放。</p>
+
+  <p class="ziti3">因此，对于查询SELECT*FROM TABLE WHERE a=xxx and b=xxx，显然是可以使用（a，b）这个联合索引的。对于单个的a列查询SELECT*FROM TABLE WHERE a=xxx，也可以使用这个（a，b）索引。但对于b列的查询SELECT*FROM TABLE WHERE b=xxx，则不可以使用这棵B+树索引。可以发现叶子节点上的b值为1、2、1、4、1、2，显然不是排序的，因此对于b列的查询使用不到（a，b）的索引。</p>
+
+  <p class="ziti3">联合索引的第二个好处是已经对第二个键值进行了排序处理。例如，在很多情况下应用程序都需要查询某个用户的购物情况，并按照时间进行排序，最后取出最近三次的购买记录，这时使用联合索引可以避免多一次的排序操作，因为索引本身在叶子节点已经排序了。来看一个例子，首先根据如下代码来创建测试表buy_log：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE buy_log(</p>
+
+  <p class="ziti4">userid INT UNSIGNED NOT NULL,</p>
+
+  <p class="ziti4">buy_date DATE</p>
+
+  <p class="ziti4">)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">INSERT INTO buy_log VALUES(1,'2009-01-01');</p>
+
+  <p class="ziti4">INSERT INTO buy_log VALUES(2,'2009-01-01');</p>
+
+  <p class="ziti4">INSERT INTO buy_log VALUES(3,'2009-01-01');</p>
+
+  <p class="ziti4">INSERT INTO buy_log VALUES(1,'2009-02-01');</p>
+
+  <p class="ziti4">INSERT INTO buy_log VALUES(3,'2009-02-01');</p>
+
+  <p class="ziti4">INSERT INTO buy_log VALUES(1,'2009-03-01');</p>
+
+  <p class="ziti4">INSERT INTO buy_log VALUES(1,'2009-04-01');</p>
+
+  <p class="ziti4">ALTER TABLE buy_log ADD KEY(userid);</p>
+
+  <p class="ziti4">ALTER TABLE buy_log ADD KEY(userid,buy_date);</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">以上代码建立了两个索引来进行比较。两个索引都包含了userid字段。如果只对于userid进行查询，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM buy_log WHERE userid=2;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">则优化器的选择为如图5-23所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00055.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-23　查询条件仅为userid的执行计划
+  </div>
+
+  <p class="ziti3">从图5-23中可以发现，possible_keys在这里有两个索引可供使用，分别是单个的userid索引和（userid，buy_date）的联合索引。但是优化器最终的选择是索引userid，因为该索引的叶子节点包含单个键值，所以理论上一个页能存放的记录应该更多。</p>
+
+  <p class="ziti3">接着假定要取出userid为1的最近3次的购买记录，其SQL语句如下，执行计划如图5-24所示。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM buy_log</p>
+
+  <p class="ziti4">WHERE userid=1 ORDER BY buy_date DESC LIMIT 3</p>
+  <hr class="calibre2"/>
+
+  <div class="pic">
+    <img alt="" src="../images/00056.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-24　SQL语句的执行计划
+  </div>
+
+  <p class="ziti3">同样的，对于上述的SQL语句既可以使用userid索引，也可以使用（userid，buy_date）索引。但是这次优化器使用了（userid，buy_date）的联合索引userid_2，因为在这个联合索引中buy_date已经排序好了。根据该联合索引取出数据，无须再对buy_date做一次额外的排序操作。若强制使用userid索引，则执行计划如图5-25所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00057.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-25　强制使用userid索引的执行计划
+  </div>
+
+  <p class="ziti3">在Extra选项中可以看到Using filesort，即需要额外的一次排序操作才能完成查询。而这次显然需要对列buy_date排序，因为索引userid中的buy_date是未排序的。</p>
+
+  <p class="ziti3">正如前面所介绍的那样，联合索引（a，b）其实是根据列a、b进行排序，因此下列语句可以直接使用联合索引得到结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT...FROM TABLE WHERE a=xxx ORDER BY b</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">然而对于联合索引（a，b，c）来说，下列语句同样可以直接通过联合索引得到结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT...FROM TABLE WHERE a=xxx ORDER BY b</p>
+
+  <p class="ziti4">SELECT...FROM TABLE WHERE a=xxx AND b=xxx ORDER BY c</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">但是对于下面的语句，联合索引不能直接得到结果，其还需要执行一次filesort排序操作，因为索引（a，c）并未排序：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT...FROM TABLE WHERE a=xxx ORDER BY c</p>
+  <hr class="calibre2"/>
+</body></html>

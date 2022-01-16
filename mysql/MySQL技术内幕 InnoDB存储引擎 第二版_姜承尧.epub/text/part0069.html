@@ -1,0 +1,125 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.5　Named File Formats机制</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="21PMQ0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">4.5　Named File Formats机制</h2>
+
+  <p class="ziti3">随着InnoDB存储引擎的发展，新的页数据结构有时用来支持新的功能特性。比如前面提到的InnoDB 1.0.x版本提供了新的页数据结构来支持表压缩功能，完全的溢出（Off page）大变长字符类型字段的存储。这些新的页数据结构和之前版本的页并不兼容，因此从InnoDB 1.0.x版本开始，InnoDB存储引通过Named File Formats机制来解决不同版本下页结构兼容性的问题。</p>
+
+  <p class="ziti3">InnoDB存储引擎将1.0.x版本之前的文件格式（file format）定义为Antelope，将这个版本支持的文件格式定义为Barracuda。新的文件格式总是包含于之前的版本的页格式。图4-8显示了Barracuda文件格式和Antelope文件格式之间的关系，Antelope文件格式有Compact和Redudant的行格式，Barracuda文件格式既包括了Antelope所有的文件格式，另外新加入了之前已经提到过的Compressed和Dynamic行格式。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00029.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　4-8　文件格式
+  </div>
+
+  <p class="ziti3">InnoDB Plugin的官方手册中提到了，未来版本的InnoDB存储引擎还将引入新的文件格式，此文件格式的名称取自动物的名字（这个学Apple的命名方式？），并按照字母排序进行命名。我翻阅了源代码，发现目前已经定义好的文件格式有：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">/**List of animal names representing file format.*/</p>
+
+  <p class="ziti4">static const char*file_format_name_map[]={</p>
+
+  <p class="ziti4">"Antelope",</p>
+
+  <p class="ziti4">"Barracuda",</p>
+
+  <p class="ziti4">"Cheetah",</p>
+
+  <p class="ziti4">"Dragon",</p>
+
+  <p class="ziti4">"Elk",</p>
+
+  <p class="ziti4">"Fox",</p>
+
+  <p class="ziti4">"Gazelle",</p>
+
+  <p class="ziti4">"Hornet",</p>
+
+  <p class="ziti4">"Impala",</p>
+
+  <p class="ziti4">"Jaguar",</p>
+
+  <p class="ziti4">"Kangaroo",</p>
+
+  <p class="ziti4">"Leopard",</p>
+
+  <p class="ziti4">"Moose",</p>
+
+  <p class="ziti4">"Nautilus",</p>
+
+  <p class="ziti4">"Ocelot",</p>
+
+  <p class="ziti4">"Porpoise",</p>
+
+  <p class="ziti4">"Quail",</p>
+
+  <p class="ziti4">"Rabbit",</p>
+
+  <p class="ziti4">"Shark",</p>
+
+  <p class="ziti4">"Tiger",</p>
+
+  <p class="ziti4">"Urchin",</p>
+
+  <p class="ziti4">"Viper",</p>
+
+  <p class="ziti4">"Whale",</p>
+
+  <p class="ziti4">"Xenops",</p>
+
+  <p class="ziti4">"Yak",</p>
+
+  <p class="ziti4">"Zebra"</p>
+
+  <p class="ziti4">};</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">参数innodb_file_format用来指定文件格式，可以通过下面的方式来查看当前所使用的InnoDB存储引擎的文件格式。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT@@version\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">@@version:5.1.37</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_version'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_version</p>
+
+  <p class="ziti4">Value:1.0.4</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_file_format'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_file_format</p>
+
+  <p class="ziti4">Value:Barracuda</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">参数innodb_file_format_check用来检测当前InnoDB存储引擎文件格式的支持度，该值默认为ON，如果出现不支持的文件格式，用户可能在错误日志文件中看到类似如下的错误：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">InnoDB:Warning:the system tablespace is in a</p>
+
+  <p class="ziti4">file format that this version doesn't support</p>
+  <hr class="calibre2"/>
+</body></html>

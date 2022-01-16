@@ -1,0 +1,28 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>第7章　事务</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3RV940-878f632495a744b2a24ea2205f162355" class="calibre">
+<div id="3RV940-878f632495a744b2a24ea2205f162355" style="height:0pt"></div><h1 class="p2" id="heading_id_2">第7章　事务</h1>
+
+  <p class="ziti3">事务（Transaction）是数据库区别于文件系统的重要特性之一。在文件系统中，如果正在写文件，但是操作系统突然崩溃了，这个文件就很有可能被破坏。当然，有一些机制可以把文件恢复到某个时间点。不过，如果需要保证两个文件同步，这些文件系统可能就显得无能为力了。例如，在需要更新两个文件时，更新完一个文件后，在更新完第二个文件之前系统重启了，就会有两个不同步的文件。</p>
+
+  <p class="ziti3">这正是数据库系统引入事务的主要目的：事务会把数据库从一种一致状态转换为另一种一致状态。在数据库提交工作时，可以确保要么所有修改都已经保存了，要么所有修改都不保存。</p>
+
+  <p class="ziti3">InnoDB存储引擎中的事务完全符合ACID的特性。ACID是以下4个词的缩写：</p>
+
+  <p class="ziti3">❑原子性（atomicity）</p>
+
+  <p class="ziti3">❑一致性（consistency）</p>
+
+  <p class="ziti3">❑隔离性（isolation）</p>
+
+  <p class="ziti3">❑持久性（durability）</p>
+
+  <p class="ziti3">第6章介绍了锁，讨论InnoDB是如何实现事务的隔离性的。本章主要关注事务的原子性这一概念，并说明怎样正确使用事务及编写正确的事务应用程序，避免在事务方面养成一些不好的习惯。</p>
+
+  </body></html>

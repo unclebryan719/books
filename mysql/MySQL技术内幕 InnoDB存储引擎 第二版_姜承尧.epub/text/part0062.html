@@ -1,0 +1,53 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.4　InnoDB数据页结构</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1R42S0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">4.4　InnoDB数据页结构</h2>
+
+  <p class="ziti3">相信通过前面几个小节的介绍，读者已经知道页是InnoDB存储引擎管理数据库的最小磁盘单位。页类型为B-tree Node的页存放的即是表中行的实际数据了。在这一节中，我们将从底层具体地介绍InnoDB数据页的内部存储结构。</p>
+
+  <p class="ziti3">注意　InnoDB公司本身并没有详细介绍其页结构的实现，MySQL的官方手册中也基本没有提及InnoDB存储引擎页的内部结构。本节通过阅读源代码来了解InnoDB的页结构，此外结合了Peter对于InnoDB页结构的分析。Peter写这部分内容的时间很久远了，在其之后InnoDB引入了Compact格式，页结构已经有所改动，因此可能出现对页结构分析错误的情况，如有错误，希望可以指出。</p>
+
+  <p class="ziti3">InnoDB数据页由以下7个部分组成，如图4-6所示。</p>
+
+  <p class="ziti3">❑File Header（文件头）</p>
+
+  <p class="ziti3">❑Page Header（页头）</p>
+
+  <p class="ziti3">❑Infimun和Supremum Records</p>
+
+  <p class="ziti3">❑User Records（用户记录，即行记录）</p>
+
+  <p class="ziti3">❑Free Space（空闲空间）</p>
+
+  <p class="ziti3">❑Page Directory（页目录）</p>
+
+  <p class="ziti3">❑File Trailer（文件结尾信息）</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00023.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　4-6　InnoDB存储引擎数据页结构
+  </div>
+
+  <p class="ziti3">其中File Header、Page Header、File Trailer的大小是固定的，分别为38、56、8字节，这些空间用来标记该页的一些信息，如Checksum，数据页所在B+树索引的层数等。User Records、Free Space、Page Directory这些部分为实际的行记录存储空间，因此大小是动态的。在接下来的各小节中将具体分析各组成部分。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>4.4.1　File Header</h3>
+
+  <p class="ziti3">File Header用来记录页的一些头信息，由表4-3中8个部分组成，共占用38字节。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00024.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="pic">
+    <img alt="" src="../images/00025.jpeg" class="calibre3"/>
+  </div>
+</body></html>

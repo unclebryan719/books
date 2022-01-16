@@ -1,0 +1,631 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.8.4　全文检索</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="38STS0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.8.4　全文检索</h3>
+
+  <p class="ziti3">MySQL数据库支持全文检索（Full-Text Search）的查询，其语法为：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">MATCH(col1,col2,...)AGAINST(expr[search_modifier])</p>
+
+  <p class="ziti4">search_modifier:</p>
+
+  <p class="ziti4">{</p>
+
+  <p class="ziti4">IN NATURAL LANGUAGE MODE</p>
+
+  <p class="ziti4">|IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION</p>
+
+  <p class="ziti4">|IN BOOLEAN MODE</p>
+
+  <p class="ziti4">|WITH QUERY EXPANSION</p>
+
+  <p class="ziti4">}</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">MySQL数据库通过MATCH()…AGAINST()语法支持全文检索的查询，MATCH指定了需要被查询的列，AGAINST指定了使用何种方法去进行查询。下面将对各种查询模式进行详细的介绍。</p>
+
+  <p class="yanse">1.Natural Language</p>
+
+  <p class="ziti3">全文检索通过MATCH函数进行查询，默认采用Natural Language模式，其表示查询带有指定word的文档。对于5.8.3小节中创建的表fts_a，查询body字段中带有Pease的文档，若不使用全文索引技术，则允许使用下述SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_a WHERE body LIKE'%Pease%';</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">显然上述SQL语句不能使用B+树索引。若采用全文检索技术，可以用下面的SQL语句进行查询：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)</p>
+
+  <p class="ziti4">-＞AGAINST('Porridge'IN NATURAL LANGUAGE MODE);</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">|FTS_DOC_ID|body|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">|2|Pease porridge hot,pease porridge cold|</p>
+
+  <p class="ziti4">|1|Pease porridge in the pot|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">由于NATURAL LANGUAGE MODE是默认的全文检索查询模式，因此用户可以省略查询修饰符，即上述SQL语句可以写为：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM fts_a WHERE MATCH(body)AGAINST('Porridge');</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">观察上述SQL语句的查询计划，可得：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞EXPLAIN SELECT*FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)AGAINST('Porridge')\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">id:1</p>
+
+  <p class="ziti4">select_type:SIMPLE</p>
+
+  <p class="ziti4">table:fts_a</p>
+
+  <p class="ziti4">type:fulltext</p>
+
+  <p class="ziti4">possible_keys:idx_fts</p>
+
+  <p class="ziti4">key:idx_fts</p>
+
+  <p class="ziti4">key_len:0</p>
+
+  <p class="ziti4">ref:NULL</p>
+
+  <p class="ziti4">rows:1</p>
+
+  <p class="ziti4">Extra:Using where</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，在type这列显示了fulltext，即表示使用全文检索的倒排索引，而key这列显示了idx_fts，表示索引的名字。可见上述查询使用了全文检索技术。同时，若表没有创建倒排索引，则执行MATCH函数会抛出类似如下错误：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_b</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)AGAINST('Porridge');</p>
+
+  <p class="ziti4">ERROR 1191(HY000):Can't find FULLTEXT index matching the column list</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在WHERE条件中使用MATCH函数，查询返回的结果是根据相关性（Relevance）进行降序排序的，即相关性最高的结果放在第一位。相关性的值是一个非负的浮点数字，0表示没有任何的相关性。根据MySQL官方的文档可知，其相关性的计算依据以下四个条件：</p>
+
+  <p class="ziti3">❑word是否在文档中出现。</p>
+
+  <p class="ziti3">❑word在文档中出现的次数。</p>
+
+  <p class="ziti3">❑word在索引列中的数量。</p>
+
+  <p class="ziti3">❑多少个文档包含该word。</p>
+
+  <p class="ziti3">对于上述查询，由于Porridge在文档2中出现了两次，因而具有更高的相关性，故第一个显示。</p>
+
+  <p class="ziti3">为了统计MATCH函数得到的结果数量，可以使用下列SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT count(*)</p>
+
+  <p class="ziti4">-＞FROM fts_a WHERE</p>
+
+  <p class="ziti4">-＞MATCH(body)AGAINST('Porridge'IN NATURAL LANGUAGE MODE);</p>
+
+  <p class="ziti4">+-------------------+</p>
+
+  <p class="ziti4">|count(FTS_DOC_ID)|</p>
+
+  <p class="ziti4">+-------------------+</p>
+
+  <p class="ziti4">|2|</p>
+
+  <p class="ziti4">+-------------------+</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述SQL语句也可以重写为：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT</p>
+
+  <p class="ziti4">-＞COUNT(IF(MATCH(body)</p>
+
+  <p class="ziti4">-＞AGAINST('Porridge'IN NATURAL LANGUAGE MODE),1,NULL))</p>
+
+  <p class="ziti4">-＞AS count</p>
+
+  <p class="ziti4">-＞FROM fts_a;</p>
+
+  <p class="ziti4">+-------+</p>
+
+  <p class="ziti4">|count|</p>
+
+  <p class="ziti4">+-------+</p>
+
+  <p class="ziti4">|2|</p>
+
+  <p class="ziti4">+-------+</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述两句SQL语句虽然得到的逻辑结果是相同的，但是从内部运行来看，第二句SQL的执行速度可能更快些。这是因为第一句SQL语句还需要进行相关性的排序统计，而在第二句SQL中是不需要的。</p>
+
+  <p class="ziti3">此外，用户可以通过SQL语句查看相关性：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT fts_doc_id,body,</p>
+
+  <p class="ziti4">-＞MATCH(body)AGAINST('Porridge'IN NATURAL LANGUAGE MODE)</p>
+
+  <p class="ziti4">-＞AS Relevance</p>
+
+  <p class="ziti4">-＞FROM fts_a;</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+--------------------+</p>
+
+  <p class="ziti4">|fts_doc_id|body|Relevance|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+--------------------+</p>
+
+  <p class="ziti4">|1|Pease porridge in the pot|0.2960100471973419|</p>
+
+  <p class="ziti4">|2|Pease porridge hot,pease porridge cold|0.5920200943946838|</p>
+
+  <p class="ziti4">|3|Nine days old|0|</p>
+
+  <p class="ziti4">|4|Some like it hot,some like it cold|0|</p>
+
+  <p class="ziti4">|5|Some like it in the pot|0|</p>
+
+  <p class="ziti4">|6|Nine days old|0|</p>
+
+  <p class="ziti4">|7|I like hot and code days|0|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+--------------------+</p>
+
+  <p class="ziti4">7 rows in set(0.01 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">对于InnoDB存储引擎的全文检索，还需要考虑以下的因素：</p>
+
+  <p class="ziti3">❑查询的word在stopword列中，忽略该字符串的查询。</p>
+
+  <p class="ziti3">❑查询的word的字符长度是否在区间[innodb_ft_min_token_size，innodb_ft_max_token_size]内。</p>
+
+  <p class="ziti3">如果词在stopword中，则不对该词进行查询，如对the这个词进行查询，结果如下所示：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT fts_doc_id AS id,body,</p>
+
+  <p class="ziti4">-＞MATCH(body)AGAINST('the'IN NATURAL LANGUAGE MODE)</p>
+
+  <p class="ziti4">-＞AS rl</p>
+
+  <p class="ziti4">-＞FROM fts_a;</p>
+
+  <p class="ziti4">+----+-----------------------------------------+------+</p>
+
+  <p class="ziti4">|id|body|rl|</p>
+
+  <p class="ziti4">+----+-----------------------------------------+------+</p>
+
+  <p class="ziti4">|1|Pease porridge in the pot|0|</p>
+
+  <p class="ziti4">|2|Pease porridge hot,pease porridge cold|0|</p>
+
+  <p class="ziti4">|3|Nine days old|0|</p>
+
+  <p class="ziti4">|4|Some like it hot,some like it cold|0|</p>
+
+  <p class="ziti4">|5|Some like it in the pot|0|</p>
+
+  <p class="ziti4">|6|Nine days old|0|</p>
+
+  <p class="ziti4">|7|I like hot and code days|0|</p>
+
+  <p class="ziti4">+----+-----------------------------------------+------+</p>
+
+  <p class="ziti4">7 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，the虽然在文档1、5中出现，但由于其是stopword，故其相关性为0。</p>
+
+  <p class="ziti3">参数innodb_ft_min_token_size和innodb_ft_max_token_size控制InnoDB存储引擎查询字符的长度，当长度小于innodb_ft_min_token_size，或者长度大于innodb_ft_max_token_size时，会忽略该词的搜索。在InnoDB存储引擎中，参数innodb_ft_min_token_size的默认值为3，参数innodb_ft_max_token_size的默认值为84。</p>
+
+  <p class="yanse">2.Boolean</p>
+
+  <p class="ziti3">MySQL数据库允许使用IN BOOLEAN MODE修饰符来进行全文检索。当使用该修饰符时，查询字符串的前后字符会有特殊的含义，例如下面的语句要求查询有字符串Pease但没有hot的文档，其中+和-分别表示这个单词必须出现，或者一定不存在。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)AGAINST('+Pease-hot'IN BOOLEAN MODE)\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">FTS_DOC_ID:1</p>
+
+  <p class="ziti4">body:Pease porridge in the pot</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">Boolean全文检索支持以下几种操作符：</p>
+
+  <p class="ziti3">❑+表示该word必须存在。</p>
+
+  <p class="ziti3">❑-表示该word必须被排除。</p>
+
+  <p class="ziti3">❑（no operator）表示该word是可选的，但是如果出现，其相关性会更高</p>
+
+  <p class="ziti3">❑@distance表示查询的多个单词之间的距离是否在distance之内，distance的单位是字节。这种全文检索的查询也称为Proximity Search。如MATCH（body）AGAINST（'"Pease pot"@30'IN BOOLEAN MODE）表示字符串Pease和pot之间的距离需在30字节内。</p>
+
+  <p class="ziti3">❑＞表示出现该单词时增加相关性。</p>
+
+  <p class="ziti3">❑＜表示出现该单词时降低相关性。</p>
+
+  <p class="ziti3">❑～表示允许出现该单词，但是出现时相关性为负（全文检索查询允许负相关性）。</p>
+
+  <p class="ziti3">❑*表示以该单词开头的单词，如lik*，表示可以是lik、like，又或者likes。</p>
+
+  <p class="ziti3">❑"表示短语。</p>
+
+  <p class="ziti3">接着将根据上述的操作符及之前创建的表fts_a来进行具体的介绍。下面的SQL语句返回有pease又有hot的文档：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)AGAINST('+Pease+hot'IN BOOLEAN MODE)\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">FTS_DOC_ID:2</p>
+
+  <p class="ziti4">body:Pease porridge hot,pease porridge cold</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">下面的SQL语句返回有pease但没有hot的文档：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)AGAINST('+Pease-hot'IN BOOLEAN MODE)\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">FTS_DOC_ID:1</p>
+
+  <p class="ziti4">body:Pease porridge in the pot</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">下面的SQL语句返回有pease或有hot的文档：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)AGAINST('Pease hot'IN BOOLEAN MODE);</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">|FTS_DOC_ID|body|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">|2|Pease porridge hot,pease porridge cold|</p>
+
+  <p class="ziti4">|1|Pease porridge in the pot|</p>
+
+  <p class="ziti4">|4|Some like it hot,some like it cold|</p>
+
+  <p class="ziti4">|7|I like hot and code days|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">4 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">下面的SQL语句进行Proximity Search：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT fts_doc_id,body FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)</p>
+
+  <p class="ziti4">-＞AGAINST('"Pease pot"@30'IN BOOLEAN MODE)\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">fts_doc_id:1</p>
+
+  <p class="ziti4">body:Pease porridge in the pot</p>
+
+  <p class="ziti4">1 row in set(0.01 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT fts_doc_id,body FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)</p>
+
+  <p class="ziti4">-＞AGAINST('"Pease pot"@10'IN BOOLEAN MODE);</p>
+
+  <p class="ziti4">Empty set(0.01 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到文档1中单词Pease和pot的距离为22字节，因此第一条@30的查询可以返回结果，而之后@10的条件不能返回任何结果。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT fts_doc_id,body,</p>
+
+  <p class="ziti4">-＞MATCH(body)AGAINST('like＞pot'IN BOOLEAN MODE)</p>
+
+  <p class="ziti4">-＞AS Relevance FROM fts_a;</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+---------------------+</p>
+
+  <p class="ziti4">|fts_doc_id|body|Relevance|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+---------------------+</p>
+
+  <p class="ziti4">|1|Pease porridge in the pot|1.2960100173950195|</p>
+
+  <p class="ziti4">|2|Pease porridge hot,pease porridge cold|0|</p>
+
+  <p class="ziti4">|3|Nine days old|0|</p>
+
+  <p class="ziti4">|4|Some like it hot,some like it cold|0.27081382274627686|</p>
+
+  <p class="ziti4">|5|Some like it in the pot|1.4314169883728027|</p>
+
+  <p class="ziti4">|6|Nine days old|0|</p>
+
+  <p class="ziti4">|7|I like hot and code days|0.13540691137313843|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+---------------------+</p>
+
+  <p class="ziti4">7 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述SQL语句查询根据是否有单词like或pot进行相关性统计，并且出现单词pot后相关性需要增加。文档4虽然出现两个like单词，但是没有pot，因此相关性没有文档1和5高。</p>
+
+  <p class="ziti3">下面的查询增加了“＜some”的条件，最后得到的结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT fts_doc_id,body,</p>
+
+  <p class="ziti4">-＞MATCH(body)AGAINST('like＞hot＜some'IN BOOLEAN MODE)</p>
+
+  <p class="ziti4">-＞AS Relevance</p>
+
+  <p class="ziti4">-＞FROM fts_a;</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+---------------------+</p>
+
+  <p class="ziti4">|fts_doc_id|body|Relevance|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+---------------------+</p>
+
+  <p class="ziti4">|1|Pease porridge in the pot|0|</p>
+
+  <p class="ziti4">|2|Pease porridge hot,pease porridge cold|1.2960100173950195|</p>
+
+  <p class="ziti4">|3|Nine days old|0|</p>
+
+  <p class="ziti4">|4|Some like it hot,some like it cold|1.158843994140625|</p>
+
+  <p class="ziti4">|5|Some like it in the pot|-0.5685830116271973|</p>
+
+  <p class="ziti4">|6|Nine days old|0|</p>
+
+  <p class="ziti4">|7|I like hot and code days|0.13540691137313843|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+---------------------+</p>
+
+  <p class="ziti4">7 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以发现文档5的相关性变为了负，这是因为虽然其中存在like单词，但是也存在some单词，所以根据查询条件，其相关性变为了负相关。</p>
+
+  <p class="ziti3">接着来看下面的SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)AGAINST('po*'IN BOOLEAN MODE);</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">|FTS_DOC_ID|body|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">|2|Pease porridge hot,pease porridge cold|</p>
+
+  <p class="ziti4">|1|Pease porridge in the pot|</p>
+
+  <p class="ziti4">|5|Some like it in the pot|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到最后结果中的文档包含以po开头的单词，如porridge，pot。</p>
+
+  <p class="ziti3">最后是关于短语的SQL查询，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)AGAINST('like hot'IN BOOLEAN MODE);</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">|FTS_DOC_ID|body|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">|4|Some like it hot,some like it cold|</p>
+
+  <p class="ziti4">|7|I like hot and code days|</p>
+
+  <p class="ziti4">|2|Pease porridge hot,pease porridge cold|</p>
+
+  <p class="ziti4">|5|Some like it in the pot|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">4 rows in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_a</p>
+
+  <p class="ziti4">-＞WHERE MATCH(body)AGAINST('"like hot"'IN BOOLEAN MODE);</p>
+
+  <p class="ziti4">+------------+---------------------------+</p>
+
+  <p class="ziti4">|FTS_DOC_ID|body|</p>
+
+  <p class="ziti4">+------------+---------------------------+</p>
+
+  <p class="ziti4">|7|I like hot and code days|</p>
+
+  <p class="ziti4">+------------+---------------------------+</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到第一条SQL语句没有使用""将like和hot视为一个短语，而只是将其视为两个单词，因此结果共返回4个文档。而第二条SQL语句使用"like hot"，因此查询的是短语，故仅文档4符合查询条件。</p>
+
+  <p class="yanse">3.Query Expansion</p>
+
+  <p class="ziti3">MySQL数据库还支持全文检索的扩展查询。这种查询通常在查询的关键词太短，用户需要implied knowledge（隐含知识）时进行。例如，对于单词database的查询，用户可能希望查询的不仅仅是包含database的文档，可能还指那些包含MySQL、Oracle、DB2、RDBMS的单词。而这时可以使用Query Expansion模式来开启全文检索的implied knowledge。</p>
+
+  <p class="ziti3">通过在查询短语中添加WITH QUERY EXPANSION或IN NATURAL LANGUAGE MODE WITH QUERY EXPANSION可以开启blind query expansion（又称为automatic relevance feedback）。该查询分为两个阶段。</p>
+
+  <p class="ziti3">❑第一阶段：根据搜索的单词进行全文索引查询。</p>
+
+  <p class="ziti3">❑第二阶段：根据第一阶段产生的分词再进行一次全文检索的查询。</p>
+
+  <p class="ziti3">接着来看一个具体的例子，首先根据如下代码创建测试表articles：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE articles(</p>
+
+  <p class="ziti4">id INT UNSIGNED AUTO_INCREMENT NOT NULL PRIMARY KEY,</p>
+
+  <p class="ziti4">title VARCHAR(200),</p>
+
+  <p class="ziti4">body TEXT,</p>
+
+  <p class="ziti4">FULLTEXT(title,body)</p>
+
+  <p class="ziti4">)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">INSERT INTO articles(title,body)VALUES</p>
+
+  <p class="ziti4">('MySQL Tutorial','DBMS stands for DataBase...'),</p>
+
+  <p class="ziti4">('How To Use MySQL Well','After you went through a...'),</p>
+
+  <p class="ziti4">('Optimizing MySQL','In this tutorial we will show...'),</p>
+
+  <p class="ziti4">('1001 MySQL Tricks','1.Never run mysqld as root.2....'),</p>
+
+  <p class="ziti4">('MySQL vs.YourSQL','In the following database comparison...'),</p>
+
+  <p class="ziti4">('MySQL Security','When configured properly,MySQL...'),</p>
+
+  <p class="ziti4">('Tuning DB2','For IBM database...'),</p>
+
+  <p class="ziti4">('IBM History','DB2 hitory for IBM...');</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在这个例子中，并没有显示创建FTS_DOC_ID列，因此InnoDB存储引擎会自动建立该列，并添加唯一索引。此外，表articles的全文检索索引是根据列title和body的联合索引。接着根据database关键字进行的全文检索查询。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM articles</p>
+
+  <p class="ziti4">-＞WHERE MATCH(title,body)</p>
+
+  <p class="ziti4">-＞AGAINST('database'IN NATURAL LANGUAGE MODE);</p>
+
+  <p class="ziti4">+----+-------------------+------------------------------------------+</p>
+
+  <p class="ziti4">|id|title|body|</p>
+
+  <p class="ziti4">+----+-------------------+------------------------------------------+</p>
+
+  <p class="ziti4">|1|MySQL Tutorial|DBMS stands for DataBase...|</p>
+
+  <p class="ziti4">|5|MySQL vs.YourSQL|In the following database comparison...|</p>
+
+  <p class="ziti4">|7|Tuning DB2|For IBM database...|</p>
+
+  <p class="ziti4">+----+-------------------+------------------------------------------+</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，查询返回了3条记录，body字段包含database关键字。接着开启Query Expansion，观察最后得到的结果如下所示：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM articles</p>
+
+  <p class="ziti4">-＞WHERE MATCH(title,body)</p>
+
+  <p class="ziti4">-＞AGAINST('database'WITH QUERY EXPANSION);</p>
+
+  <p class="ziti4">+----+-----------------------+------------------------------------------+</p>
+
+  <p class="ziti4">|id|title|body|</p>
+
+  <p class="ziti4">+----+-----------------------+------------------------------------------+</p>
+
+  <p class="ziti4">|5|MySQL vs.YourSQL|In the following database comparison...|</p>
+
+  <p class="ziti4">|1|MySQL Tutorial|DBMS stands for DataBase...|</p>
+
+  <p class="ziti4">|7|Tuning DB2|For IBM database...|</p>
+
+  <p class="ziti4">|8|IBM History|DB2 hitory for IBM...|</p>
+
+  <p class="ziti4">|3|Optimizing MySQL|In this tutorial we will show...|</p>
+
+  <p class="ziti4">|6|MySQL Security|When configured properly,MySQL...|</p>
+
+  <p class="ziti4">|2|How To Use MySQL Well|After you went through a...|</p>
+
+  <p class="ziti4">|4|1001 MySQL Tricks|1.Never run mysqld as root.2....|</p>
+
+  <p class="ziti4">+----+-----------------------+------------------------------------------+</p>
+
+  <p class="ziti4">8 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到最后得到8条结果，除了之前包含database的记录，也有包含title或body字段中包含MySQL、DB2的文档。这就是Query Expansion。</p>
+
+  <p class="ziti3">由于Query Expansion的全文检索可能带来许多非相关性的查询，因此在使用时，用户可能需要非常谨慎。</p>
+</body></html>

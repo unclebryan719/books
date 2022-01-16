@@ -1,0 +1,215 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.4　B+树索引</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2MP360-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">5.4　B+树索引</h2>
+
+  <p class="ziti3">前面讨论的都是B+树的数据结构及其一般操作，B+树索引的本质就是B+树在数据库中的实现。但是B+索引在数据库中有一个特点是高扇出性，因此在数据库中，B+树的高度一般都在2～4层，这也就是说查找某一键值的行记录时最多只需要2到4次IO，这倒不错。因为当前一般的机械磁盘每秒至少可以做100次IO，2～4次的IO意味着查询时间只需0.02～0.04秒。</p>
+
+  <p class="ziti3">数据库中的B+树索引可以分为聚集索引（clustered inex）和辅助索引（secondary index）<sup class="calibre4"><a id="ch1" href="part0091.html#ch1-back" class="pcalibre calibre1">[1]</a></sup>，但是不管是聚集还是辅助的索引，其内部都是B+树的，即高度平衡的，叶子节点存放着所有的数据。聚集索引与辅助索引不同的是，叶子节点存放的是否是一整行的信息。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>5.4.1　聚集索引</h3>
+
+  <p class="ziti3">之前已经介绍过了，InnoDB存储引擎表是索引组织表，即表中数据按照主键顺序存放。而聚集索引（clustered index）就是按照每张表的主键构造一棵B+树，同时叶子节点中存放的即为整张表的行记录数据，也将聚集索引的叶子节点称为数据页。聚集索引的这个特性决定了索引组织表中数据也是索引的一部分。同B+树数据结构一样，每个数据页都通过一个双向链表来进行链接。</p>
+
+  <p class="ziti3">由于实际的数据页只能按照一棵B+树进行排序，因此每张表只能拥有一个聚集索引。在多数情况下，查询优化器倾向于采用聚集索引。因为聚集索引能够在B+树索引的叶子节点上直接找到数据。此外，由于定义了数据的逻辑顺序，聚集索引能够特别快地访问针对范围值的查询。查询优化器能够快速发现某一段范围的数据页需要扫描。</p>
+
+  <p class="ziti3">接着来看一张表，这里以人为的方式让其每个页只能存放两个行记录，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE t（</p>
+
+  <p class="ziti4">a INT NOT NULL,</p>
+
+  <p class="ziti4">b VARCHAR(8000),</p>
+
+  <p class="ziti4">c INT NOT NULL,</p>
+
+  <p class="ziti4">PRIMARY KEY(a),</p>
+
+  <p class="ziti4">KEY idx_c(c)</p>
+
+  <p class="ziti4">)ENGINE=INNODB;</p>
+
+  <p class="ziti4">INSERT INTO t SELECT 1,REPEAT('a',7000),-1;</p>
+
+  <p class="ziti4">INSERT INTO t SELECT 2,REPEAT('a',7000),-2;</p>
+
+  <p class="ziti4">INSERT INTO t SELECT 3,REPEAT('a',7000),-3;</p>
+
+  <p class="ziti4">INSERT INTO t SELECT 4,REPEAT('a',7000),-4;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在上述例子中，插入的列b长度为7000，因此可以以人为的方式使目前每个页只能存放两个行记录。接着用py_innodb_page_info工具来分析表空间，可得：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nineyou0-43 data]#py_innodb_page_info.py-v mytest/t.ibd</p>
+
+  <p class="ziti4">page offset 00000000,page type＜File Space Header＞</p>
+
+  <p class="ziti4">page offset 00000001,page type＜Insert Buffer Bitmap＞</p>
+
+  <p class="ziti4">page offset 00000002,page type＜File Segment inode＞</p>
+
+  <p class="ziti4">page offset 00000003,page type＜B-tree Node＞,page level＜0001＞</p>
+
+  <p class="ziti4">page offset 00000004,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000005,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000006,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000000,page type＜Freshly Allocated Page＞</p>
+
+  <p class="ziti4">Total number of page:8:</p>
+
+  <p class="ziti4">Freshly Allocated Page:1</p>
+
+  <p class="ziti4">Insert Buffer Bitmap:1</p>
+
+  <p class="ziti4">File Space Header:1</p>
+
+  <p class="ziti4">B-tree Node:4</p>
+
+  <p class="ziti4">File Segment inode:1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">page level为0000的即是数据页，而前面的章节也对数据页进行了分析，所以这不是当前所需要关注的部分。要分析的是page level为0001的页，当前聚集索引的B+树高度为2，故该页是B+树的根。通过hexdump工具来观察索引的根页中所存放的数据：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">0000c000 c2 33 62 95 00 00 00 03 ff ff ff ff ff ff ff ff|.3b.............|</p>
+
+  <p class="ziti4">0000c010 00 00 00 0a b6 8c ce 57 45 bf 00 00 00 00 00 00|.......WE.......|</p>
+
+  <p class="ziti4">0000c020 00 00 00 00 00 f9 00 02 00 a2 80 05 00 00 00 00|................|</p>
+
+  <p class="ziti4">0000c030 00 9a 00 02 00 02 00 03 00 00 00 00 00 00 00 00|................|</p>
+
+  <p class="ziti4">0000c040 00 01 00 00 00 00 00 00 01 e2 00 00 00 f9 00 00|................|</p>
+
+  <p class="ziti4">0000c050 00 02 00 f2 00 00 00 f9 00 00 00 02 00 32 01 00|.............2..|</p>
+
+  <p class="ziti4">0000c060 02 00 1b 69 6e 66 69 6d 75 6d 00 04 00 0b 00 00|...infimum......|</p>
+
+  <p class="ziti4">0000c070 73 75 70 72 65 6d 75 6d 00 10 00 11 00 0e 80 00|supremum........|</p>
+
+  <p class="ziti4">0000c080 00 01 00 00 00 04 00 00 00 19 00 0e 80 00 00 02|................|</p>
+
+  <p class="ziti4">0000c090 00 00 00 05 00 00 00 21 ff d6 80 00 00 04 00 00|.......!........|</p>
+
+  <p class="ziti4">0000c0a0 00 06 00 00 00 00 00 00 00 00 00 00 00 00 00 00|................|</p>
+
+  <p class="ziti4">0000c0b0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00|................|</p>
+
+  <p class="ziti4">0000c0c0 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00 00|................|</p>
+
+  <p class="ziti4">......</p>
+
+  <p class="ziti4">0000fff0 00 00 00 00 00 70 00 63 73 d8 52 3a b6 8c ce 57|.....p.cs.R:...W|</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这里可以直接通过页尾的Page Directory来分析此页。从00 63可以知道该页中行开始的位置，接着通过Recorder Header来分析，0xc063开始的值为69 6e 66 69 6d 75 6d 00，就代表infimum为行记录，之前的5字节01 00 02 00 1b就是Recorder Header，分析第4位到第8位的值1代表该行记录中只有一个记录（需要记住的是，InnoDB的Page Directory是稀疏的），即infimum记录本身。通过Recorder Header中最后的两个字节00 1b来判断下一条记录的位置，即c063+1b=c07e，读取键值可得80 00 00 01，这就是主键为1的键值（表定义时INT是无符号的，因此二进制是0x80 00 00 01，而不是0x0001），80 00 00 01后的值00 00 00 04代表指向数据页的页号。同样的方式可以找到80 00 00 02和80 00 00 04这两个键值以及它们指向的数据页。</p>
+
+  <p class="ziti3">通过以上对非数据页节点的分析，可以发现数据页上存放的是完整的每行的记录，而在非数据页的索引页中，存放的仅仅是键值及指向数据页的偏移量，而不是一个完整的行记录。因此这棵聚集索引树的构造大致如图5-14所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00045.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-14　B+树索引
+  </div>
+
+  <p class="ziti3">许多数据库的文档会这样告诉读者：聚集索引按照顺序物理地存储数据。如果看图5-14，可能也会有这样的感觉。但是试想一下，如果聚集索引必须按照特定顺序存放物理记录，则维护成本显得非常之高。所以，聚集索引的存储并不是物理上连续的，而是逻辑上连续的。这其中有两点：一是前面说过的页通过双向链表链接，页按照主键的顺序排序；另一点是每个页中的记录也是通过双向链表进行维护的，物理存储上可以同样不按照主键存储。</p>
+
+  <p class="ziti3">聚集索引的另一个好处是，它对于主键的排序查找和范围查找速度非常快。叶子节点的数据就是用户所要查询的数据。如用户需要查询一张注册用户的表，查询最后注册的10位用户，由于B+树索引是双向链表的，用户可以快速找到最后一个数据页，并取出10条记录。若用命令EXPLAIN进行分析，可得：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞EXPLAIN</p>
+
+  <p class="ziti4">-＞SELECT*FROM Profile ORDER BY id LIMIT 10\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">id:1</p>
+
+  <p class="ziti4">select_type:SIMPLE</p>
+
+  <p class="ziti4">table:Profile</p>
+
+  <p class="ziti4">type:index</p>
+
+  <p class="ziti4">possible_keys:NULL</p>
+
+  <p class="ziti4">key:PRIMARY</p>
+
+  <p class="ziti4">key_len:4</p>
+
+  <p class="ziti4">ref:NULL</p>
+
+  <p class="ziti4">rows:10</p>
+
+  <p class="ziti4">Extra:</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到虽然使用ORDER BY对记录进行排序，但是在实际过程中并没有进行所谓的filesort操作，而这就是因为聚集索引的特点。</p>
+
+  <p class="ziti3">另一个是范围查询（range query），即如果要查找主键某一范围内的数据，通过叶子节点的上层中间节点就可以得到页的范围，之后直接读取数据页即可，又如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞EXPLAIN</p>
+
+  <p class="ziti4">-＞SELECT*FROM Profile</p>
+
+  <p class="ziti4">-＞WHERE id＞10 AND id＜10000\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">id:1</p>
+
+  <p class="ziti4">select_type:SIMPLE</p>
+
+  <p class="ziti4">table:Profile</p>
+
+  <p class="ziti4">type:range</p>
+
+  <p class="ziti4">possible_keys:PRIMARY</p>
+
+  <p class="ziti4">key:PRIMARY</p>
+
+  <p class="ziti4">key_len:4</p>
+
+  <p class="ziti4">ref:NULL</p>
+
+  <p class="ziti4">rows:14868</p>
+
+  <p class="ziti4">Extra:Using where</p>
+
+  <p class="ziti4">1 row in set（0.01 sec）</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">执行EXPLAIN得到了MySQL数据库的执行计划（execute plan），并且在rows列中给出了一个查询结果的预估返回行数。要注意的是，rows代表的是一个预估值，不是确切的值，如果实际执行这句SQL的查询，可以看到实际上只有9946行记录：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT COUNT(*)from Profile</p>
+
+  <p class="ziti4">-＞WHERE id＞10 AND id＜10000;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">COUNT(1):9946</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <div class="fnote">
+    <a id="ch1-back" href="part0091.html#ch1" class="pcalibre calibre1">[1]</a>辅助索引有时也称非聚集索引（non-clustered index）。
+  </div>
+</body></html>

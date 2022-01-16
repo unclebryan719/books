@@ -1,0 +1,153 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>10.3　MySQL 5.1版本编译和调试InnoDB源代码</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="57R300-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">10.3　MySQL 5.1版本编译和调试InnoDB源代码</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>10.3.1　Windows下的调试</h3>
+
+  <p class="ziti3">在Windows平台下，可以通过Visual Studion 2003、2005和2008开发工具对MySQL的源代码进行编译和调试。在此之前，用户需要预先安装如下的工具。</p>
+
+  <p class="ziti3">❑CMake：可以从http://www.cmake.org下载。</p>
+
+  <p class="ziti3">❑bison：可以从http://gnuwin32.sourceforge.net/packages/bison.htm下载。</p>
+
+  <p class="ziti3">安装之后还需要通过configure.js这个命令进行配置：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">C:\workdir＞win\configure.js options</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">options比较重要的选项如下：</p>
+
+  <p class="ziti3">❑WITH_INNOBASE_STORAGE_ENGINE，支持InnoDB存储引擎。</p>
+
+  <p class="ziti3">❑WITH_PARTITION_STORAGE_ENGINE，分区支持。</p>
+
+  <p class="ziti3">❑WITH_ARCHIVE_STORAGE_ENGINE，支持Archive存储引擎。</p>
+
+  <p class="ziti3">❑WITH_BLACKHOLE_STORAGE_ENGINE，支持Blackhole存储引擎。</p>
+
+  <p class="ziti3">❑WITH_EXAMPLE_STORAGE_ENGINE，支持Example存储引擎，这个存储引擎是展示给开发人员的，用户可以从这个存储引擎开始构建自己的存储引擎。</p>
+
+  <p class="ziti3">❑WITH_FEDERATED_STORAGE_ENGINE，支持Federated存储引擎。</p>
+
+  <p class="ziti3">❑WITH_NDBCLUSTER_STORAGE_ENGINE，支持NDB Cluster存储引擎。</p>
+
+  <p class="ziti3">如果我们只是比较关心InnoDB存储引擎，可以这样进行设置，如图10-8所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00164.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-8　configure.js配置
+  </div>
+
+  <p class="ziti3">之后可以根据用户使用的是Visual Studio 2005还是Visual Studio 2008在win文件下运行build-vsx.bat文件来生成Visual Studio的工程文件。build-vs8.bat表示Visual Studio 2005，build-vs8_x64.bat表示需要编译64位的MySQL数据库。例如，我们需要在32位的操作系统下使用Visual Studio 2008进行调试工作，可以使用如下命令：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">D:\Project\mysql-5.5.5-m3＞win\build-vs9.bat</p>
+
+  <p class="ziti4">--Check for working C compiler:C:/Program Files/Microsoft Visual Studio 9.0/VC/bin/cl.exe</p>
+
+  <p class="ziti4">--Check for working C compiler:C:/Program Files/Microsoft Visual Studio 9.0/VC/bin/cl.exe--works</p>
+
+  <p class="ziti4">--Detecting C compiler ABI info</p>
+
+  <p class="ziti4">--Detecting C compiler ABI info-done</p>
+
+  <p class="ziti4">--Check for working CXX compiler:C:/Program Files/Microsoft Visual Studio 9.0/VC/bin/cl.exe</p>
+
+  <p class="ziti4">--Check for working CXX compiler:C:/Program Files/Microsoft Visual Studio 9.0/VC/bin/cl.exe--works</p>
+
+  <p class="ziti4">--Detecting CXX compiler ABI info</p>
+
+  <p class="ziti4">--Detecting CXX compiler ABI info-done</p>
+
+  <p class="ziti4">--Check size of void*</p>
+
+  <p class="ziti4">--Check size of void*-done</p>
+
+  <p class="ziti4">SIZEOF_VOIDP=4</p>
+
+  <p class="ziti4">--Looking for include files HAVE_CXXABI_H</p>
+
+  <p class="ziti4">--Looking for include files HAVE_CXXABI_H-not found.</p>
+
+  <p class="ziti4">--Looking for include files HAVE_NDIR_H</p>
+
+  <p class="ziti4">--Looking for include files HAVE_NDIR_H-not found.</p>
+
+  <p class="ziti4">--Looking for include files HAVE_SYS_NDIR_H</p>
+
+  <p class="ziti4">--Looking for include files HAVE_SYS_NDIR_H-not found.</p>
+
+  <p class="ziti4">--Looking for include files HAVE_ASM_TERMBITS_H</p>
+
+  <p class="ziti4">--Looking for include files HAVE_ASM_TERMBITS_H-not found.</p>
+
+  <p class="ziti4">--Looking for include files HAVE_TERMBITS_H</p>
+
+  <p class="ziti4">--Looking for include files HAVE_TERMBITS_H-not found.</p>
+
+  <p class="ziti4">--Looking for include files HAVE_VIS_H</p>
+
+  <p class="ziti4">--Looking for include files HAVE_VIS_H-not found.</p>
+
+  <p class="ziti4">--Looking for include files HAVE_WCHAR_H</p>
+
+  <p class="ziti4">--Looking for include files HAVE_WCHAR_H-found</p>
+
+  <p class="ziti4">--Looking for include files HAVE_WCTYPE_H</p>
+
+  <p class="ziti4">--Looking for include files HAVE_WCTYPE_H-found</p>
+
+  <p class="ziti4">--Looking for include files HAVE_XFS_XFS_H</p>
+
+  <p class="ziti4">--Looking for include files HAVE_XFS_XFS_H-not found.</p>
+
+  <p class="ziti4">--Looking for include files CMAKE_HAVE_PTHREAD_H</p>
+
+  <p class="ziti4">--Looking for include files CMAKE_HAVE_PTHREAD_H-not found.</p>
+
+  <p class="ziti4">--Found Threads:TRUE</p>
+
+  <p class="ziti4">--Looking for pthread_rwlockattr_setkind_np</p>
+
+  <p class="ziti4">--Looking for pthread_rwlockattr_setkind_np-not found</p>
+
+  <p class="ziti4">--Performing Test HAVE_SOCKADDR_IN_SIN_LEN</p>
+
+  <p class="ziti4">--Performing Test HAVE_SOCKADDR_IN_SIN_LEN-Failed</p>
+
+  <p class="ziti4">--Performing Test HAVE_SOCKADDR_IN6_SIN6_LEN</p>
+
+  <p class="ziti4">--Performing Test HAVE_SOCKADDR_IN6_SIN6_LEN-Failed</p>
+
+  <p class="ziti4">--Cannot find wix 3,installer project will not be generated</p>
+
+  <p class="ziti4">--Configuring done</p>
+
+  <p class="ziti4">--Generating done</p>
+
+  <p class="ziti4">--Build files have been written to:D:/Project/mysql-5.5.5-m3</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这样就生成了MySQL.sln的工程文件，打开这个工程文件并将mysqld这个项目设置为默认的启动项就可以进行MySQL的编译和调试了。</p>
+
+  <p class="ziti3">之后的编译，断点的设置和调试与在Visual Studio下操作一般的程序没有什么区别，图10-9演示了对InnoDB存储引擎的master thread进行调试。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00165.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-9　调试master thread
+  </div>
+</body></html>

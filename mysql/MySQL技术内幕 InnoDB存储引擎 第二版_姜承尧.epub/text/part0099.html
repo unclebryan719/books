@@ -1,0 +1,65 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.6.3　覆盖索引</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2UD7M0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.6.3　覆盖索引</h3>
+
+  <p class="ziti3">InnoDB存储引擎支持覆盖索引（covering index，或称索引覆盖），即从辅助索引中就可以得到查询的记录，而不需要查询聚集索引中的记录。使用覆盖索引的一个好处是辅助索引不包含整行记录的所有信息，故其大小要远小于聚集索引，因此可以减少大量的IO操作。</p>
+
+  <p class="ziti3">注意　覆盖索引技术最早是在InnoDB Plugin中完成并实现。这意味着对于InnoDB版本小于1.0的，或者MySQL数据库版本为5.0或以下的，InnoDB存储引擎不支持覆盖索引特性。</p>
+
+  <p class="ziti3">对于InnoDB存储引擎的辅助索引而言，由于其包含了主键信息，因此其叶子节点存放的数据为（primary key1，primary key2，…，key1，key2，…）。例如，下列语句都可仅使用一次辅助联合索引来完成查询：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT key2 FROM table WHERE key1=xxx；</p>
+
+  <p class="ziti4">SELECT primary key2,key2 FROM table WHERE key1=xxx；</p>
+
+  <p class="ziti4">SELECT primary key1,key2 FROM table WHERE key1=xxx；</p>
+
+  <p class="ziti4">SELECT primary key1,primary key2，key2 FROM table WHERE key1=xxx；</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">覆盖索引的另一个好处是对某些统计问题而言的。还是对于上一小节创建的表buy_log，要进行如下的查询：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT COUNT(*)FROM buy_log;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">InnoDB存储引擎并不会选择通过查询聚集索引来进行统计。由于buy_log表上还有辅助索引，而辅助索引远小于聚集索引，选择辅助索引可以减少IO操作，故优化器的选择为如图5-26所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00058.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-26　COUNT（*）操作的执行计划
+  </div>
+
+  <p class="ziti3">通过图5-26可以看到，possible_keys列为NULL，但是实际执行时优化器却选择了userid索引，而列Extra列的Using index就是代表了优化器进行了覆盖索引操作。</p>
+
+  <p class="ziti3">此外，在通常情况下，诸如（a，b）的联合索引，一般是不可以选择列b中所谓的查询条件。但是如果是统计操作，并且是覆盖索引的，则优化器会进行选择，如下述语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT COUNT(*)FROM buy_log</p>
+
+  <p class="ziti4">WHERE buy_date＞='2011-01-01'AND buy_date＜'2011-02-01'</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">表buy_log有（userid，buy_date）的联合索引，这里只根据列b进行条件查询，一般情况下是不能进行该联合索引的，但是这句SQL查询是统计操作，并且可以利用到覆盖索引的信息，因此优化器会选择该联合索引，其执行计划如图5-27所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00059.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-27　利用覆盖索引执行统计操作
+  </div>
+
+  <p class="ziti3">从图5-27中可以发现列possible_keys依然为NULL，但是列key为userid_2，即表示（userid，buy_date）的联合索引。在列Extra同样可以发现Using index提示，表示为覆盖索引。</p>
+</body></html>

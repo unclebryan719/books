@@ -1,0 +1,161 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.8.6　在表和分区间交换数据</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2G3F80-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.8.6　在表和分区间交换数据</h3>
+
+  <p class="ziti3">MySQL 5.6开始支持ALTER TABLE…EXCHANGE PARTITION语法。该语句允许分区或子分区中的数据与另一个非分区的表中的数据进行交换。如果非分区表中的数据为空，那么相当于将分区中的数据移动到非分区表中。若分区表中的数据为空，则相当于将外部表中的数据导入到分区中。</p>
+
+  <p class="ziti3">要使用ALTER TABLE…EXCHANGE PARTITION语句，必须满足下面的条件：</p>
+
+  <p class="ziti3">❑要交换的表需和分区表有着相同的表结构，但是表不能含有分区</p>
+
+  <p class="ziti3">❑在非分区表中的数据必须在交换的分区定义内</p>
+
+  <p class="ziti3">❑被交换的表中不能含有外键，或者其他的表含有对该表的外键引用</p>
+
+  <p class="ziti3">❑用户除了需要ALTER、INSERT和CREATE权限外，还需要DROP的权限</p>
+
+  <p class="ziti3">此外，有两个小的细节需要注意：</p>
+
+  <p class="ziti3">❑使用该语句时，不会触发交换表和被交换表上的触发器</p>
+
+  <p class="ziti3">❑AUTO_INCREMENT列将被重置</p>
+
+  <p class="ziti3">接着来看一个例子，首先创建含有RANGE分区的表e，并填充相应的数据：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE e(</p>
+
+  <p class="ziti4">id INT NOT NULL,</p>
+
+  <p class="ziti4">fname VARCHAR(30),</p>
+
+  <p class="ziti4">lname VARCHAR(30)</p>
+
+  <p class="ziti4">)</p>
+
+  <p class="ziti4">PARTITION BY RANGE(id)(</p>
+
+  <p class="ziti4">PARTITION p0 VALUES LESS THAN(50),</p>
+
+  <p class="ziti4">PARTITION p1 VALUES LESS THAN(100),</p>
+
+  <p class="ziti4">PARTITION p2 VALUES LESS THAN(150),</p>
+
+  <p class="ziti4">PARTITION p3 VALUES LESS THAN(MAXVALUE)</p>
+
+  <p class="ziti4">);</p>
+
+  <p class="ziti4">INSERT INTO e VALUES</p>
+
+  <p class="ziti4">(1669,"Jim","Smith"),</p>
+
+  <p class="ziti4">(337,"Mary","Jones"),</p>
+
+  <p class="ziti4">(16,"Frank","White"),</p>
+
+  <p class="ziti4">(2005,"Linda","Black");</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">然后创建交换表e2。表e2的结构和表e一样，但需要注意的是表e2不能含有分区：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE e2 LIKE e;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(1.34 sec)</p>
+
+  <p class="ziti4">mysql＞ALTER TABLE e2 REMOVE PARTITIONING;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.90 sec)</p>
+
+  <p class="ziti4">Records:0 Duplicates:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过下列语句观察分区表中的数据：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT PARTITION_NAME,TABLE_ROWS</p>
+
+  <p class="ziti4">-＞FROM INFORMATION_SCHEMA.PARTITIONS</p>
+
+  <p class="ziti4">-＞WHERE TABLE_NAME='e';</p>
+
+  <p class="ziti4">+----------------+------------+</p>
+
+  <p class="ziti4">|PARTITION_NAME|TABLE_ROWS|</p>
+
+  <p class="ziti4">+----------------+------------+</p>
+
+  <p class="ziti4">|p0|1|</p>
+
+  <p class="ziti4">|p1|0|</p>
+
+  <p class="ziti4">|p2|0|</p>
+
+  <p class="ziti4">|p3|3|</p>
+
+  <p class="ziti4">+----------------+------------+</p>
+
+  <p class="ziti4">4 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">因为表e2中的没有数据，使用如下语句将表e的分区p0中的数据移动到表e2中：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞ALTER TABLE e EXCHANGE PARTITION p0 WITH TABLE e2;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.28 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这时再观察表e中分区的数据，可以发现p0中的数据已经没有了。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT PARTITION_NAME,TABLE_ROWS</p>
+
+  <p class="ziti4">-＞FROM INFORMATION_SCHEMA.PARTITIONS</p>
+
+  <p class="ziti4">-＞WHERE TABLE_NAME='e';</p>
+
+  <p class="ziti4">+----------------+------------+</p>
+
+  <p class="ziti4">|PARTITION_NAME|TABLE_ROWS|</p>
+
+  <p class="ziti4">+----------------+------------+</p>
+
+  <p class="ziti4">|p0|0|</p>
+
+  <p class="ziti4">|p1|0|</p>
+
+  <p class="ziti4">|p2|0|</p>
+
+  <p class="ziti4">|p3|3|</p>
+
+  <p class="ziti4">+----------------+------------+</p>
+
+  <p class="ziti4">4 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">而这时可以在表e2中观察到被移动的数据：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM e2;</p>
+
+  <p class="ziti4">+----+-------+-------+</p>
+
+  <p class="ziti4">|id|fname|lname|</p>
+
+  <p class="ziti4">+----+-------+-------+</p>
+
+  <p class="ziti4">|16|Frank|White|</p>
+
+  <p class="ziti4">+----+-------+-------+</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

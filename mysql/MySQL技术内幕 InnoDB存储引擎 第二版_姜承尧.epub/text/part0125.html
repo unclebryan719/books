@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.7　死锁</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3N6MA0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">6.7　死锁</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>6.7.1　死锁的概念</h3>
+
+  <p class="ziti3">死锁是指两个或两个以上的事务在执行过程中，因争夺锁资源而造成的一种互相等待的现象。若无外力作用，事务都将无法推进下去。解决死锁问题最简单的方式是不要有等待，将任何的等待都转化为回滚，并且事务重新开始。毫无疑问，这的确可以避免死锁问题的产生。然而在线上环境中，这可能导致并发性能的下降，甚至任何一个事务都不能进行。而这所带来的问题远比死锁问题更为严重，因为这很难被发现并且浪费资源。</p>
+
+  <p class="ziti3">解决死锁问题最简单的一种方法是超时，即当两个事务互相等待时，当一个等待时间超过设置的某一阈值时，其中一个事务进行回滚，另一个等待的事务就能继续进行。在InnoDB存储引擎中，参数innodb_lock_wait_timeout用来设置超时的时间。</p>
+
+  <p class="ziti3">超时机制虽然简单，但是其仅通过超时后对事务进行回滚的方式来处理，或者说其是根据FIFO的顺序选择回滚对象。但若超时的事务所占权重比较大，如事务操作更新了很多行，占用了较多的undo log，这时采用FIFO的方式，就显得不合适了，因为回滚这个事务的时间相对另一个事务所占用的时间可能会很多。</p>
+
+  <p class="ziti3">因此，除了超时机制，当前数据库还都普遍采用wait-for graph（等待图）的方式来进行死锁检测。较之超时的解决方案，这是一种更为主动的死锁检测方式。InnoDB存储引擎也采用的这种方式。wait-for graph要求数据库保存以下两种信息：</p>
+
+  <p class="ziti3">❑锁的信息链表</p>
+
+  <p class="ziti3">❑事务等待链表</p>
+
+  <p class="ziti3">通过上述链表可以构造出一张图，而在这个图中若存在回路，就代表存在死锁，因此资源间相互发生等待。在wait-for graph中，事务为图中的节点。而在图中，事务T1指向T2边的定义为：</p>
+
+  <p class="ziti3">❑事务T1等待事务T2所占用的资源</p>
+
+  <p class="ziti3">❑事务T1最终等待T2所占用的资源，也就是事务之间在等待相同的资源，而事务T1发生在事务T2的后面</p>
+
+  <p class="ziti3">下面来看一个例子，当前事务和锁的状态如图6-5所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00100.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　6-5　示例事务状态和锁的信息
+  </div>
+
+  <p class="ziti3">在Transaction Wait Lists中可以看到共有4个事务t1、t2、t3、t4，故在wait-for graph中应有4个节点。而事务t2对row1占用x锁，事务t1对row2占用s锁。事务t1需要等待事务t2中row1的资源，因此在wait-for graph中有条边从节点t1指向节点t2。事务t2需要等待事务t1、t4所占用的row2对象，故而存在节点t2到节点t1、t4的边。同样，存在节点t3到节点t1、t2、t4的边，因此最终的wait-for graph如图6-6所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00101.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　6-6　wait-for graph
+  </div>
+
+  <p class="ziti3">通过图6-6可以发现存在回路（t1，t2），因此存在死锁。通过上述的介绍，可以发现wait-for graph是一种较为主动的死锁检测机制，在每个事务请求锁并发生等待时都会判断是否存在回路，若存在则有死锁，通常来说InnoDB存储引擎选择回滚undo量最小的事务。</p>
+
+  <p class="ziti3">wait-for graph的死锁检测通常采用深度优先的算法实现，在InnoDB1.2版本之前，都是采用递归方式实现。而从1.2版本开始，对wait-for graph的死锁检测进行了优化，将递归用非递归的方式实现，从而进一步提高了InnoDB存储引擎的性能。</p>
+</body></html>

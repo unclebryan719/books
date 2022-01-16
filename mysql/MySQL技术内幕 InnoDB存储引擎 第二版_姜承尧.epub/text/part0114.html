@@ -1,0 +1,299 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.3　InnoDB存储引擎中的锁</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3CN040-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">6.3　InnoDB存储引擎中的锁</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>6.3.1　锁的类型</h3>
+
+  <p class="ziti3">InnoDB存储引擎实现了如下两种标准的行级锁：</p>
+
+  <p class="ziti3">❑共享锁（S Lock），允许事务读一行数据。</p>
+
+  <p class="ziti3">❑排他锁（X Lock），允许事务删除或更新一行数据。</p>
+
+  <p class="ziti3">如果一个事务T1已经获得了行r的共享锁，那么另外的事务T2可以立即获得行r的共享锁，因为读取并没有改变行r的数据，称这种情况为锁兼容（Lock Compatible）。但若有其他的事务T3想获得行r的排他锁，则其必须等待事务T1、T2释放行r上的共享锁——这种情况称为锁不兼容。表6-3显示了共享锁和排他锁的兼容性。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00082.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">从表6-3可以发现X锁与任何的锁都不兼容，而S锁仅和S锁兼容。需要特别注意的是，S和X锁都是行锁，兼容是指对同一记录（row）锁的兼容性情况。</p>
+
+  <p class="ziti3">此外，InnoDB存储引擎支持多粒度（granular）锁定，这种锁定允许事务在行级上的锁和表级上的锁同时存在。为了支持在不同粒度上进行加锁操作，InnoDB存储引擎支持一种额外的锁方式，称之为意向锁（Intention Lock）。意向锁是将锁定的对象分为多个层次，意向锁意味着事务希望在更细粒度（fine granularity）上进行加锁，如图6-3所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00083.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　6-3　层次结构
+  </div>
+
+  <p class="ziti3">若将上锁的对象看成一棵树，那么对最下层的对象上锁，也就是对最细粒度的对象进行上锁，那么首先需要对粗粒度的对象上锁。例如图6-3，如果需要对页上的记录r进行上X锁，那么分别需要对数据库A、表、页上意向锁IX，最后对记录r上X锁。若其中任何一个部分导致等待，那么该操作需要等待粗粒度锁的完成。举例来说，在对记录r加X锁之前，已经有事务对表1进行了S表锁，那么表1上已存在S锁，之后事务需要对记录r在表1上加上IX，由于不兼容，所以该事务需要等待表锁操作的完成。</p>
+
+  <p class="ziti3">InnoDB存储引擎支持意向锁设计比较简练，其意向锁即为表级别的锁。设计目的主要是为了在一个事务中揭示下一行将被请求的锁类型。其支持两种意向锁：</p>
+
+  <p class="ziti3">1）意向共享锁（IS Lock），事务想要获得一张表中某几行的共享锁</p>
+
+  <p class="ziti3">2）意向排他锁（IX Lock），事务想要获得一张表中某几行的排他锁</p>
+
+  <p class="ziti3">由于InnoDB存储引擎支持的是行级别的锁，因此意向锁其实不会阻塞除全表扫以外的任何请求。故表级意向锁与行级锁的兼容性如表6-4所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00084.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">用户可以通过命令SHOW ENGINE INNODB STATUS命令来查看当前锁请求的信息：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">------------</p>
+
+  <p class="ziti4">TRANSACTIONS</p>
+
+  <p class="ziti4">------------</p>
+
+  <p class="ziti4">Trx id counter 48B89BF</p>
+
+  <p class="ziti4">Purge done for trx's n:o＜48B89BA undo n:o＜0</p>
+
+  <p class="ziti4">History list length 0</p>
+
+  <p class="ziti4">LIST OF TRANSACTIONS FOR EACH SESSION:</p>
+
+  <p class="ziti4">---TRANSACTION 0,not started,process no 13757,OS thread id 1255176512</p>
+
+  <p class="ziti4">MySQL thread id 42,query id 80424887 localhost root</p>
+
+  <p class="ziti4">show engine innodb status</p>
+
+  <p class="ziti4">---TRANSACTION 48B89BE,ACTIVE 193 sec,process no 13757,OS thread id 1254910272 starting index read</p>
+
+  <p class="ziti4">mysql tables in use 1,locked 1</p>
+
+  <p class="ziti4">LOCK WAIT 2 lock struct(s),heap size 368,1 row lock(s)</p>
+
+  <p class="ziti4">MySQL thread id 41,query id 80424886 localhost root Sending data</p>
+
+  <p class="ziti4">select*from t where a＜4 lock in share mode</p>
+
+  <p class="ziti4">-------TRX HAS BEEN WAITING 2 SEC FOR THIS LOCK TO BE GRANTED:</p>
+
+  <p class="ziti4">RECORD LOCKS space id 30 page no 3 n bits 72 index'PRIMARY'of table'test'.'t'trx id 48B89BE lock mode S waiting</p>
+
+  <p class="ziti4">------------------</p>
+
+  <p class="ziti4">TABLE LOCK table'test'.'t'trx id 48B89BE lock mode IS</p>
+
+  <p class="ziti4">RECORD LOCKS space id 30 page no 3 n bits 72 index'PRIMARY'of table'test'.'t'trx id 48B89BE lock mode S waiting</p>
+
+  <p class="ziti4">---TRANSACTION 48B89BD,ACTIVE 205 sec,process no 13757,OS thread id 1257838912</p>
+
+  <p class="ziti4">2 lock struct(s),heap size 368,1 row lock(s)</p>
+
+  <p class="ziti4">MySQL thread id 40,query id 80424881 localhost root</p>
+
+  <p class="ziti4">TABLE LOCK table'test'.'t'trx id 48B89BD lock mode IX</p>
+
+  <p class="ziti4">RECORD LOCKS space id 30 page no 3 n bits 72 index'PRIMARY'of table'test'.'t'trx id 48B89BD lock_mode X locks rec but not gap</p>
+
+  <p class="ziti4">----------------------------</p>
+
+  <p class="ziti4">END OF INNODB MONITOR OUTPUT</p>
+
+  <p class="ziti4">============================</p>
+
+  <p class="ziti4">1 row in set(0.01 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到SQL语句select*from t where a＜4 lock in share mode在等待，RECORD LOCKS space id 30 page no 3 n bits 72 index'PRIMARY'of table'test'.'t'trx id 48B89BD lock_mode X locks rec but not gap表示锁住的资源。locks rec but not gap代表锁住的是一个索引，不是一个范围。</p>
+
+  <p class="ziti3">在InnoDB 1.0版本之前，用户只能通过命令SHOW FULL PROCESSLIST，SHOW ENGINE INNODB STATUS等来查看当前数据库中锁的请求，然后再判断事务锁的情况。从InnoDB1.0开始，在INFORMATION_SCHEMA架构下添加了表INNODB_TRX、INNODB_LOCKS、INNODB_LOCK_WAITS。通过这三张表，用户可以更简单地监控当前事务并分析可能存在的锁问题。我们将通过具体的示例来分析这三张表，在之前，首先了来看表6-5中表INNODB_TRX的定义，其由8个字段组成。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00085.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">接着来看一个具体的例子：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM information_schema.INNODB_TRX\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">trx_id:7311F4</p>
+
+  <p class="ziti4">trx_state:LOCK WAIT</p>
+
+  <p class="ziti4">trx_started:2010-01-04 10:49:33</p>
+
+  <p class="ziti4">trx_requested_lock_id:7311F4:96:3:2</p>
+
+  <p class="ziti4">trx_wait_started:2010-01-04 10:49:33</p>
+
+  <p class="ziti4">trx_weight:2</p>
+
+  <p class="ziti4">trx_mysql_thread_id:471719</p>
+
+  <p class="ziti4">trx_query:select*from parent lock in share mode</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">trx_id:730FEE</p>
+
+  <p class="ziti4">trx_state:RUNNING</p>
+
+  <p class="ziti4">trx_started:2010-01-04 10:18:37</p>
+
+  <p class="ziti4">trx_requested_lock_id:NULL</p>
+
+  <p class="ziti4">trx_wait_started:NULL</p>
+
+  <p class="ziti4">trx_weight:2</p>
+
+  <p class="ziti4">trx_mysql_thread_id:471718</p>
+
+  <p class="ziti4">trx_query:NULL</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过列state可以观察到trx_id为730FEE的事务当前正在运行，而trx_id为7311F4的事务目前处于“LOCK WAIT”状态，且运行的SQL语句是select*from parent lock in share mode。该表只是显示了当前运行的InnoDB事务，并不能直接判断锁的一些情况。如果需要查看锁，则还需要访问表INNODB_LOCKS，该表的字段组成如表6-6所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00086.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">接着上面的例子，继续查看表INNODB_LOCKS：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM information_schema.INNODB_LOCKS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">lock_id:7311F4:96:3:2</p>
+
+  <p class="ziti4">lock_trx_id:7311F4</p>
+
+  <p class="ziti4">lock_mode:S</p>
+
+  <p class="ziti4">lock_type:RECORD</p>
+
+  <p class="ziti4">lock_table:'mytest'.'parent'</p>
+
+  <p class="ziti4">lock_index:'PRIMARY'</p>
+
+  <p class="ziti4">lock_space:96</p>
+
+  <p class="ziti4">lock_page:3</p>
+
+  <p class="ziti4">lock_rec:2</p>
+
+  <p class="ziti4">lock_data:1</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">lock_id:730FEE:96:3:2</p>
+
+  <p class="ziti4">lock_trx_id:730FEE</p>
+
+  <p class="ziti4">lock_mode:X</p>
+
+  <p class="ziti4">lock_type:RECORD</p>
+
+  <p class="ziti4">lock_table:'mytest'.'parent'</p>
+
+  <p class="ziti4">lock_index:'PRIMARY'</p>
+
+  <p class="ziti4">lock_space:96</p>
+
+  <p class="ziti4">lock_page:3</p>
+
+  <p class="ziti4">lock_rec:2</p>
+
+  <p class="ziti4">lock_data:1</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这次用户可以清晰地看到当前锁的信息。trx_id为730FEE的事务向表parent加了一个X的行锁，ID为7311F4的事务向表parent申请了一个S的行锁。lock_data都是1，申请相同的资源，因此会有等待。这也可以解释INNODB_TRX中为什么一个事务的trx_state是“RUNNING”，另一个是“LOCK WAIT”了。</p>
+
+  <p class="ziti3">另外需要特别注意的是，我发现lock_data这个值并非是“可信”的值。例如当用户运行一个范围查找时，lock_data可能只返回第一行的主键值。与此同时，如果当前资源被锁住了，若锁住的页因为InnoDB存储引擎缓冲池的容量，导致该页从缓冲池中被刷出，则查看INNODB_LOCKS表时，该值同样会显示为NULL，即InnoDB存储引擎不会从磁盘进行再一次的查找。</p>
+
+  <p class="ziti3">在通过表INNODB_LOCKS查看了每张表上锁的情况后，用户就可以来判断由此引发的等待情况了。当事务较小时，用户就可以人为地、直观地进行判断了。但是当事务量非常大，其中锁和等待也时常发生，这个时候就不这么容易判断。但是通过表INNODB_LOCK_WAITS，可以很直观地反映当前事务的等待。表INNODB_LOCK_WAITS由4个字段组成，如表6-7所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00087.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">接着上面的例子，运行如下查询：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM information_schema.INNODB_LOCK_WAITS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">requesting_trx_id:7311F4</p>
+
+  <p class="ziti4">requested_lock_id:7311F4:96:3:2</p>
+
+  <p class="ziti4">blocking_trx_id:730FEE</p>
+
+  <p class="ziti4">blocking_lock_id:730FEE:96:3:2</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过上述的SQL语句，用户可以清楚直观地看到哪个事务阻塞了另一个事务。当然，这里只给出了事务和锁的ID。如果需要，用户可以根据表INNODB_TRX、INNODB_LOCKS、INNODB_LOCK_WAITS得到更为直观的详细信息。例如，用户可以执行如下联合查询：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT</p>
+
+  <p class="ziti4">r.trx_id waiting_trx_id,</p>
+
+  <p class="ziti4">r.trx_mysql_thread_id waiting_thread,</p>
+
+  <p class="ziti4">r.trx_query waiting_query,</p>
+
+  <p class="ziti4">b.trx_id blocking_trx_id,</p>
+
+  <p class="ziti4">b.trx_mysql_thread_id blocking_thread,</p>
+
+  <p class="ziti4">b.trx_query blocking_query</p>
+
+  <p class="ziti4">FROM information_schema.innodb_lock_waits w</p>
+
+  <p class="ziti4">INNER JOIN information_schema.innodb_trx b</p>
+
+  <p class="ziti4">ON b.trx_id=w.blocking_trx_id</p>
+
+  <p class="ziti4">INNER JOIN information_schema.innodb_trx r</p>
+
+  <p class="ziti4">ON r.trx_id=w.requesting_trx_id\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">waiting_trx_id:73122F</p>
+
+  <p class="ziti4">waiting_thread:471719</p>
+
+  <p class="ziti4">waiting_query:NULL</p>
+
+  <p class="ziti4">blocking_trx_id:7311FC</p>
+
+  <p class="ziti4">blocking_thread:471718</p>
+
+  <p class="ziti4">blocking_query:NULL</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

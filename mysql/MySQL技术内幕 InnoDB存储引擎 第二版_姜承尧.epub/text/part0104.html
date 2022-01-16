@@ -1,0 +1,63 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.7　哈希算法</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="335QG0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">5.7　哈希算法</h2>
+
+  <p class="ziti3">哈希算法是一种常见算法，时间复杂度为O（1），且不只存在于索引中，每个数据库应用中都存在该数据库结构。设想一个问题，当前服务器的内存为128GB时，用户怎么从内存中得到某一个被缓存的页呢？虽然内存中查询速度很快，但是也不可能每次都要遍历所有内存来进行查找，这时对于字典操作只需O（1）的哈希算法就有了很好的用武之地。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>5.7.1　哈希表</h3>
+
+  <p class="ziti3">哈希表（Hash Table）也称散列表，由直接寻址表改进而来。我们先来看直接寻址表。当关键字的全域U比较小时，直接寻址是一种简单而有效的技术。假设某应用要用到一个动态集合，其中每个元素都有一个取自全域U={0，1，…，m-1}<sup class="calibre4"><a id="ch1" href="part0104.html#ch1-back" class="pcalibre calibre1">[1]</a></sup>的关键字。同时假设没有两个元素具有相同的关键字。</p>
+
+  <p class="ziti3">用一个数组（即直接寻址表）T[0..m-1]表示动态集合，其中每个位置（或称槽或桶）对应全域U中的一个关键字。图5-38说明了这个方法，槽k指向集合中一个关键字为k的元素。如果该集合中没有关键字为k的元素，则T[k]=NULL。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00072.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-38　直接寻址表
+  </div>
+
+  <p class="ziti3">直接寻址技术存在一个很明显的问题，如果域U很大，在一台典型计算机的可用容量的限制下，要在机器中存储大小为U的一张表T就有点不实际，甚至是不可能的。如果实际要存储的关键字集合K相对于U来说很小，那么分配给T的大部分空间都要浪费掉。</p>
+
+  <p class="ziti3">因此，哈希表出现了。在哈希方式下，该元素处于h（k）中，即利用哈希函数h，根据关键字k计算出槽的位置。函数h将关键字域U映射到哈希表T[0..m-1]的槽位上，如图5-39所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00073.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-39　哈希表
+  </div>
+
+  <p class="ziti3">哈希表技术很好地解决了直接寻址遇到的问题，但是这样做有一个小问题，如图5-39所示的两个关键字可能映射到同一个槽上。一般将这种情况称之为发生了碰撞（collision）。在数据库中一般采用最简单的碰撞解决技术，这种技术被称为链接法（chaining）。</p>
+
+  <p class="ziti3">在链接法中，把散列到同一槽中的所有元素都放在一个链表中，如图5-40所示。槽j中有一个指针，它指向由所有散列到j的元素构成的链表的头；如果不存在这样的元素，则j中为NULL。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00074.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-40　通过链表法解决碰撞的哈希表
+  </div>
+
+  <p class="ziti3">最后要考虑的是哈希函数。哈希函数h必须可以很好地进行散列。最好的情况是能避免碰撞的发生。即使不能避免，也应该使碰撞在最小程度下产生。一般来说，都将关键字转换成自然数，然后通过除法散列、乘法散列或全域散列来实现。数据库中一般采用除法散列的方法。</p>
+
+  <p class="ziti3">在哈希函数的除法散列法中，通过取k除以m的余数，将关键字k映射到m个槽的某一个去，即哈希函数为：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">h(k)=k mod m</p>
+  <hr class="calibre2"/>
+
+  <div class="fnote">
+    <a id="ch1-back" href="part0104.html#ch1" class="pcalibre calibre1">[1]</a>此处的m不是一个很大的数。
+  </div>
+</body></html>

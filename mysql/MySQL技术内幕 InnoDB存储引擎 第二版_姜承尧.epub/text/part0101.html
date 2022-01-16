@@ -1,0 +1,123 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.6.5　索引提示</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="30A8Q0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.6.5　索引提示</h3>
+
+  <p class="ziti3">MySQL数据库支持索引提示（INDEX HINT），显式地告诉优化器使用哪个索引。个人总结以下两种情况可能需要用到INDEX HINT：</p>
+
+  <p class="ziti3">❑MySQL数据库的优化器错误地选择了某个索引，导致SQL语句运行的很慢。这种情况在最新的MySQL数据库版本中非常非常的少见。优化器在绝大部分情况下工作得都非常有效和正确。这时有经验的DBA或开发人员可以强制优化器使用某个索引，以此来提高SQL运行的速度。</p>
+
+  <p class="ziti3">❑某SQL语句可以选择的索引非常多，这时优化器选择执行计划时间的开销可能会大于SQL语句本身。例如，优化器分析Range查询本身就是比较耗时的操作。这时DBA或开发人员分析最优的索引选择，通过Index Hint来强制使优化器不进行各个执行路径的成本分析，直接选择指定的索引来完成查询。</p>
+
+  <p class="ziti3">在MySQL数据库中Index Hint的语法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">tbl_name[[AS]alias][index_hint_list]</p>
+
+  <p class="ziti4">index_hint_list:</p>
+
+  <p class="ziti4">index_hint[,index_hint]...</p>
+
+  <p class="ziti4">index_hint:</p>
+
+  <p class="ziti4">USE{INDEX|KEY}</p>
+
+  <p class="ziti4">[{FOR{JOIN|ORDER BY|GROUP BY}]([index_list])</p>
+
+  <p class="ziti4">|IGNORE{INDEX|KEY}</p>
+
+  <p class="ziti4">[{FOR{JOIN|ORDER BY|GROUP BY}](index_list)</p>
+
+  <p class="ziti4">|FORCE{INDEX|KEY}</p>
+
+  <p class="ziti4">[{FOR{JOIN|ORDER BY|GROUP BY}](index_list)</p>
+
+  <p class="ziti4">index_list:</p>
+
+  <p class="ziti4">index_name[,index_name]...</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着来看一个例子，首先根据如下代码创建测试表t，并填充相应数据。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE t(</p>
+
+  <p class="ziti4">a INT,</p>
+
+  <p class="ziti4">b INT,</p>
+
+  <p class="ziti4">KEY(a),</p>
+
+  <p class="ziti4">KEY(b)</p>
+
+  <p class="ziti4">)ENGINE=INNODB;</p>
+
+  <p class="ziti4">INSERT INTO t SELECT 1,1;</p>
+
+  <p class="ziti4">INSERT INTO t SELECT 1,2;</p>
+
+  <p class="ziti4">INSERT INTO t SELECT 2,3;</p>
+
+  <p class="ziti4">INSERT INTO t SELECT 2,4;</p>
+
+  <p class="ziti4">INSERT INTO t SELECT 1,2;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">然后执行如下的SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM t WHERE a=1 AND b=2;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过EXPLAIN命令得到如图5-31所示的执行计划。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00063.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-31　SQL语句的执行计划
+  </div>
+
+  <p class="ziti3">图5-31中的列possible_keys显示了上述SQL语句可使用的索引为a，b，而实际使用的索引为列key所示，同样为a，b。也就是MySQL数据库使用a，b两个索引来完成这一个查询。列Extra提示的Using intersect（b，a）表示根据两个索引得到的结果进行求交的数学运算，最后得到结果。</p>
+
+  <p class="ziti3">如果我们使用USE INDEX的索引提示来使用a这个索引，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM t USE INDEX(a)WHERE a=1 AND b=2;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">那么得到的结果如图5-32所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00064.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-32　使用USE INDEX后的执行计划
+  </div>
+
+  <p class="ziti3">可以看到，虽然我们指定使用a索引，但是优化器实际选择的是通过表扫描的方式。因此，USE INDEX只是告诉优化器可以选择该索引，实际上优化器还是会再根据自己的判断进行选择。而如果使用FORCE INDEX的索引提示，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM t FORCE INDEX(a)WHERE a=1 AND b=2;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">则这时的执行计划如图5-33所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00065.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-33　使用FORCE INDEX后的执行计划
+  </div>
+
+  <p class="ziti3">可以看到，这时优化器的最终选择和用户指定的索引是一致的。因此，如果用户确定指定某个索引来完成查询，那么最可靠的是使用FORCE INDEX，而不是USE INDEX。</p>
+</body></html>

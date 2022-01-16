@@ -1,0 +1,35 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>10.4　cmake方式编译和调试InnoDB存储引擎</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="59O440-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">10.4　cmake方式编译和调试InnoDB存储引擎</h2>
+
+  <p class="ziti3">MySQL数据库从5.5版本开始可以直接通过命令cmake生成对应的MySQL工程文件，例如在Mac OSX操作系统下，用户可以直接通过下列命令产生xcode对应的MySQL工程文件：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">cd mysql-xxx</p>
+
+  <p class="ziti4">mkdir bld</p>
+
+  <p class="ziti4">cd bld</p>
+
+  <p class="ziti4">cmake..-G Xcode</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述命令在MySQL源码文件夹下创建了bld文件夹，接着通过命令cmake产生对应xcode的工程文件，之后在文件夹下就能看到工程文件MySQL.xcodeproj，双击该文件就能对MySQL数据库和InnoDB存储引擎进行编译，如图10-19所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00175.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-19　Mac OS X操作系统下通过xcode对MySQL进行编译
+  </div>
+
+  <p class="ziti3">总之，cmake大大简化了编译MySQL数据库的难度。更多关于cmake的参数及说明可见MySQL官方手册说明。</p>
+</body></html>

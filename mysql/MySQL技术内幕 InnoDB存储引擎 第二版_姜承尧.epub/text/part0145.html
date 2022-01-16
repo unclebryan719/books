@@ -1,0 +1,89 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.9　长事务</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4A91I0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">7.9　长事务</h2>
+
+  <p class="ziti3">长事务(Long-Lived Transactions)，顾名思义，就是执行时间较长的事务。比如，对于银行系统的数据库，每过一个阶段可能需要更新对应账户的利息。如果对应账号的数量非常大，例如对有1亿用户的表account，需要执行下列语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">UPDATE account</p>
+
+  <p class="ziti4">SET account_total=account_total+(1+interest_rate)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这时这个事务可能需要非常长的时间来完成。可能需要1个小时，也可能需要4、5个小时，这取决于数据库的硬件配置。DBA和开发人员本身能做的事情非常少。然而，由于事务ACID的特性，这个操作被封装在一个事务中完成。这就产生了一个问题，在执行过程中，当数据库或操作系统、硬件等发生问题时，重新开始事务的代价变得不可接受。数据库需要回滚所有已经发生的变化，而这个过程可能比产生这些变化的时间还要长。因此，对于长事务的问题，有时可以通过转化为小批量(mini batch)的事务来进行处理。当事务发生错误时，只需要回滚一部分数据，然后接着上次已完成的事务继续进行。</p>
+
+  <p class="ziti3">例如，对于前面讨论的银行利息计算问题，我们可以通过分解为小批量事务来完成，下面给出的是伪代码，既可以通过程序完成，也可以通过存储过程完成：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">void ComputeInterest（double interest_rate){</p>
+
+  <p class="ziti4">long last_account_done,max_account_no,log_size;</p>
+
+  <p class="ziti4">int batch_size=100000;</p>
+
+  <p class="ziti4">EXEC SQL SELECT COUNT(*)INTO log_size FROM batchcontext;</p>
+
+  <p class="ziti4">if(SQLCODE!=0||log_size==0){</p>
+
+  <p class="ziti4">EXEC SQL DROP TABLE IF EXISTS batchcontext;</p>
+
+  <p class="ziti4">EXEC SQL CREATE TABLE batchcontext(last_account_done BIGINT);</p>
+
+  <p class="ziti4">last_account_done=0;</p>
+
+  <p class="ziti4">INSERT INTO batchcontext SELECT 0;</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">else{</p>
+
+  <p class="ziti4">EXEC SQL SELECT last_account_no</p>
+
+  <p class="ziti4">INTO last_account_done</p>
+
+  <p class="ziti4">FROM batchcontext;</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">EXEC SQL SELECT COUNT(*)INTO max_account_no</p>
+
+  <p class="ziti4">FROM account LOCK IN SHARE MODE;</p>
+
+  <p class="ziti4">WHILE(last_account_no＜max_account_no){</p>
+
+  <p class="ziti4">EXEC SQL START TRANSACTION;</p>
+
+  <p class="ziti4">EXEC SQL UPDATE account</p>
+
+  <p class="ziti4">SET account_total=account_total*(1+interest_rate);</p>
+
+  <p class="ziti4">WHERE account_no</p>
+
+  <p class="ziti4">BETWEEN last_account_no</p>
+
+  <p class="ziti4">AND last_account_no+batch_size;</p>
+
+  <p class="ziti4">EXEC SQL UPDATE batchcontext</p>
+
+  <p class="ziti4">SET last_account_done=last_account_done+batch_size;</p>
+
+  <p class="ziti4">EXEC SQL COMMIT WORK;</p>
+
+  <p class="ziti4">last_account_done=last_account_done+batch_size;</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">}</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述代码将一个需要处理1亿用户的大事务分解为每次处理10万用户的小事务，通过批量处理小事务来完成大事务的逻辑。每完成一个小事务，将完成的结果存放在batchcontext表中，表示已完成批量事务的最大账号ID。若事务在运行过程中产生问题，需要重做事务，可以从这个已完成的最大事务ID继续进行批量的小事务，这样重新开启事务的代价就显得比较低，也更容易让用户接受。batchcontext表的另外一个好处是，在长事务的执行过程中，用户可以知道现在大概已经执行到了哪个阶段。比如一共有1亿条的记录，现在表batchcontext中最大的账号ID为4000万，也就是说这个大事务大概完成了40%的工作。</p>
+
+  <p class="ziti3">这里还有一个小地方需要注意，在从表account中取得max_account_no时，人为地加上了一个共享锁，以保证在事务的处理过程中，没有其他的事务可以来更新表中的数据，这是有意义的，并且也是非常有必要的操作。</p>
+</body></html>

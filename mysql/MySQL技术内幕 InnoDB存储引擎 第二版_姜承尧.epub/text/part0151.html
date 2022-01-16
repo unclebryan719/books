@@ -1,0 +1,45 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>8.3.3　逻辑备份的恢复</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4G04U0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">8.3.3　逻辑备份的恢复</h3>
+
+  <p class="ziti3">mysqldump的恢复操作比较简单，因为备份的文件就是导出的SQL语句，一般只需要执行这个文件就可以了，可以通过以下的方法：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#mysql-uroot-p＜test_backup.sql</p>
+
+  <p class="ziti4">Enter password:</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果在导出时包含了创建和删除数据库的SQL语句，那必须确保删除架构时，架构目录下没有其他与数据库相关的文件，否则可能会得到以下的错误：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞drop database test;</p>
+
+  <p class="ziti4">ERROR 1010(HY000):Error dropping database(can't rmdir'./test',errno:39)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">因为逻辑备份的文件是由SQL语句组成的，也可以通过SOURCE命令来执行导出的逻辑备份文件，如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞source/home/mysql/test_backup.sql;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过mysqldump可以恢复数据库，但是经常发生的一个问题是，mysqldump可以导出存储过程、导出触发器、导出事件、导出数据，但是却不能导出视图。因此，如果用户的数据库中还使用了视图，那么在用mysqldump备份完数据库后还需要导出视图的定义，或者备份视图定义的frm文件，并在恢复时进行导入，这样才能保证mysqldump数据库的完全恢复。</p>
+</body></html>

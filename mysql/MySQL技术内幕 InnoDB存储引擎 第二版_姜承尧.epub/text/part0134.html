@@ -1,0 +1,49 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.2.3　purge</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3VPBC0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">7.2.3　purge</h3>
+
+  <p class="ziti3">delete和update操作可能并不直接删除原有的数据。例如，对上一小节所产生的表t执行如下的SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">DELETE FROM t WHERE a=1;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">表t上列a有聚集索引，列b上有辅助索引。对于上述的delete操作，通过前面关于undo log的介绍已经知道仅是将主键列等于1的记录delete flag设置为1，记录并没有被删除，即记录还是存在于B+树中。其次，对辅助索引上a等于1，b等于1的记录同样没有做任何处理，甚至没有产生undo log。而真正删除这行记录的操作其实被“延时”了，最终在purge操作中完成。</p>
+
+  <p class="ziti3">purge用于最终完成delete和update操作。这样设计是因为InnoDB存储引擎支持MVCC，所以记录不能在事务提交时立即进行处理。这时其他事物可能正在引用这行，故InnoDB存储引擎需要保存记录之前的版本。而是否可以删除该条记录通过purge来进行判断。若该行记录已不被任何其他事务引用，那么就可以进行真正的delete操作。可见，purge操作是清理之前的delete和update操作，将上述操作“最终”完成。而实际执行的操作为delete操作，清理之前行记录的版本。</p>
+
+  <p class="ziti3">在前一个小节中已经介绍过，为了节省存储空间，InnoDB存储引擎的undo log设计是这样的：一个页上允许多个事务的undo log存在。虽然这不代表事务在全局过程中提交的顺序，但是后面的事务产生的undo log总在最后。此外，InnoDB存储引擎还有一个history列表，它根据事务提交的顺序，将undo log进行链接。如下面的一种情况：</p>
+
+  <p class="ziti3">在图7-17的例子中，history list表示按照事务提交的顺序将undo log进行组织。在InnoDB存储引擎的设计中，先提交的事务总在尾端。undo page存放了undo log，由于可以重用，因此一个undo page中可能存放了多个不同事务的undo log。trx5的灰色阴影表示该undo log还被其他事务引用。</p>
+
+  <p class="ziti3">在执行purge的过程中，InnoDB存储引擎首先从history list中找到第一个需要被清理的记录，这里为trx1，清理之后InnoDB存储引擎会在trx1的undo log所在的页中继续寻找是否存在可以被清理的记录，这里会找到事务trx3，接着找到trx5，但是发现trx5被其他事务所引用而不能清理，故去再次去history list中查找，发现这时最尾端的记录为trx2，接着找到trx2所在的页，然后依次再把事务trx6、trx4的记录进行清理。由于undo page2中所有的页都被清理了，因此该undo page可以被重用。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00130.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-17　undo log与history列表的关系
+  </div>
+
+  <p class="ziti3">InnoDB存储引擎这种先从history list中找undo log，然后再从undo page中找undo log的设计模式是为了避免大量的随机读取操作，从而提高purge的效率。</p>
+
+  <p class="ziti3">全局动态参数innodb_purge_batch_size用来设置每次purge操作需要清理的undo page数量。在InnoDB1.2之前，该参数的默认值为20。而从1.2版本开始，该参数的默认值为300。通常来说，该参数设置得越大，每次回收的undo page也就越多，这样可供重用的undo page就越多，减少了磁盘存储空间与分配的开销。不过，若该参数设置得太大，则每次需要purge处理更多的undo page，从而导致CPU和磁盘IO过于集中于对undo log的处理，使性能下降。因此对该参数的调整需要由有经验的DBA来操作，并且需要长期观察数据库的运行的状态。正如官方的MySQL数据库手册所说的，普通用户不需要调整该参数。</p>
+
+  <p class="ziti3">当InnoDB存储引擎的压力非常大时，并不能高效地进行purge操作。那么history list的长度会变得越来越长。全局动态参数innodb_max_purge_lag用来控制history list的长度，若长度大于该参数时，其会“延缓”DML的操作。该参数默认值为0，表示不对history list做任何限制。当大于0时，就会延缓DML的操作，其延缓的算法为：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">delay=（（length(history_list)-innodb_max_purge_lag）*10)-5</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">delay的单位是毫秒。此外，需要特别注意的是，delay的对象是行，而不是一个DML操作。例如当一个update操作需要更新5行数据时，每行数据的操作都会被delay，故总的延时时间为5*delay。而delay的统计会在每一次purge操作完成后，重新进行计算。</p>
+
+  <p class="ziti3">InnoDB1.2版本引入了新的全局动态参数innodb_max_purge_lag_delay，其用来控制delay的最大毫秒数。也就是当上述计算得到的delay值大于该参数时，将delay设置为innodb_max_purge_lag_delay，避免由于purge操作缓慢导致其他SQL线程出现无限制的等待。</p>
+</body></html>

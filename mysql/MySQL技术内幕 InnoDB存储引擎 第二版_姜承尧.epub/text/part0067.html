@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.4.6　File Trailer</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1VSLM0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.4.6　File Trailer</h3>
+
+  <p class="ziti3">为了检测页是否已经完整地写入磁盘（如可能发生的写入过程中磁盘损坏、机器关机等），InnoDB存储引擎的页中设置了File Trailer部分。</p>
+
+  <p class="ziti3">File Trailer只有一个FIL_PAGE_END_LSN部分，占用8字节。前4字节代表该页的checksum值，最后4字节和File Header中的FIL_PAGE_LSN相同。将这两个值与File Header中的FIL_PAGE_SPACE_OR_CHKSUM和FIL_PAGE_LSN值进行比较，看是否一致（checksum的比较需要通过InnoDB的checksum函数来进行比较，不是简单的等值比较），以此来保证页的完整性（not corrupted）。</p>
+
+  <p class="ziti3">在默认配置下，InnoDB存储引擎每次从磁盘读取一个页就会检测该页的完整性，即页是否发生Corrupt，这就是通过File Trailer部分进行检测，而该部分的检测会有一定的开销。用户可以通过参数innodb_checksums来开启或关闭对这个页完整性的检查。</p>
+
+  <p class="ziti3">MySQL 5.6.6版本开始新增了参数innodb_checksum_algorithm，该参数用来控制检测checksum函数的算法，默认值为crc32，可设置的值有：innodb、crc32、none、strict_innodb、strict_crc32、strict_none。</p>
+
+  <p class="ziti3">innodb为兼容之前版本InnoDB页的checksum检测方式，crc32为MySQL 5.6.6版本引进的新的checksum算法，该算法较之前的innodb有着较高的性能。但是若表中所有页的checksum值都以strict算法保存，那么低版本的MySQL数据库将不能读取这些页。none表示不对页启用checksum检查。</p>
+
+  <p class="ziti3">strict_*正如其名，表示严格地按照设置的checksum算法进行页的检测。因此若低版本MySQL数据库升级到MySQL 5.6.6或之后的版本，启用strict_crc32将导致不能读取表中的页。启用strict_crc32方式是最快的方式，因为其不再对innodb和crc32算法进行两次检测。故推荐使用该设置。若数据库从低版本升级而来，则需要进行mysql_upgrade操作。</p>
+</body></html>

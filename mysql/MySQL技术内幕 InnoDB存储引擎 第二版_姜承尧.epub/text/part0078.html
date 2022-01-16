@@ -1,0 +1,301 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.7.2　物化视图</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2ACBS0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.7.2　物化视图</h3>
+
+  <p class="ziti3">Oracle数据库支持物化视图——该视图不是基于基表的虚表，而是根据基表实际存在的实表，即物化视图的数据存储在非易失的存储设备上。物化视图可以用于预先计算并保存多表的链接（JOIN）或聚集（GROUP BY）等耗时较多的SQL操作结果。这样，在执行复杂查询时，就可以避免进行这些耗时的操作，从而快速得到结果。物化视图的好处是对于一些复杂的统计类查询能直接查出结果。在Microsoft SQL Server数据库中，称这种视图为索引视图。</p>
+
+  <p class="ziti3">在Oracle数据库中，物化视图的创建方式包括以下两种：</p>
+
+  <p class="ziti3">❑BUILD IMMEDIATE</p>
+
+  <p class="ziti3">❑BUILD DEFERRED</p>
+
+  <p class="ziti3">BUILD IMMEDIATE是默认的创建方式，在创建物化视图的时候就生成数据，而BUILD DEFERRED则在创建物化视图时不生成数据，以后根据需要再生成数据。</p>
+
+  <p class="ziti3">查询重写是指当对物化视图的基表进行查询时，数据库会自动判断能否通过查询物化视图来直接得到最终的结果，如果可以，则避免了聚集或连接等这类较为复杂的SQL操作，直接从已经计算好的物化视图中得到所需的数据。</p>
+
+  <p class="ziti3">物化视图的刷新是指当基表发生了DML操作后，物化视图何时采用哪种方式和基表进行同步。刷新的模式有两种：</p>
+
+  <p class="ziti3">❑ON DEMAND</p>
+
+  <p class="ziti3">❑ON COMMIT</p>
+
+  <p class="ziti3">ON DEMAND意味着物化视图在用户需要的时候进行刷新，ON COMMIT意味着物化视图在对基表的DML操作提交的同时进行刷新。</p>
+
+  <p class="ziti3">而刷新的方法有四种：</p>
+
+  <p class="ziti3">❑FAST</p>
+
+  <p class="ziti3">❑COMPLETE</p>
+
+  <p class="ziti3">❑FORCE</p>
+
+  <p class="ziti3">❑NEVER</p>
+
+  <p class="ziti3">FAST刷新采用增量刷新，只刷新自上次刷新以后进行的修改。COMPLETE刷新是对整个物化视图进行完全的刷新。如果选择FORCE方式，则数据库在刷新时会去判断是否可以进行快速刷新，如果可以，则采用FAST方式，否则采用COMPLETE的方式。NEVER是指物化视图不进行任何刷新。</p>
+
+  <p class="ziti3">MySQL数据库本身并不支持物化视图，换句话说，MySQL数据库中的视图总是虚拟的。但是用户可以通过一些机制来实现物化视图的功能。例如要创建一个ON DEMAND的物化视图还是比较简单的，用户只需定时把数据导入到另一张表。例如有如下的订单表，记录了用户采购电脑设备的信息：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE Orders</p>
+
+  <p class="ziti4">-＞(</p>
+
+  <p class="ziti4">-＞order_id INT UNSIGNED NOT NULL AUTO_INCREMENT,</p>
+
+  <p class="ziti4">-＞product_name VARCHAR(30)NOT NULL,</p>
+
+  <p class="ziti4">-＞price DECIMAL(8,2)NOT NULL,</p>
+
+  <p class="ziti4">-＞amount SMALLINT NOT NULL,</p>
+
+  <p class="ziti4">-＞PRIMARY KEY(order_id)</p>
+
+  <p class="ziti4">-＞)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.13 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO Orders VALUES</p>
+
+  <p class="ziti4">-＞(NULL,'CPU',135.5,1),</p>
+
+  <p class="ziti4">-＞(NULL,'Memory',48.2,3),</p>
+
+  <p class="ziti4">-＞(NULL,'CPU',125.6,3),</p>
+
+  <p class="ziti4">-＞(NULL,'CPU',105.3,4)</p>
+
+  <p class="ziti4">-＞;</p>
+
+  <p class="ziti4">Query OK,4 rows affected(0.03 sec)</p>
+
+  <p class="ziti4">Records:4 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM Orders\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">order_id:1</p>
+
+  <p class="ziti4">product_name:CPU</p>
+
+  <p class="ziti4">price:135.50</p>
+
+  <p class="ziti4">amount:1</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">order_id:2</p>
+
+  <p class="ziti4">product_name:Memory</p>
+
+  <p class="ziti4">price:48.20</p>
+
+  <p class="ziti4">amount:3</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">order_id:3</p>
+
+  <p class="ziti4">product_name:CPU</p>
+
+  <p class="ziti4">price:125.60</p>
+
+  <p class="ziti4">amount:3</p>
+
+  <p class="ziti4">***************************4.row***************************</p>
+
+  <p class="ziti4">order_id:4</p>
+
+  <p class="ziti4">product_name:CPU</p>
+
+  <p class="ziti4">price:105.30</p>
+
+  <p class="ziti4">amount:4</p>
+
+  <p class="ziti4">4 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着建立一张物化视图的基表，用来统计每件物品的信息，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE Orders_MV(</p>
+
+  <p class="ziti4">-＞product_name VARCHAR(30)NOT NULL</p>
+
+  <p class="ziti4">-＞,price_sum DECIMAL(8,2)NOT NULL</p>
+
+  <p class="ziti4">-＞,amount_sum INT NOT NULL</p>
+
+  <p class="ziti4">-＞,price_avg FLOAT NOT NULL</p>
+
+  <p class="ziti4">-＞,orders_cnt INT NOT NULL</p>
+
+  <p class="ziti4">-＞,UNIQUE INDEX(product_name)</p>
+
+  <p class="ziti4">-＞);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.13 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO Orders_MV</p>
+
+  <p class="ziti4">-＞SELECT product_name</p>
+
+  <p class="ziti4">-＞,SUM(price),SUM(amount),AVG(price)</p>
+
+  <p class="ziti4">-＞,COUNT(*)</p>
+
+  <p class="ziti4">-＞FROM Orders</p>
+
+  <p class="ziti4">-＞GROUP BY product_name;</p>
+
+  <p class="ziti4">Query OK,2 rows affected(0.02 sec)</p>
+
+  <p class="ziti4">Records:2 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞</p>
+
+  <p class="ziti4">mysql＞</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM Orders_MV\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">product_name:CPU</p>
+
+  <p class="ziti4">price:366.40</p>
+
+  <p class="ziti4">amount_sum:8</p>
+
+  <p class="ziti4">price_avg:122.133</p>
+
+  <p class="ziti4">orders_cnt:3</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">product_name:Memory</p>
+
+  <p class="ziti4">price:48.20</p>
+
+  <p class="ziti4">amount_sum:3</p>
+
+  <p class="ziti4">price_avg:48.2</p>
+
+  <p class="ziti4">orders_cnt:1</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在上面的例子中，把物化视图定义为一张表Orders_MV。表名以_MV结尾，以便能让DBA很好地理解这张表的作用。通过上面的方式，用户就拥有了一个统计信息的物化视图。如果是要实现ON DEMAND的物化视图，只需把表清空，重新导入数据即可。当然，这是COMPLETE的刷新方式，要实现FAST的方式，也是可以的，只不过稍微复杂点，需要记录上次统计时order_id的位置。</p>
+
+  <p class="ziti3">但是，如果要实现ON COMMIT的物化视图，就不像上面这么简单了。在Oracle数据库中是通过物化视图日志来实现的，很显然MySQL数据库没有这个日志，不过通过触发器同样可以达到这个目的，首先需要对表Orders建立一个触发器，代码如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">DELIMITER$$</p>
+
+  <p class="ziti4">CREATE TRIGGER tgr_Orders_insert</p>
+
+  <p class="ziti4">AFTER INSERT ON Orders</p>
+
+  <p class="ziti4">FOR EACH ROW</p>
+
+  <p class="ziti4">BEGIN</p>
+
+  <p class="ziti4">SET@old_price_sum=0;</p>
+
+  <p class="ziti4">SET@old_amount_sum=0;</p>
+
+  <p class="ziti4">SET@old_price_avg=0;</p>
+
+  <p class="ziti4">SET@old_orders_cnt=0;</p>
+
+  <p class="ziti4">SELECT IFNULL(price_sum,0),IFNULL(amount_sum,0),IFNULL(price_avg,0),IFNULL(orders_cnt,0)</p>
+
+  <p class="ziti4">FROM Orders_MV</p>
+
+  <p class="ziti4">WHERE product_name=NEW.product_name</p>
+
+  <p class="ziti4">INTO@old_price_sum,@old_amount_sum,@old_price_avg,@old_orders_cnt;</p>
+
+  <p class="ziti4">SET@new_price_sum=@old_price_sum+NEW.price;</p>
+
+  <p class="ziti4">SET@new_amount_sum=@old_amount_sum+NEW.amount;</p>
+
+  <p class="ziti4">SET@new_orders_cnt=@old_orders_cnt+1;</p>
+
+  <p class="ziti4">SET@new_price_avg=@new_price_sum/@new_orders_cnt;</p>
+
+  <p class="ziti4">REPLACE INTO Orders_MV</p>
+
+  <p class="ziti4">VALUES(NEW.product_name,@new_price_sum,@new_amount_sum,@new_price_avg,@new_orders_cnt);</p>
+
+  <p class="ziti4">END;</p>
+
+  <p class="ziti4">$$</p>
+
+  <p class="ziti4">DELIMITER;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述代码创建了一个INSERT的触发器，每次INSERT操作都会重新统计表Orders_MV中的数据。接着运行以下插入操作，并观察之后物化视图表Orders_MV中的记录。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞INSERT INTO Orders VALUES(NULL,'SSD',299,3);</p>
+
+  <p class="ziti4">Query OK,1 row affected,1 warning(0.03 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO Orders VALUES(NULL,'Memory',47.9,5);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.03 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM Orders_MV\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">product_name:CPU</p>
+
+  <p class="ziti4">price:366.40</p>
+
+  <p class="ziti4">amount_sum:8</p>
+
+  <p class="ziti4">price_avg:122.133</p>
+
+  <p class="ziti4">orders_cnt:3</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">product_name:Memory</p>
+
+  <p class="ziti4">price:96.10</p>
+
+  <p class="ziti4">amount_sum:8</p>
+
+  <p class="ziti4">price_avg:48.05</p>
+
+  <p class="ziti4">orders_cnt:2</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">product_name:SSD</p>
+
+  <p class="ziti4">price:299.00</p>
+
+  <p class="ziti4">amount_sum:3</p>
+
+  <p class="ziti4">price_avg:299</p>
+
+  <p class="ziti4">orders_cnt:1</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以发现在插入两条新的记录后，直接查询Orders_MV表就能得到统计信息。而不像之前需要重新进行SQL语句的统计，这就实现了ON_COMMIT的物化视图功能。需要注意的是，Orders表可能还会有UPDATE和DELETE的操作，所以应该还需要实现DELETE和UPDATE的触发器，这就留给读者自己去实现了。</p>
+
+  <p class="ziti3">通过触发器，在MySQL数据库中实现了类似物化视图的功能。但是MySQL数据库本身并不支持物化视图，因此对于物化视图支持的查询重写（Query Rewrite）功能就显得无能为力，用户只能在应用程序端做一些控制。</p>
+</body></html>

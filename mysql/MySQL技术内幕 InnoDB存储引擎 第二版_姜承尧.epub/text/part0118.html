@@ -1,0 +1,71 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.3.5　外键和锁</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3GH2C0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">6.3.5　外键和锁</h3>
+
+  <p class="ziti3">前面已经介绍了外键，外键主要用于引用完整性的约束检查。在InnoDB存储引擎中，对于一个外键列，如果没有显式地对这个列加索引，InnoDB存储引擎自动对其加一个索引，因为这样可以避免表锁——这比Oracle数据库做得好，Oracle数据库不会自动添加索引，用户必须自己手动添加，这也导致了Oracle数据库中可能产生死锁。</p>
+
+  <p class="ziti3">对于外键值的插入或更新，首先需要查询父表中的记录，即SELECT父表。但是对于父表的SELECT操作，不是使用一致性非锁定读的方式，因为这样会发生数据不一致的问题，因此这时使用的是SELECT…LOCK IN SHARE MODE方式，即主动对父表加一个S锁。如果这时父表上已经这样加X锁，子表上的操作会被阻塞，如表6-11所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00092.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">在上述的例子中，两个会话中的事务都没有进行COMMIT或ROLLBACK操作，而会话B的操作会被阻塞。这是因为id为3的父表在会话A中已经加了一个X锁，而此时在会话B中用户又需要对父表中id为3的行加一个S锁，这时INSERT的操作会被阻塞。设想如果访问父表时，使用的是一致性的非锁定读，这时Session B会读到父表有id=3的记录，可以进行插入操作。但是如果会话A对事务提交了，则父表中就不存在id为3的记录。数据在父、子表就会存在不一致的情况。若这时用户查询INNODB_LOCKS表，会看到如下结果：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM information_schema.INNODB_LOCKS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">lock_id:7573B8:96:3:4</p>
+
+  <p class="ziti4">lock_trx_id:7573B8</p>
+
+  <p class="ziti4">lock_mode:S</p>
+
+  <p class="ziti4">lock_type:RECORD</p>
+
+  <p class="ziti4">lock_table:'mytest'.'parent'</p>
+
+  <p class="ziti4">lock_index:'PRIMARY'</p>
+
+  <p class="ziti4">lock_space:96</p>
+
+  <p class="ziti4">lock_page:3</p>
+
+  <p class="ziti4">lock_rec:4</p>
+
+  <p class="ziti4">lock_data:3</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">lock_id:7573B3:96:3:4</p>
+
+  <p class="ziti4">lock_trx_id:7573B3</p>
+
+  <p class="ziti4">lock_mode:X</p>
+
+  <p class="ziti4">lock_type:RECORD</p>
+
+  <p class="ziti4">lock_table:'mytest'.'parent'</p>
+
+  <p class="ziti4">lock_index:'PRIMARY'</p>
+
+  <p class="ziti4">lock_space:96</p>
+
+  <p class="ziti4">lock_page:3</p>
+
+  <p class="ziti4">lock_rec:4</p>
+
+  <p class="ziti4">lock_data:3</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

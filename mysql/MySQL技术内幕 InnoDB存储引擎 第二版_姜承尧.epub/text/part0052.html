@@ -1,0 +1,101 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.2　InnoDB逻辑存储结构</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1HIT80-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">4.2　InnoDB逻辑存储结构</h2>
+
+  <p class="ziti3">从InnoDB存储引擎的逻辑存储结构看，所有数据都被逻辑地存放在一个空间中，称之为表空间（tablespace）。表空间又由段（segment）、区（extent）、页（page）组成。页在一些文档中有时也称为块（block），InnoDB存储引擎的逻辑存储结构大致如图4-1所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00016.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　4-1　InnoDB逻辑存储结构
+  </div>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>4.2.1　表空间</h3>
+
+  <p class="ziti3">表空间可以看做是InnoDB存储引擎逻辑结构的最高层，所有的数据都存放在表空间中。第3章中已经介绍了在默认情况下InnoDB存储引擎有一个共享表空间ibdata1，即所有数据都存放在这个表空间内。如果用户启用了参数innodb_file_per_table，则每张表内的数据可以单独放到一个表空间内。</p>
+
+  <p class="ziti3">如果启用了innodb_file_per_table的参数，需要注意的是每张表的表空间内存放的只是数据、索引和插入缓冲Bitmap页，其他类的数据，如回滚（undo）信息，插入缓冲索引页、系统事务信息，二次写缓冲（Double write buffer）等还是存放在原来的共享表空间内。这同时也说明了另一个问题：即使在启用了参数innodb_file_per_table之后，共享表空间还是会不断地增加其大小。可以来做一个实验，在实验之前已经将innodb_file_per_table设为ON了。现在看看初始共享表空间文件的大小：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_file_per_table'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_file_per_table</p>
+
+  <p class="ziti4">Value:ON</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞system ls-lh/usr/local/mysql/data/ibdata*</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 58M Mar 11 13:58/usr/local/mysql/data/ibdata1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，共享表空间ibdata1的大小为58MB，接着模拟产生undo的操作，利用第1章已生成的表mytest，并把其存储引擎更改为InnoDB，执行如下操作：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET autocommit=0;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞UPDATE mytest SET salary=0;</p>
+
+  <p class="ziti4">Query OK,2844047 rows affected(19.47 sec)</p>
+
+  <p class="ziti4">Rows matched:2844047 Changed:2844047 Warnings:0</p>
+
+  <p class="ziti4">mysql＞system ls-lh/usr/local/mysql/data/ibdata*</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 114M Mar 11 14:00/usr/local/mysql/data/ibdata1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这里首先将自动提交设为0，即用户需要显式提交事务（注意，在上面操作结束时，并没有对该事务执行commit或rollback）。接着执行会产生大量undo操作的语句update mytest set salary=0，完成后再观察共享表空间，会发现ibdata1已经增长到了114MB。这个例子虽然简单，但是足以说明共享表空间中还包含有undo信息。</p>
+
+  <p class="ziti3">有用户会问，如果对k这个事务执行rollback，ibdata1这个表空间会不会缩减至原来的大小（58MB）？这可以通过继续运行下面的语句得到验证：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞ROLLBACK;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞system ls-lh/usr/local/mysql/data/ibdata*</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 114M Mar 11 14:00/usr/local/mysql/data/ibdata1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">很“可惜”，共享表空间的大小还是114MB，即InnoDB存储引擎不会在执行rollback时去收缩这个表空间。虽然InnoDB不会回收这些空间，但是会自动判断这些undo信息是否还需要，如果不需要，则会将这些空间标记为可用空间，供下次undo使用。</p>
+
+  <p class="ziti3">回想一下，在第2章中提到的master thread每10秒会执行一次的full purge操作，很有可能的一种情况是：用户再次执行上述的UPDATE语句后，会发现ibdata1不会再增大了，那就是这个原因了。</p>
+
+  <p class="ziti3">我用python写了一个py_innodb_page_info小工具，用来查看表空间中各页的类型和信息，用户可以在code.google.com上搜索david-mysql-tools进行查找。使用方法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nineyou0-43 py]#python py_innodb_page_info.py/usr/local/mysql/data/ibdata1</p>
+
+  <p class="ziti4">Total number of page:83584:</p>
+
+  <p class="ziti4">Insert Buffer Free List:204</p>
+
+  <p class="ziti4">Freshly Allocated Page:5467</p>
+
+  <p class="ziti4">Undo Log Page:38675</p>
+
+  <p class="ziti4">File Segment inode:4</p>
+
+  <p class="ziti4">B-tree Node:39233</p>
+
+  <p class="ziti4">File Space Header:1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到共有83 584个页，其中插入缓冲的空闲列表有204个页、5467个可用页、38 675个undo页、39 233个数据页等。用户可以通过添加-v参数来查看更详细的内容。由于该工具还在开发之中，因此并不保证在本书出版时此工具最终显示结果的变化。</p>
+</body></html>

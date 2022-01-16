@@ -1,0 +1,209 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>2.5.2　InnoDB1.2.x版本之前的Master Thread</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="SJGS0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">2.5.2　InnoDB1.2.x版本之前的Master Thread</h3>
+
+  <p class="ziti3">在了解了1.0.x版本之前的Master Thread的具体实现过程后，细心的读者会发现InnoDB存储引擎对于IO其实是有限制的，在缓冲池向磁盘刷新时其实都做了一定的硬编码（hard coding）。在磁盘技术飞速发展的今天，当固态磁盘（SSD）出现时，这种规定在很大程度上限制了InnoDB存储引擎对磁盘IO的性能，尤其是写入性能。</p>
+
+  <p class="ziti3">从前面的伪代码来看，无论何时，InnoDB存储引擎最大只会刷新100个脏页到磁盘，合并20个插入缓冲。如果是在写入密集的应用程序中，每秒可能会产生大于100个的脏页，如果是产生大于20个插入缓冲的情况，Master Thread似乎会“忙不过来”，或者说它总是做得很慢。即使磁盘能在1秒内处理多于100个页的写入和20个插入缓冲的合并，但是由于hard coding，Master Thread也只会选择刷新100个脏页和合并20个插入缓冲。同时，当发生宕机需要恢复时，由于很多数据还没有刷新回磁盘，会导致恢复的时间可能需要很久，尤其是对于insert buffer来说。</p>
+
+  <p class="ziti3">这个问题最初由Google的工程师Mark Callaghan提出，之后InnoDB官方对其进行了修正并发布了补丁（patch）。InnoDB存储引擎的开发团队参考了Google的patch，提供了类似的方法来修正该问题。因此InnoDB Plugin（从InnoDB1.0.x版本开始）提供了参数innodb_io_capacity，用来表示磁盘IO的吞吐量，默认值为200。对于刷新到磁盘页的数量，会按照innodb_io_capacity的百分比来进行控制。规则如下：</p>
+
+  <p class="ziti3">❑在合并插入缓冲时，合并插入缓冲的数量为innodb_io_capacity值的5%；</p>
+
+  <p class="ziti3">❑在从缓冲区刷新脏页时，刷新脏页的数量为innodb_io_capacity。</p>
+
+  <p class="ziti3">若用户使用了SSD类的磁盘，或者将几块磁盘做了RAID，当存储设备拥有更高的IO速度时，完全可以将innodb_io_capacity的值调得再高点，直到符合磁盘IO的吞吐量为止。</p>
+
+  <p class="ziti3">另一个问题是，参数innodb_max_dirty_pages_pct默认值的问题，在InnoDB 1.0.x版本之前，该值的默认为90，意味着脏页占缓冲池的90%。但是该值“太大”了，因为InnoDB存储引擎在每秒刷新缓冲池和flush loop时会判断这个值，如果该值大于innodb_max_dirty_pages_pct，才刷新100个脏页，如果有很大的内存，或者数据库服务器的压力很大，这时刷新脏页的速度反而会降低。同样，在数据库的恢复阶段可能需要更多的时间。</p>
+
+  <p class="ziti3">在很多论坛上都有对这个问题的讨论，有人甚至将这个值调到了20或10，然后测试发现性能会有所提高，但是将innodb_max_dirty_pages_pct调到20或10会增加磁盘的压力，系统的负担还是会有所增加的。Google在这个问题上进行了测试，证明20并不是一个最优值<sup class="calibre4"><a id="ch1" href="part0030.html#ch1-back" class="pcalibre calibre1">[1]</a></sup>。而从InnoDB 1.0.x版本开始，innodb_max_dirty_pages_pct默认值变为了75，和Google测试的80比较接近。这样既可以加快刷新脏页的频率，又能保证了磁盘IO的负载。</p>
+
+  <p class="ziti3">InnoDB 1.0.x版本带来的另一个参数是innodb_adaptive_flushing（自适应地刷新），该值影响每秒刷新脏页的数量。原来的刷新规则是：脏页在缓冲池所占的比例小于innodb_max_dirty_pages_pct时，不刷新脏页；大于innodb_max_dirty_pages_pct时，刷新100个脏页。随着innodb_adaptive_flushing参数的引入，InnoDB存储引擎会通过一个名为buf_flush_get_desired_flush_rate的函数来判断需要刷新脏页最合适的数量。粗略地翻阅源代码后发现buf_flush_get_desired_flush_rate通过判断产生重做日志（redo log）的速度来决定最合适的刷新脏页数量。因此，当脏页的比例小于innodb_max_dirty_pages_pct时，也会刷新一定量的脏页。</p>
+
+  <p class="ziti3">还有一个改变是：之前每次进行full purge操作时，最多回收20个Undo页，从InnoDB 1.0.x版本开始引入了参数innodb_purge_batch_size，该参数可以控制每次full purge回收的Undo页的数量。该参数的默认值为20，并可以动态地对其进行修改，具体如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_purge_batch_size'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_purge_batch_size</p>
+
+  <p class="ziti4">Value:20</p>
+
+  <p class="ziti4">mysql＞SET GLOBAL innodb_purge_batch_size=50;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过上述的讨论和解释我们知道，从InnoDB 1.0.x版本开始，Master Thread的伪代码必将有所改变，最终变成：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">void master_thread(){</p>
+
+  <p class="ziti4">goto loop;</p>
+
+  <p class="ziti4">loop：</p>
+
+  <p class="ziti4">for(int i=0;i＜10;i++){</p>
+
+  <p class="ziti4">thread_sleep(1)//sleep 1 second</p>
+
+  <p class="ziti4">do log buffer flush to disk</p>
+
+  <p class="ziti4">if(last_one_second_ios＜5%innodb_io_capacity)</p>
+
+  <p class="ziti4">do merge 5%innodb_io_capacity insert buffer</p>
+
+  <p class="ziti4">if(buf_get_modified_ratio_pct＞innodb_max_dirty_pages_pct)</p>
+
+  <p class="ziti4">do buffer pool flush 100%innodb_io_capacity dirty page</p>
+
+  <p class="ziti4">else if enable adaptive flush</p>
+
+  <p class="ziti4">do buffer pool flush desired amount dirty page</p>
+
+  <p class="ziti4">if(no user activity)</p>
+
+  <p class="ziti4">goto backgroud loop</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">if(last_ten_second_ios＜innodb_io_capacity)</p>
+
+  <p class="ziti4">do buffer pool flush 100%innodb_io_capacity dirty page</p>
+
+  <p class="ziti4">do merge 5%innodb_io_capacity insert buffer</p>
+
+  <p class="ziti4">do log buffer flush to disk</p>
+
+  <p class="ziti4">do full purge</p>
+
+  <p class="ziti4">if(buf_get_modified_ratio_pct＞70%)</p>
+
+  <p class="ziti4">do buffer pool flush 100%innodb_io_capacity dirty page</p>
+
+  <p class="ziti4">else</p>
+
+  <p class="ziti4">dobuffer pool flush 10%innodb_io_capacity dirty page</p>
+
+  <p class="ziti4">goto loop</p>
+
+  <p class="ziti4">background loop:</p>
+
+  <p class="ziti4">do full purge</p>
+
+  <p class="ziti4">do merge 100%innodb_io_capacity insert buffer</p>
+
+  <p class="ziti4">if not idle:</p>
+
+  <p class="ziti4">goto loop:</p>
+
+  <p class="ziti4">else:</p>
+
+  <p class="ziti4">goto flush loop</p>
+
+  <p class="ziti4">flush loop:</p>
+
+  <p class="ziti4">do buffer pool flush 100%innodb_io_capacity dirty page</p>
+
+  <p class="ziti4">if(buf_get_modified_ratio_pct＞innodb_max_dirty_pages_pct)</p>
+
+  <p class="ziti4">go to flush loop</p>
+
+  <p class="ziti4">goto suspend loop</p>
+
+  <p class="ziti4">suspend loop:</p>
+
+  <p class="ziti4">suspend_thread()</p>
+
+  <p class="ziti4">waiting event</p>
+
+  <p class="ziti4">goto loop;</p>
+
+  <p class="ziti4">}</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">很多测试都显示，InnoDB 1.0.x版本在性能方面取得了极大的提高，其实这和前面提到的Master Thread的改动是密不可分的，因为InnoDB存储引擎的核心操作大部分都集中在Master Thread后台线程中。</p>
+
+  <p class="ziti3">从InnoDB 1.0.x开始，命令SHOW ENGINE INNODB STATUS可以查看当前Master Thread的状态信息，如下所示：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Type:InnoDB</p>
+
+  <p class="ziti4">Name:</p>
+
+  <p class="ziti4">Status:</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">090921 14:24:56 INNODB MONITOR OUTPUT</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">Per second averages calculated from the last 6 seconds</p>
+
+  <p class="ziti4">----------</p>
+
+  <p class="ziti4">BACKGROUND THREAD</p>
+
+  <p class="ziti4">----------</p>
+
+  <p class="ziti4">srv_master_thread loops:45 1_second,45 sleeps,4 10_second,6 background,6 flush</p>
+
+  <p class="ziti4">srv_master_thread log flush and writes:45 log writes only:69</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这里可以看到主循环进行了45次，每秒挂起（sleep）的操作进行了45次（说明负载不是很大），10秒一次的活动进行了4次，符合1∶10。background loop进行了6次，flush loop也进行了6次。因为当前这台服务器的压力很小，所以能在理论值上运行。如果是在一台压力很大的MySQL数据库服务器上，看到的可能会是下面的情景：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞show engine innodb status\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Type:InnoDB</p>
+
+  <p class="ziti4">Name:</p>
+
+  <p class="ziti4">Status:</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">091009 10:14:34 INNODB MONITOR OUTPUT</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">Per second averages calculated from the last 42 seconds</p>
+
+  <p class="ziti4">----------</p>
+
+  <p class="ziti4">BACKGROUND THREAD</p>
+
+  <p class="ziti4">----------</p>
+
+  <p class="ziti4">srv_master_thread loops:2188 1_second,1537 sleeps,218 10_second,2 background,2 flush</p>
+
+  <p class="ziti4">srv_master_thread log flush and writes:1777 log writes only:5816</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到当前主循环运行了2188次，但是循环中的每秒挂起（sleep）的操作只运行了1537次。这是因为InnoDB对其内部进行了一些优化，当压力大时并不总是等待1秒。因此，并不能认为1_second和sleeps的值总是相等的。在某些情况下，可以通过两者之间差值的比较来反映当前数据库的负载压力。</p>
+
+  <div class="fnote">
+    <a id="ch1-back" href="part0030.html#ch1" class="pcalibre calibre1">[1]</a>有兴趣的读者可参考：http://code.google.com/p/google-mysql-tools/wiki/InnodbIoOltpDisk。
+  </div>
+</body></html>

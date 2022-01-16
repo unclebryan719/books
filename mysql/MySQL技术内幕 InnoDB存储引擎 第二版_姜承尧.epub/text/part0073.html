@@ -1,0 +1,83 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.6.4　对错误数据的约束</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="25JP20-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.6.4　对错误数据的约束</h3>
+
+  <p class="ziti3">在某些默认设置下，MySQL数据库允许非法的或不正确的数据的插入或更新，又或者可以在数据库内部将其转化为一个合法的值，如向NOT NULL的字段插入一个NULL值，MySQL数据库会将其更改为0再进行插入，因此数据库本身没有对数据的正确性进行约束。例如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE a(</p>
+
+  <p class="ziti4">-＞id INT NOT NULL,</p>
+
+  <p class="ziti4">-＞date DATE NOT NULL);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.13 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO a</p>
+
+  <p class="ziti4">-＞SELECT NULL,'2009-02-30';</p>
+
+  <p class="ziti4">Query OK,1 row affected,2 warnings(0.04 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:2</p>
+
+  <p class="ziti4">mysql＞SHOW WARNINGS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Level:Warning</p>
+
+  <p class="ziti4">Code:1048</p>
+
+  <p class="ziti4">Message:Column'id'cannot be null</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">Level:Warning</p>
+
+  <p class="ziti4">Code:1265</p>
+
+  <p class="ziti4">Message:Data truncated for column'date'at row 1</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM a\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">id:0</p>
+
+  <p class="ziti4">date:0000-00-00</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在上述例子中，首先向NOT NULL的列插入了一个NULL值，同时向列date插入了一个非法日期'2009-02-30'。“奇怪”的是MySQL数据库并没有报错，而是显示了警告（warning）。如果用户想通过约束对于数据库非法数据的插入或更新，即MySQL数据库提示报错而不是警告，那么用户必须设置参数sql_mode，用来严格审核输入的参数，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET sql_mode='STRICT_TRANS_TABLES';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO a</p>
+
+  <p class="ziti4">-＞SELECT NULL,'2009-02-30';</p>
+
+  <p class="ziti4">ERROR 1048(23000):Column'id'cannot be null</p>
+
+  <p class="ziti4">mysql＞INSERT INTO a</p>
+
+  <p class="ziti4">-＞SELECT 1,'2009-02-30';</p>
+
+  <p class="ziti4">ERROR 1292(22007):Incorrect date value:'2009-02-30'for column'date'at row 1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过设置参数sql_mode的值为STRICT_TRANS_TABLES，这次MySQL数据库对于输入值的合法性进行了约束，而且针对不同的错误，提示的错误内容也都不同。参数sql_mode可设的值有很多，具体可参考MySQL官方手册。</p>
+</body></html>

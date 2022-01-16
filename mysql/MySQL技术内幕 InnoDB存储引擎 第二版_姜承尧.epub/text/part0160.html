@@ -1,0 +1,51 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>8.7.2　快照+复制的备份架构</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4OIQ00-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">8.7.2　快照+复制的备份架构</h3>
+
+  <p class="ziti3">复制可以用来作为备份，但功能不仅限于备份，其主要功能如下：</p>
+
+  <p class="ziti3">❑数据分布。由于MySQL数据库提供的复制并不需要很大的带宽要求，因此可以在不同的数据中心之间实现数据的复制。</p>
+
+  <p class="ziti3">❑读取的负载平衡。通过建立多个从服务器，可将读取平均地分布到这些从服务器中，并且减少了主服务器的压力。一般通过DNS的Round-Robin和Linux的LVS功能都可以实现负载平衡。</p>
+
+  <p class="ziti3">❑数据库备份。复制对备份很有帮助，但是从服务器不是备份，不能完全代替备份。</p>
+
+  <p class="ziti3">❑高可用性和故障转移。通过复制建立的从服务器有助于故障转移，减少故障的停机时间和恢复时间。</p>
+
+  <p class="ziti3">可见，复制的设计不是简简单单用来备份的，并且只是用复制来进行备份是远远不够的。假设当前应用采用了主从的复制架构，从服务器作为备份。这时，一个初级DBA执行了误操作，如DROP DATABASE或DROP TABLE，这时从服务器也跟着运行了。这时用户怎样从服务器进行恢复呢？</p>
+
+  <p class="ziti3">因此，一个比较好的方法是通过对从服务器上的数据库所在分区做快照，以此来避免误操作对复制造成影响。当发生主服务器上的误操作时，只需要将从服务器上的快照进行恢复，然后再根据二进制日志进行point-in-time的恢复即可。因此快照+复制的备份架构如图8-5所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00143.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　8-5　快照+复制的备份架构
+  </div>
+
+  <p class="ziti3">还有一些其他的方法来调整复制，比如采用延时复制，即间歇性地开启从服务器上的同步，保证大约一小时的延时。这的确也是一个方法，只是数据库在高峰和非高峰期间每小时产生的二进制日志量是不同的，用户很难精准地控制。另外，这种方法也不能完全起到对误操作的防范作用。</p>
+
+  <p class="ziti3">此外，建议在从服务上启用read-only选项，这样能保证从服务器上的数据仅与主服务器进行同步，避免其他线程修改数据。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[mysqld]</p>
+
+  <p class="ziti4">read-only</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在启用read-only选项后，如果操作从服务器的用户没有SUPER权限，则对从服务器进行任何的修改操作会抛出一个错误，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞INSERT INTO z SELECT 2;</p>
+
+  <p class="ziti4">ERROR 1290(HY000):The MySQL server is running with the--read-only option so it cannot execute this statement</p>
+  <hr class="calibre2"/>
+</body></html>

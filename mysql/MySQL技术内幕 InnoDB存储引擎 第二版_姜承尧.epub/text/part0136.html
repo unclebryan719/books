@@ -1,0 +1,247 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.3　事务控制语句</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="41MCG0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">7.3　事务控制语句</h2>
+
+  <p class="ziti3">在MySQL命令行的默认设置下，事务都是自动提交（auto commit）的，即执行SQL语句后就会马上执行COMMIT操作。因此要显式地开启一个事务需使用命令BEGIN、START TRANSACTION，或者执行命令SET AUTOCOMMIT=0，禁用当前会话的自动提交。每个数据库厂商自动提交的设置都不相同，每个DBA或开发人员需要非常明白这一点，这对之后的SQL编程会有非凡的意义，因此用户不能以之前的经验来判断MySQL数据库的运行方式。在具体介绍其含义之前，先来看看用户可以使用哪些事务控制语句。</p>
+
+  <p class="ziti3">❑START TRANSACTION|BEGIN：显式地开启一个事务。</p>
+
+  <p class="ziti3">❑COMMIT：要想使用这个语句的最简形式，只需发出COMMIT。也可以更详细一些，写为COMMIT WORK，不过这二者几乎是等价的。COMMIT会提交事务，并使得已对数据库做的所有修改成为永久性的。</p>
+
+  <p class="ziti3">❑ROLLBACK：要想使用这个语句的最简形式，只需发出ROLLBACK。同样地，也可以写为ROLLBACK WORK，但是二者几乎是等价的。回滚会结束用户的事务，并撤销正在进行的所有未提交的修改。</p>
+
+  <p class="ziti3">❑SAVEPOINT identifier∶SAVEPOINT允许在事务中创建一个保存点，一个事务中可以有多个SAVEPOINT。</p>
+
+  <p class="ziti3">❑RELEASE SAVEPOINT identifier：删除一个事务的保存点，当没有一个保存点执行这句语句时，会抛出一个异常。</p>
+
+  <p class="ziti3">❑ROLLBACK TO[SAVEPOINT]identifier：这个语句与SAVEPOINT命令一起使用。可以把事务回滚到标记点，而不回滚在此标记点之前的任何工作。例如可以发出两条UPDATE语句，后面跟一个SAVEPOINT，然后又是两条DELETE语句。如果执行DELETE语句期间出现了某种异常情况，并且捕获到这个异常，同时发出了ROLLBACK TO SAVEPOINT命令，事务就会回滚到指定的SAVEPOINT，撤销DELETE完成的所有工作，而UPDATE语句完成的工作不受影响。</p>
+
+  <p class="ziti3">❑SET TRANSACTION：这个语句用来设置事务的隔离级别。InnoDB存储引擎提供的事务隔离级别有：READ UNCOMMITTED、READ COMMITTED、REPEATABLE READ、SERIALIZABLE。</p>
+
+  <p class="ziti3">START TRANSACTION、BEGIN语句都可以在MySQL命令行下显式地开启一个事务。但是在存储过程中，MySQL数据库的分析器会自动将BEGIN识别为BEGIN…END，因此在存储过程中只能使用START TRANSACTION语句来开启一个事务。</p>
+
+  <p class="ziti3">COMMIT和COMMIT WORK语句基本是一致的，都是用来提交事务。不同之处在于COMMIT WORK用来控制事务结束后的行为是CHAIN还是RELEASE的。如果是CHAIN方式，那么事务就变成了链事务。</p>
+
+  <p class="ziti3">用户可以通过参数completion_type来进行控制，该参数默认为0，表示没有任何操作。在这种设置下COMMIT和COMMIT WORK是完全等价的。当参数completion_type的值为1时，COMMIT WORK等同于COMMIT AND CHAIN，表示马上自动开启一个相同隔离级别的事务，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t(a INT,PRIMARY KEY(a))ENGINE=INNODB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT@@autocommit\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">@@autocommit:1</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SET@@completion_type=1;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 1;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞COMMIT WORK;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.01 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 2;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 2;</p>
+
+  <p class="ziti4">ERROR 1062(23000):Duplicate entry'2'for key'PRIMARY'</p>
+
+  <p class="ziti4">mysql＞ROLLBACK;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">#注意回滚之后只有1这个记录，而没有2这个记录</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">a:1</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在这个示例中我们设置completion_type为1，第一次通过COMMIT WORK来插入1这个记录。之后插入记录2时我们并没有用BEGIN（或者START TRANSACTION）来显式地开启一个事务，之后再插入一条重复的记录2就会抛出异常。接着执行ROLLBACK操作，最后发现只有1这一个记录，2并没有被插入。因为completion_type为1时，COMMIT WORK会自动开启一个链事务，第二条INSERT INTO t SELECT 2语句是在同一个事务内的，因此回滚后2这条记录并没有被插入表t中。</p>
+
+  <p class="ziti3">参数completion_type为2时，COMMIT WORK等同于COMMIT AND RELEASE。在事务提交后会自动断开与服务器的连接，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET@@completion_type=2;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 3;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞COMMIT WORK;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.01 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT@@version\G;</p>
+
+  <p class="ziti4">ERROR 2006(HY000):MySQL server has gone away</p>
+
+  <p class="ziti4">No connection.Trying to reconnect...</p>
+
+  <p class="ziti4">Connection id:54</p>
+
+  <p class="ziti4">Current database:test</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">@@version:5.1.45-log</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过上面的示例可以发现，当将参数completion_type设置为2时，COMMIT WORK后用户再执行语句SELECT@@version会出现ERROR 2006（HY000）：MySQL server has gone away的错误。抛出该异常的原因是当前会话已经在上次执行COMMIT WORK语句后与服务器断开了连接。</p>
+
+  <p class="ziti3">ROLLBACK和ROLLBACK WORK与COMMIT和COMMIT WORK的工作一样，这里不再进行赘述。</p>
+
+  <p class="ziti3">SAVEPOINT记录了一个保存点，可以通过ROLLBACK TO SAVEPOINT来回滚到某个保存点，但是如果回滚到一个不存在的保存点，会抛出异常：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞ROLLBACK TO SAVEPOINT t1;</p>
+
+  <p class="ziti4">ERROR 1305(42000):SAVEPOINT t1 does not exist</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">InnoDB存储引擎中的事务都是原子的，这说明下述两种情况：构成事务的每条语句都会提交（成为永久），或者所有语句都回滚。这种保护还延伸到单个的语句。一条语句要么完全成功，要么完全回滚（注意，这里说的是语句回滚）。因此一条语句失败并抛出异常时，并不会导致先前已经执行的语句自动回滚。所有的执行都会得到保留，必须由用户自己来决定是否对其进行提交或回滚的操作。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t(a INT,PRIMARY KEY(a))ENGINE=INNODB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 1;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 1;</p>
+
+  <p class="ziti4">ERROR 1062(23000):Duplicate entry'1'for key'PRIMARY'</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">a:1</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，插入第二记录1时，因为重复的关系抛出了1062的错误，但是数据库并没有进行自动回滚，这时事务仍需要用户显式地运行COMMIT或ROLLBACK命令。</p>
+
+  <p class="ziti3">另一个容易犯的错误是ROLLBACK TO SAVEPOINT，虽然有ROLLBACK，但其并不是真正地结束一个事务，因此即使执行了ROLLBACK TO SAVEPOINT，之后也需要显式地运行COMMIT或ROLLBACK命令。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t(a INT,PRIMARY KEY(a))ENGINE=INNODB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 1;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SAVEPOINT t1;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 2;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SAVEPOINT t2;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞RELEASE SAVEPOINT t1;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 2;</p>
+
+  <p class="ziti4">ERROR 1062(23000):Duplicate entry'2'for key'PRIMARY'</p>
+
+  <p class="ziti4">mysql＞ROLLBACK TO SAVEPOINT t2;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t;</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">|a|</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">|1|</p>
+
+  <p class="ziti4">|2|</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞ROLLBACK;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t;</p>
+
+  <p class="ziti4">Empty set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，在上面的例子中，虽然在发生重复错误后用户通过ROLLBACK TO SAVEPOINT t2命令回滚到了保存点t2，但是事务此时没有结束。再运行命令ROLLBACK后，事务才会完整地回滚。这里再一次提醒，ROLLBACK TO SAVEPOINT命令并不真正地结束事务。</p>
+</body></html>

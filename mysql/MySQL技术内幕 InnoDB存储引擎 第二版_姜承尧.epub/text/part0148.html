@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>8.2　冷备</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4D4J80-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">8.2　冷备</h2>
+
+  <p class="ziti3">对于InnoDB存储引擎的冷备非常简单，只需要备份MySQL数据库的frm文件，共享表空间文件，独立表空间文件（*.ibd），重做日志文件。另外建议定期备份MySQL数据库的配置文件my.cnf，这样有利于恢复的操作。</p>
+
+  <p class="ziti3">通常DBA会写一个脚本来进行冷备的操作，DBA可能还会对备份完的数据库进行打包和压缩，这都并不是难事。关键在于不要遗漏原本需要备份的物理文件，如共享表空间和重做日志文件，少了这些文件可能数据库都无法启动。另外一种经常发生的情况是由于磁盘空间已满而导致的备份失败，DBA可能习惯性地认为运行脚本的备份是没有问题的，少了检验的机制。</p>
+
+  <p class="ziti3">正如前面所说的，在同一台机器上对数据库进行冷备是远远不够的，至少还需要将本地产生的备份存放到一台远程的服务器中，确保不会因为本地数据库的宕机而影响备份文件的使用。</p>
+
+  <p class="ziti3">冷备的优点是：</p>
+
+  <p class="ziti3">❑备份简单，只要复制相关文件即可。</p>
+
+  <p class="ziti3">❑备份文件易于在不同操作系统，不同MySQL版本上进行恢复。</p>
+
+  <p class="ziti3">❑恢复相当简单，只需要把文件恢复到指定位置即可。</p>
+
+  <p class="ziti3">❑恢复速度快，不需要执行任何SQL语句，也不需要重建索引。</p>
+
+  <p class="ziti3">冷备的缺点是：</p>
+
+  <p class="ziti3">❑InnoDB存储引擎冷备的文件通常比逻辑文件大很多，因为表空间中存放着很多其他的数据，如undo段，插入缓冲等信息。</p>
+
+  <p class="ziti3">❑冷备也不总是可以轻易地跨平台。操作系统、MySQL的版本、文件大小写敏感和浮点数格式都会成为问题。</p>
+</body></html>

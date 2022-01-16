@@ -1,0 +1,39 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.8.2　倒排索引</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="36VSO0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.8.2　倒排索引</h3>
+
+  <p class="ziti3">全文检索通常使用倒排索引（inverted index）来实现。倒排索引同B+树索引一样，也是一种索引结构。它在辅助表（auxiliary table）中存储了单词与单词自身在一个或多个文档中所在位置之间的映射。这通常利用关联数组实现，其拥有两种表现形式：</p>
+
+  <p class="ziti3">❑inverted file index，其表现形式为{单词，单词所在文档的ID}</p>
+
+  <p class="ziti3">❑full invertedindex，其表现形式为{单词，(单词所在文档的ID，在具体文档中的位置)}</p>
+
+  <p class="ziti3">例如，对于下面这个例子，表t存储的内容如表5-6所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00075.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">DocumentId表示进行全文检索文档的Id，Text表示存储的内容，用户需要对存储的这些文档内容进行全文检索。例如，查找出现过Some单词的文档Id，又或者查找单个文档中出现过两个Some单词的文档Id，等等。</p>
+
+  <p class="ziti3">对于inverted file index的关联数组，其存储的内容如表5-7所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00076.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">可以看到单词code存在于文档1和4中，单词days存在与文档3和6中。之后再要进行全文查询就简单了，可以直接根据Documents得到包含查询关键字的文档。对于inverted file index，其仅存取文档Id，而full inverted index存储的是对(pair)，即(DocumentId，Position)，因此其存储的倒排索引如表5-8所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00077.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">full inverted index还存储了单词所在的位置信息，如code这个单词出现在（1∶6），即文档1的第6个单词为code。相比之下，full inverted index占用更多的空间，但是能更好地定位数据，并扩充一些其他的搜索特性。</p>
+</body></html>

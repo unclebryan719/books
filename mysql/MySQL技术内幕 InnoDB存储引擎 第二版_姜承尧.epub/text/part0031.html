@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>2.5.3　InnoDB 1.2.x版本的Master Thread</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="TI1E0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">2.5.3　InnoDB 1.2.x版本的Master Thread</h3>
+
+  <p class="ziti3">在InnoDB 1.2.x版本中再次对Master Thread进行了优化，由此也可以看出Master Thread对性能所起到的关键作用。在InnoDB 1.2.x版本中，Master Thread的伪代码如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">if InnoDB is idle</p>
+
+  <p class="ziti4">srv_master_do_idle_tasks();</p>
+
+  <p class="ziti4">else</p>
+
+  <p class="ziti4">srv_master_do_active_tasks();</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">其中srv_master_do_idle_tasks()就是之前版本中每10秒的操作，srv_master_do_active_tasks()处理的是之前每秒中的操作。同时对于刷新脏页的操作，从Master Thread线程分离到一个单独的Page Cleaner Thread，从而减轻了Master Thread的工作，同时进一步提高了系统的并发性。</p>
+</body></html>

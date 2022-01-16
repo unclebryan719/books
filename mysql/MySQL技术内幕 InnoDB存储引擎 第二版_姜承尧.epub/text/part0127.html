@@ -1,0 +1,99 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.7.3　死锁的示例</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3P3NE0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">6.7.3　死锁的示例</h3>
+
+  <p class="ziti3">如果程序是串行的，那么不可能发生死锁。死锁只存在于并发的情况，而数据库本身就是一个并发运行的程序，因此可能会发生死锁。表6-18的操作演示了死锁的一种经典的情况，即A等待B，B在等待A，这种死锁问题被称为AB-BA死锁。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00107.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">在上述操作中，会话B中的事务抛出了1213这个错误提示，即表示事务发生了死锁。死锁的原因是会话A和B的资源在互相等待。大多数的死锁InnoDB存储引擎本身可以侦测到，不需要人为进行干预。但是在上面的例子中，在会话B中的事务抛出死锁异常后，会话A中马上得到了记录为2的这个资源，这其实是因为会话B中的事务发生了回滚，否则会话A中的事务是不可能得到该资源的。还记得6.6节中所说的内容吗？InnoDB存储引擎并不会回滚大部分的错误异常，但是死锁除外。发现死锁后，InnoDB存储引擎会马上回滚一个事务，这点是需要注意的。因此如果在应用程序中捕获了1213这个错误，其实并不需要对其进行回滚。</p>
+
+  <p class="ziti3">Oracle数据库中产生死锁的常见原因是没有对外键添加索引，而InnoDB存储引擎会自动对其进行添加，因而能够很好地避免了这种情况的发生。而人为删除外键上的索引，MySQL数据库会抛出一个异常：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE p(</p>
+
+  <p class="ziti4">-＞aINT,</p>
+
+  <p class="ziti4">-＞PRIMARY KEY(a)</p>
+
+  <p class="ziti4">-＞)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞CREATE TABLE c(</p>
+
+  <p class="ziti4">-＞bINT,</p>
+
+  <p class="ziti4">-＞FOREIGH KEY(b)REFERENCES p(a)</p>
+
+  <p class="ziti4">-＞)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW INDEX FROM c\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Table:c</p>
+
+  <p class="ziti4">Non_unique:1</p>
+
+  <p class="ziti4">Key_name:b</p>
+
+  <p class="ziti4">Seq_in_index:1</p>
+
+  <p class="ziti4">Column_name:b</p>
+
+  <p class="ziti4">Collation:A</p>
+
+  <p class="ziti4">Cardinality:0</p>
+
+  <p class="ziti4">Sub_part:NULL</p>
+
+  <p class="ziti4">Packed:NULL</p>
+
+  <p class="ziti4">Null:YES</p>
+
+  <p class="ziti4">Index_type:BTREE</p>
+
+  <p class="ziti4">Comment:</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞DROP INDEX b ON c;</p>
+
+  <p class="ziti4">ERROR 1553(HY000):Cannot drop index'b':needed in a foreign key constraint</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过上述例子可以看到，虽然在建立子表时指定了外键，但是InnoDB存储引擎会自动在外键列上建立了一个索引b。并且，人为地删除这个列是不被允许的。</p>
+
+  <p class="ziti3">此外还存在另一种死锁，即当前事务持有了待插入记录的下一个记录的X锁，但是在等待队列中存在一个S锁的请求，则可能会发生死锁。来看一个例子，首先根据如下代码创建测试表t，并导入一些数据：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE t(</p>
+
+  <p class="ziti4">a INT PRIMARY KEY</p>
+
+  <p class="ziti4">)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">INSERT INTO t VALUES(1),(2),(4),(5);</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">表t仅有一个列a，并插入4条记录。接着运行表6-19所示的查询。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00108.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">可以看到，会话A中已经对记录4持有了X锁，但是会话A中插入记录3时会导致死锁发生。这个问题的产生是由于会话B中请求记录4的S锁而发生等待，但之前请求的锁对于主键值记录1、2都已经成功，若在事件点5能插入记录，那么会话B在获得记录4持有的S锁后，还需要向后获得记录3的记录，这样就显得有点不合理。因此InnoDB存储引擎在这里主动选择了死锁，而回滚的是undo log记录大的事务，这与AB-BA死锁的处理方式又有所不同。</p>
+</body></html>

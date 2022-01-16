@@ -1,0 +1,411 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>8.3　逻辑备份</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4E33Q0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">8.3　逻辑备份</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>8.3.1　mysqldump</h3>
+
+  <p class="ziti3">mysqldump备份工具最初由Igor Romanenko编写完成，通常用来完成转存（dump）数据库的备份及不同数据库之间的移植，如从MySQL低版本数据库升级到MySQL高版本数据库，又或者从MySQL数据库移植到Oracle、Microsoft SQL Server数据库等。</p>
+
+  <p class="ziti3">mysqldump的语法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">shell＞mysqldump[arguments]＞fle_name</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果想要备份所有的数据库，可以使用--all-databases选项：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">shell＞mysqldump--all-databases＞dump.sql</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果想要备份指定的数据库，可以使用--databases选项:</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">shell＞mysqldump--databases db1 db2 db3＞dump.sql</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果想要对test这个架构进行备份，可以使用如下语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#mysqldump--single-transaction test＞test_backup.sql</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述操作产生了一个对test架构的备份，使用--single-transaction选项来保证备份的一致性。备份出的test_backup.sql是文本文件，通过文本查看命令cat就可以得到文件的内容：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#cattest_backup.sql</p>
+
+  <p class="ziti4">--MySQL dump 10.13 Distrib 5.5.1-m2,for unknown-linux-gnu(x86_64)</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Host:localhost Database:test</p>
+
+  <p class="ziti4">--------------------------------------------------------</p>
+
+  <p class="ziti4">--Server version 5.5.1-m2-log</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Table structure for table'a'</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">DROP TABLE IF EXISTS'a';</p>
+
+  <p class="ziti4">/*!40101 SET@saved_cs_client=@@character_set_client*/;</p>
+
+  <p class="ziti4">/*!40101 SET character_set_client=utf8*/;</p>
+
+  <p class="ziti4">CREATE TABLE'a'(</p>
+
+  <p class="ziti4">'b'int(11)NOT NULL DEFAULT'0',</p>
+
+  <p class="ziti4">PRIMARY KEY('b')</p>
+
+  <p class="ziti4">)ENGINE=InnoDB DEFAULT CHARSET=latin1;</p>
+
+  <p class="ziti4">/*!40101 SET character_set_client=@saved_cs_client*/;</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Dumping data for table'a'</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">LOCK TABLES'a'WRITE;</p>
+
+  <p class="ziti4">/*!40000 ALTER TABLE'a'DISABLE KEYS*/;</p>
+
+  <p class="ziti4">INSERT INTO'a'VALUES(1),(2),(4),(5);</p>
+
+  <p class="ziti4">/*!40000 ALTER TABLE'a'ENABLE KEYS*/;</p>
+
+  <p class="ziti4">UNLOCK TABLES;</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Table structure for table'z'</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">DROP TABLE IF EXISTS'z';</p>
+
+  <p class="ziti4">/*!40101 SET@saved_cs_client=@@character_set_client*/;</p>
+
+  <p class="ziti4">/*!40101 SET character_set_client=utf8*/;</p>
+
+  <p class="ziti4">CREATE TABLE'z'(</p>
+
+  <p class="ziti4">'a'int(11)DEFAULT NULL</p>
+
+  <p class="ziti4">)ENGINE=InnoDB DEFAULT CHARSET=latin1;</p>
+
+  <p class="ziti4">/*!40101 SET character_set_client=@saved_cs_client*/;</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Dumping data for table'z'</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">LOCK TABLES'z'WRITE;</p>
+
+  <p class="ziti4">/*!40000 ALTER TABLE'z'DISABLE KEYS*/;</p>
+
+  <p class="ziti4">INSERT INTO'z'VALUES(1),(1);</p>
+
+  <p class="ziti4">/*!40000 ALTER TABLE'z'ENABLE KEYS*/;</p>
+
+  <p class="ziti4">UNLOCK TABLES;</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">--Dump completed on 2010-08-03 13:36:17</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，备份出的文件内容就是表结构和数据，所有这些都是用SQL语句方式表示。文件开始和结束的注释部分是用来设置MySQL数据库的各项参数，一般用来使还原工作更有效和准确地进行。之后的部分先是CREATE TABLE语句，接着就是INSERT的SQL语句了。</p>
+
+  <p class="ziti3">mysqldump的参数选项很多，可以通过使用mysqldump--help命令来查看所有的参数，有些参数有缩写形式，如--lock-tables的缩写形式-l。这里列举一些比较重要的参数。</p>
+
+  <p class="ziti3">❑--single-transaction：在备份开始前，先执行START TRANSACTION命令，以此来获得备份的一致性，当前该参数只对InnoDB存储引擎有效。当启用该参数并进行备份时，确保没有其他任何的DDL语句执行，因为一致性读并不能隔离DDL操作。</p>
+
+  <p class="ziti3">❑--lock-tables（-l）：在备份中，依次锁住每个架构下的所有表。一般用于MyISAM存储引擎，当备份时只能对数据库进行读取操作，不过备份依然可以保证一致性。对于InnoDB存储引擎，不需要使用该参数，用--single-transaction即可。并且--lock-tables和--single-transaction是互斥（exclusive）的，不能同时使用。如果用户的MySQL数据库中，既有MyISAM存储引擎的表，又有InnoDB存储引擎的表，那么这时用户的选择只有--lock-tables了。此外，正如前面所说的那样，--lock-tables选项是依次对每个架构中的表上锁的，因此只能保证每个架构下表备份的一致性，而不能保证所有架构下表的一致性。</p>
+
+  <p class="ziti3">❑--lock-all-tables（-x）：在备份过程中，对所有架构中的所有表上锁。这个可以避免之前说的--lock-tables参数不能同时锁住所有表的问题。</p>
+
+  <p class="ziti3">❑--add-drop-database：在CREATE DATABASE前先运行DROP DATABASE。这个参数需要和--all-databases或者--databases选项一起使用。在默认情况下，导出的文本文件中并不会有CREATE DATABASE，除非指定了这个参数，因此可能会看到如下的内容：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#mysqldump--single-transaction--add-drop-database--databases test＞test_backup.sql</p>
+
+  <p class="ziti4">[root@xen-server～]#cat test_backup.sql</p>
+
+  <p class="ziti4">--MySQL dump 10.13 Distrib 5.5.1-m2,for unknown-linux-gnu(x86_64)</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Current Database:'test'</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">/*!40000 DROP DATABASE IF EXISTS'test'*/;</p>
+
+  <p class="ziti4">CREATE DATABASE/*!32312 IF NOT EXISTS*/'test'/*!40100 DEFAULT CHARACTER SET latin1*/;</p>
+
+  <p class="ziti4">USE'test';</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">❑--master-data[=value]：通过该参数产生的备份转存文件主要用来建立一个replication。当value的值为1时，转存文件中记录CHANGE MASTER语句。当value的值为2时，CHANGE MASTER语句被写出SQL注释。在默认情况下，value的值为空。当value值为1时，在备份文件中会看到：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#mysqldump--single-transaction--add-drop-database--master-data=1--databases test＞test_backup.sql</p>
+
+  <p class="ziti4">[root@xen-server～]#cat test_backup.sql</p>
+
+  <p class="ziti4">--MySQL dump 10.13 Distrib 5.5.1-m2,for unknown-linux-gnu(x86_64)</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Host:localhost Database:test</p>
+
+  <p class="ziti4">--------------------------------------------------------</p>
+
+  <p class="ziti4">--Server version 5.5.1-m2-log</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Position to start replication or point-in-time recovery from</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">CHANGE MASTER TO MASTER_LOG_FILE='xen-server-bin.000006',MASTER_LOG_POS=8095;</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">当value为2时，在备份文件中会看到CHANGE MASTER语句被注释了：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#mysqldump--single-transaction--add-drop-database--master-data=2--databases test＞test_backup.sql</p>
+
+  <p class="ziti4">[root@xen-server～]#cat test_backup.sql</p>
+
+  <p class="ziti4">--MySQL dump 10.13 Distrib 5.5.1-m2,for unknown-linux-gnu(x86_64)</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Host:localhost Database:test</p>
+
+  <p class="ziti4">--------------------------------------------------------</p>
+
+  <p class="ziti4">--Server version 5.5.1-m2-log</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Position to start replication or point-in-time recovery from</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">❑--master-data会自动忽略--lock-tables选项。如果没有使用--single-transaction选项，则会自动使用--lock-all-tables选项。</p>
+
+  <p class="ziti3">❑--events（-E）：备份事件调度器。</p>
+
+  <p class="ziti3">❑--routines（-R）：备份存储过程和函数。</p>
+
+  <p class="ziti3">❑--triggers：备份触发器。</p>
+
+  <p class="ziti3">❑--hex-blob：将BINARY、VARBINARY、BLOG和BIT列类型备份为十六进制的格式。mysqldump导出的文件一般是文本文件，但是如果导出的数据中有上述这些类型，在文本文件模式下可能有些字符不可见，若添加--hex-blob选项，结果会以十六进制的方式显示，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#mysqldump--single-transaction--add-drop-database--master-data=2--no-autocommit--databases test3＞test3_backup.sql</p>
+
+  <p class="ziti4">[root@xen-server～]#cat test3_backup.sql</p>
+
+  <p class="ziti4">--MySQL dump 10.13 Distrib 5.5.1-m2,for unknown-linux-gnu(x86_64)</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Host:localhost Database:test3</p>
+
+  <p class="ziti4">--------------------------------------------------------</p>
+
+  <p class="ziti4">--Server version 5.5.1-m2-log</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">LOCK TABLES'a'WRITE;</p>
+
+  <p class="ziti4">/*!40000 ALTER TABLE'a'DISABLE KEYS*/;</p>
+
+  <p class="ziti4">setautocommit=0;</p>
+
+  <p class="ziti4">INSERT INTO'a'VALUES(0x61000000000000000000);</p>
+
+  <p class="ziti4">/*!40000 ALTER TABLE'a'ENABLE KEYS*/;</p>
+
+  <p class="ziti4">UNLOCK TABLES;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，这里用0x61000000000000000000的十六进制的格式来导出数据。</p>
+
+  <p class="ziti3">❑--tab=path（-T path）：产生TAB分割的数据文件。对于每张表，mysqldump创建一个包含CREATE TABLE语句的table_name.sql文件，和包含数据的tbl_name.txt文件。可以使用--fields-terminated-by=...，--fields-enclosed-by=...，--fields-optionally-enclosed-by=...，--fields-escaped-by=...，--lines-terminated-by=...来改变默认的分割符、换行符等。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server test]#mysqldump--single-transaction--add-drop-database--tab="/usr/local/mysql/data/test"test</p>
+
+  <p class="ziti4">[root@xen-server test]#ls-lh</p>
+
+  <p class="ziti4">total 244K</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 8.4K Jul 21 16:02 a.frm</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Jul 22 17:18 a.ibd</p>
+
+  <p class="ziti4">-rw-r--r--1 root root 1.3K Aug 3 15:36 a.sql</p>
+
+  <p class="ziti4">-rw-rw-rw-1 mysql mysql 8 Aug 3 15:36 a.txt</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 65 Jul 17 15:54 db.opt</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 8.4K Aug 2 17:22 z.frm</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 2 17:22 z.ibd</p>
+
+  <p class="ziti4">-rw-r--r--1 root root 1.3K Aug 3 15:36 z.sql</p>
+
+  <p class="ziti4">-rw-rw-rw-1 mysql mysql 4 Aug 3 15:36 z.txt</p>
+
+  <p class="ziti4">-----------</p>
+
+  <p class="ziti4">--Server version 5.5.1-m2-log</p>
+
+  <p class="ziti4">/*!40101 SET@OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT*/;</p>
+
+  <p class="ziti4">/*!40101 SET@OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS*/;</p>
+
+  <p class="ziti4">/*!40101 SET@OLD_COLLATION_CONNECTION=@@COLLATION_CONNECTION*/;</p>
+
+  <p class="ziti4">/*!40101 SET NAMES utf8*/;</p>
+
+  <p class="ziti4">/*!40103 SET@OLD_TIME_ZONE=@@TIME_ZONE*/;</p>
+
+  <p class="ziti4">/*!40103 SET TIME_ZONE='+00:00'*/;</p>
+
+  <p class="ziti4">/*!40101 SET@OLD_SQL_MODE=@@SQL_MODE,SQL_MODE=''*/;</p>
+
+  <p class="ziti4">/*!40111 SET@OLD_SQL_NOTES=@@SQL_NOTES,SQL_NOTES=0*/;</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Table structure for table'a'</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">DROP TABLE IF EXISTS'a';</p>
+
+  <p class="ziti4">/*!40101 SET@saved_cs_client=@@character_set_client*/;</p>
+
+  <p class="ziti4">/*!40101 SET character_set_client=utf8*/;</p>
+
+  <p class="ziti4">CREATE TABLE'a'(</p>
+
+  <p class="ziti4">'b'int(11)NOT NULL DEFAULT'0',</p>
+
+  <p class="ziti4">PRIMARY KEY('b')</p>
+
+  <p class="ziti4">)ENGINE=InnoDB DEFAULT CHARSET=latin1;</p>
+
+  <p class="ziti4">/*!40101 SET character_set_client=@saved_cs_client*/;</p>
+
+  <p class="ziti4">/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE*/;</p>
+
+  <p class="ziti4">/*!40101 SET SQL_MODE=@OLD_SQL_MODE*/;</p>
+
+  <p class="ziti4">/*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT*/;</p>
+
+  <p class="ziti4">/*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS*/;</p>
+
+  <p class="ziti4">/*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION*/;</p>
+
+  <p class="ziti4">/*!40111 SET SQL_NOTES=@OLD_SQL_NOTES*/;</p>
+
+  <p class="ziti4">--Dump completed on 2010-08-03 15:36:56</p>
+
+  <p class="ziti4">[root@xen-server test]#cat a.txt</p>
+
+  <p class="ziti4">1</p>
+
+  <p class="ziti4">2</p>
+
+  <p class="ziti4">4</p>
+
+  <p class="ziti4">5</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">我发现大多数DBA喜欢用SELECT...INTO OUTFILE的方式来导出一张表，但是通过mysqldump一样可以完成工作，而且可以一次完成多张表的导出，并且实现导出数据的一致性。</p>
+
+  <p class="ziti3">❑--where='where_condition'（-w'where_condition'）：导出给定条件的数据。如导出b架构下的表a，并且表a的数据大于2：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server bin]#mysqldump--single-transaction--where='b＞2'test a＞a.sql</p>
+
+  <p class="ziti4">[root@xen-server bin]#cat a.sql</p>
+
+  <p class="ziti4">--MySQL dump 10.13 Distrib 5.5.1-m2,for unknown-linux-gnu(x86_64)</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Host:localhost Database:test</p>
+
+  <p class="ziti4">--------------------------------------------------------</p>
+
+  <p class="ziti4">--Server version 5.5.1-m2-log</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--Dumping data for table'a'</p>
+
+  <p class="ziti4">--</p>
+
+  <p class="ziti4">--WHERE:b＞2</p>
+
+  <p class="ziti4">LOCK TABLES'a'WRITE;</p>
+
+  <p class="ziti4">/*!40000 ALTER TABLE'a'DISABLE KEYS*/;</p>
+
+  <p class="ziti4">INSERT INTO'a'VALUES(4),(5);</p>
+
+  <p class="ziti4">/*!40000 ALTER TABLE'a'ENABLE KEYS*/;</p>
+
+  <p class="ziti4">UNLOCK TABLES;</p>
+
+  <p class="ziti4">/*!40103 SET TIME_ZONE=@OLD_TIME_ZONE*/;</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+</body></html>

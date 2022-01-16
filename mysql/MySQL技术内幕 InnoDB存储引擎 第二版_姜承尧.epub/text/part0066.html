@@ -1,0 +1,19 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.4.5　Page Directory</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1UU540-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.4.5　Page Directory</h3>
+
+  <p class="ziti3">Page Directory（页目录）中存放了记录的相对位置（注意，这里存放的是页相对位置，而不是偏移量），有些时候这些记录指针称为Slots（槽）或目录槽（Directory Slots）。与其他数据库系统不同的是，在InnoDB中并不是每个记录拥有一个槽，InnoDB存储引擎的槽是一个稀疏目录（sparse directory），即一个槽中可能包含多个记录。伪记录Infimum的n_owned值总是为1，记录Supremum的n_owned的取值范围为[1，8]，其他用户记录n_owned的取值范围为[4，8]。当记录被插入或删除时需要对槽进行分裂或平衡的维护操作。</p>
+
+  <p class="ziti3">在Slots中记录按照索引键值顺序存放，这样可以利用二叉查找迅速找到记录的指针。假设有（'i'，'d'，'c'，'b'，'e'，'g'，'l'，'h'，'f'，'j'，'k'，'a'），同时假设一个槽中包含4条记录，则Slots中的记录可能是（'a'，'e'，'i'）。</p>
+
+  <p class="ziti3">由于在InnoDB存储引擎中Page Direcotry是稀疏目录，二叉查找的结果只是一个粗略的结果，因此InnoDB存储引擎必须通过recorder header中的next_record来继续查找相关记录。同时，Page Directory很好地解释了recorder header中的n_owned值的含义，因为这些记录并不包括在Page Directory中。</p>
+
+  <p class="ziti3">需要牢记的是，B+树索引本身并不能找到具体的一条记录，能找到只是该记录所在的页。数据库把页载入到内存，然后通过Page Directory再进行二叉查找。只不过二叉查找的时间复杂度很低，同时在内存中的查找很快，因此通常忽略这部分查找所用的时间。</p>
+</body></html>

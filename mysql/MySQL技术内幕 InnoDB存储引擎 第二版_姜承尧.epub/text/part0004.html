@@ -1,0 +1,23 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>第1版与第2版的区别</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3Q280-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">第1版与第2版的区别</h2>
+
+  <p class="ziti3">本书是第2版，在写作中吸收了读者对上一版内容的许多意见和建议，同时对于最新MySQL 5.6中许多关于InnoDB存储引擎的部分进行了详细的解析与介绍。希望通过这些改进，给读者一个从应用到设计再到实现的完整理解，弥补上一版中深度有余，内容层次不够丰富、分析手法单一等诸多不足。</p>
+
+  <p class="ziti3">较第1版而言，第2版的改动非常大，基本上重写了50%的内容。其主要体现在以下几个方面，希望读者能够在阅读中体会到。</p>
+
+  <p class="ziti3">❑本书增加了对最新MySQL 5.6中的InnoDB存储引擎特性的介绍。MySQL 5.6版本是有史以来最大的一次更新，InnoDB存储引擎更是添加了许多功能，如多线程清理线程、全文索引、在线索引添加、独立回滚段、非递归死锁检测、新的刷新算法、新的元数据表等。读者通过本书可以知道如何使用这些特性、新特性存在的局限性，并明白新功能与老版本InnoDB存储引擎之间实现的区别，从而在实际应用中充分利用这些特性。</p>
+
+  <p class="ziti3">❑根据读者的要求对于InnoDB存储引擎的redo日志和undo日志进行了详细的分析。读者应该能更好地理解InnoDB存储引擎事务的实现。在undo日志分析中，通过InnoSQL自带的元数据表，用户终于可对undo日志进行统计和分析，极大提高了DBA对于InnoDB存储引擎内部的认知。</p>
+
+  <p class="ziti3">❑对第6章进行大幅度的重写，读者可以更好地理解InnoDB存储引擎特有的next-key locking算法，并且通过分析锁的实现来了解死锁可能产生的情况，以及InnoDB存储引擎内部是如何来避免死锁问题的产生的。</p>
+
+  <p class="ziti3">❑根据读者的反馈，对InnoDB存储引擎的insert buffer模块实现进行了更为详细的介绍，读者可以了解其使用方法以及其内部的实现原理。此外还增加了对insert buffer的升级版本功能——change buffer的介绍。</p>
+</body></html>

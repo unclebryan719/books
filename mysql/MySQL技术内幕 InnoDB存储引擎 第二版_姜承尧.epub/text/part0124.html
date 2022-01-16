@@ -1,0 +1,133 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>6.6　阻塞</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3M85O0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">6.6　阻塞</h2>
+
+  <p class="ziti3">因为不同锁之间的兼容性关系，在有些时刻一个事务中的锁需要等待另一个事务中的锁释放它所占用的资源，这就是阻塞。阻塞并不是一件坏事，其是为了确保事务可以并发且正常地运行。</p>
+
+  <p class="ziti3">在InnoDB存储引擎中，参数innodb_lock_wait_timeout用来控制等待的时间（默认是50秒），innodb_rollback_on_timeout用来设定是否在等待超时时对进行中的事务进行回滚操作（默认是OFF，代表不回滚）。参数innodb_lock_wait_timeout是动态的，可以在MySQL数据库运行时进行调整：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET@@innodb_lock_wait_timeout=60;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">而innodb_rollback_on_timeout是静态的，不可在启动时进行修改，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET@@innodb_rollback_on_timeout=on;</p>
+
+  <p class="ziti4">ERROR 1238(HY000):Variable'innodb_rollback_on_timeout'is a read only variable</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">当发生超时，MySQL数据库会抛出一个1205的错误，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t WHERE a=1 FORUPDATE;</p>
+
+  <p class="ziti4">ERROR 1205(HY000):Lock wait timeout exceeded;try restarting transaction</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">需要牢记的是，在默认情况下InnoDB存储引擎不会回滚超时引发的错误异常。其实InnoDB存储引擎在大部分情况下都不会对异常进行回滚。如在一个会话中执行了如下语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#会话A</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t;</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">|a|</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">|1|</p>
+
+  <p class="ziti4">|2|</p>
+
+  <p class="ziti4">|4|</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">3 rows in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM t WHERE a＜4 FOR UPDATE;</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">|a|</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">|1|</p>
+
+  <p class="ziti4">|2|</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在会话A中开启了一个事务，在Next-Key Lock算法下锁定了小于4的所有记录（其实也锁定了4这个记录本身）。在另一个会话B中执行如下语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#会话B</p>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT 5;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERTINTO t SELECT 3;</p>
+
+  <p class="ziti4">ERROR 1205(HY000):Lock wait timeout exceeded;try restarting transaction</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，在会话B中插入记录5是可以的，但是在插入记录3时，因为会话A中Next-Key Lock算法的关系，需要等待会话A中事务释放这个资源，所以等待后产生了超时。但是在超时后用户再进行SELECT操作时会发现，5这个记录依然存在：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM t;</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">|a|</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">|1|</p>
+
+  <p class="ziti4">|2|</p>
+
+  <p class="ziti4">|4|</p>
+
+  <p class="ziti4">|5|</p>
+
+  <p class="ziti4">|8|</p>
+
+  <p class="ziti4">+---+</p>
+
+  <p class="ziti4">5 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这是因为这时会话B中的事务虽然抛出了异常，但是既没有进行COMMIT操作，也没有进行ROLLBACK。而这是十分危险的状态，因此用户必须判断是否需要COMMIT还是ROLLBACK，之后再进行下一步的操作。</p>
+</body></html>

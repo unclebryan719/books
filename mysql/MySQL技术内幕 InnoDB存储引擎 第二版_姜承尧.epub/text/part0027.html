@@ -1,0 +1,455 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>2.3.2　内存</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="PNV60-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">2.3.2　内存</h3>
+
+  <p class="yanse">1.缓冲池</p>
+
+  <p class="ziti3">InnoDB存储引擎是基于磁盘存储的，并将其中的记录按照页的方式进行管理。因此可将其视为基于磁盘的数据库系统（Disk-base Database）。在数据库系统中，由于CPU速度与磁盘速度之间的鸿沟，基于磁盘的数据库系统通常使用缓冲池技术来提高数据库的整体性能。</p>
+
+  <p class="ziti3">缓冲池简单来说就是一块内存区域，通过内存的速度来弥补磁盘速度较慢对数据库性能的影响。在数据库中进行读取页的操作，首先将从磁盘读到的页存放在缓冲池中，这个过程称为将页“FIX”在缓冲池中。下一次再读相同的页时，首先判断该页是否在缓冲池中。若在缓冲池中，称该页在缓冲池中被命中，直接读取该页。否则，读取磁盘上的页。</p>
+
+  <p class="ziti3">对于数据库中页的修改操作，则首先修改在缓冲池中的页，然后再以一定的频率刷新到磁盘上。这里需要注意的是，页从缓冲池刷新回磁盘的操作并不是在每次页发生更新时触发，而是通过一种称为Checkpoint的机制刷新回磁盘。同样，这也是为了提高数据库的整体性能。</p>
+
+  <p class="ziti3">综上所述，缓冲池的大小直接影响着数据库的整体性能。由于32位操作系统的限制，在该系统下最多将该值设置为3G。此外用户可以打开操作系统的PAE选项来获得32位操作系统下最大64GB内存的支持。随着内存技术的不断成熟，其成本也在不断下降。单条8GB的内存变得非常普遍，而PC服务器已经能支持512GB的内存。因此为了让数据库使用更多的内存，强烈建议数据库服务器都采用64位的操作系统。</p>
+
+  <p class="ziti3">对于InnoDB存储引擎而言，其缓冲池的配置通过参数innodb_buffer_pool_size来设置。下面显示一台MySQL数据库服务器，其将InnoDB存储引擎的缓冲池设置为15GB。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_buffer_pool_size'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_buffer_pool_size</p>
+
+  <p class="ziti4">Value:16106127360</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">具体来看，缓冲池中缓存的数据页类型有：索引页、数据页、undo页、插入缓冲（insert buffer）、自适应哈希索引（adaptive hash index）、InnoDB存储的锁信息（lock info）、数据字典信息（data dictionary）等。不能简单地认为，缓冲池只是缓存索引页和数据页，它们只是占缓冲池很大的一部分而已。图2-2很好地显示了InnoDB存储引擎中内存的结构情况。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00005.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　2-2　InnoDB内存数据对象
+  </div>
+
+  <p class="ziti3">从InnoDB 1.0.x版本开始，允许有多个缓冲池实例。每个页根据哈希值平均分配到不同缓冲池实例中。这样做的好处是减少数据库内部的资源竞争，增加数据库的并发处理能力。可以通过参数innodb_buffer_pool_instances来进行配置，该值默认为1。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_buffer_pool_instances'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_buffer_pool_instances</p>
+
+  <p class="ziti4">Value:1</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在配置文件中将innodb_buffer_pool_instances设置为大于1的值就可以得到多个缓冲池实例。再通过命令SHOW ENGINE INNODB STATUS可以观察到如下的内容：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Type:InnoDB</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">----------------------</p>
+
+  <p class="ziti4">INDIVIDUAL BUFFER POOL INFO</p>
+
+  <p class="ziti4">----------------------</p>
+
+  <p class="ziti4">---BUFFER POOL 0</p>
+
+  <p class="ziti4">Buffer pool size 65535</p>
+
+  <p class="ziti4">Free buffers 65451</p>
+
+  <p class="ziti4">Database pages 84</p>
+
+  <p class="ziti4">Old database pages 0</p>
+
+  <p class="ziti4">Modified db pages 0</p>
+
+  <p class="ziti4">Pending reads 0</p>
+
+  <p class="ziti4">Pending writes:LRU 0,flush list 0 single page 0</p>
+
+  <p class="ziti4">Pages made young 0,not young 0</p>
+
+  <p class="ziti4">0.00 youngs/s,0.00 non-youngs/s</p>
+
+  <p class="ziti4">Pages read 84,created 0,written 1</p>
+
+  <p class="ziti4">9.33 reads/s,0.00 creates/s,0.11 writes/s</p>
+
+  <p class="ziti4">Buffer pool hit rate 764/1000,young-making rate 0/1000 not 0/1000</p>
+
+  <p class="ziti4">Pages read ahead 0.00/s,evicted without access 0.00/s,Random read ahead 0.00/s</p>
+
+  <p class="ziti4">LRU len:84,unzip_LRU len:0</p>
+
+  <p class="ziti4">I/O sum[0]:cur[0],unzip sum[0]:cur[0]</p>
+
+  <p class="ziti4">---BUFFER POOL 1</p>
+
+  <p class="ziti4">Buffer pool size 65536</p>
+
+  <p class="ziti4">Free buffers 65473</p>
+
+  <p class="ziti4">Database pages 63</p>
+
+  <p class="ziti4">Old database pages 0</p>
+
+  <p class="ziti4">Modified db pages 0</p>
+
+  <p class="ziti4">Pending reads 0</p>
+
+  <p class="ziti4">Pending writes:LRU 0,flush list 0 single page 0</p>
+
+  <p class="ziti4">Pages made young 0,not young 0</p>
+
+  <p class="ziti4">0.00 youngs/s,0.00 non-youngs/s</p>
+
+  <p class="ziti4">Pages read 63,created 0,written 0</p>
+
+  <p class="ziti4">7.00 reads/s,0.00 creates/s,0.00 writes/s</p>
+
+  <p class="ziti4">Buffer pool hit rate 500/1000,young-making rate 0/1000 not 0/1000</p>
+
+  <p class="ziti4">Pages read ahead 0.00/s,evicted without access 0.00/s,Random read ahead 0.00/s</p>
+
+  <p class="ziti4">LRU len:63,unzip_LRU len:0</p>
+
+  <p class="ziti4">I/O sum[0]:cur[0],unzip sum[0]:cur[0]</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这里将参数innodb_buffer_pool_instances设置为2，即数据库用户拥有两个缓冲池实例。通过命令SHOW ENGINE INNODB STATUS可以观察到每个缓冲池实例对象运行的状态，并且通过类似---BUFFER POOL 0的注释来表明是哪个缓冲池实例。</p>
+
+  <p class="ziti3">从MySQL 5.6版本开始，还可以通过information_schema架构下的表INNODB_BUFFER_POOL_STATS来观察缓冲的状态，如运行下列命令可以看到各个缓冲池的使用状态：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT POOL_ID,POOL_SIZE,</p>
+
+  <p class="ziti4">-＞FREE_BUFFERS,DATABASE_PAGES</p>
+
+  <p class="ziti4">-＞FROM INNODB_BUFFER_POOL_STATS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">POOL_ID:0</p>
+
+  <p class="ziti4">POOL_SIZE:65535</p>
+
+  <p class="ziti4">FREE_BUFFERS:65451</p>
+
+  <p class="ziti4">DATABASE_PAGES:84</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">POOL_ID:1</p>
+
+  <p class="ziti4">POOL_SIZE:65536</p>
+
+  <p class="ziti4">FREE_BUFFERS:65473</p>
+
+  <p class="ziti4">DATABASE_PAGES:63</p>
+  <hr class="calibre2"/>
+
+  <p class="yanse">2.LRU List、Free List和Flush List</p>
+
+  <p class="ziti3">在前一小节中我们知道了缓冲池是一个很大的内存区域，其中存放各种类型的页。那么InnoDB存储引擎是怎么对这么大的内存区域进行管理的呢？这就是本小节要告诉读者的。</p>
+
+  <p class="ziti3">通常来说，数据库中的缓冲池是通过LRU（Latest Recent Used，最近最少使用）算法来进行管理的。即最频繁使用的页在LRU列表的前端，而最少使用的页在LRU列表的尾端。当缓冲池不能存放新读取到的页时，将首先释放LRU列表中尾端的页。</p>
+
+  <p class="ziti3">在InnoDB存储引擎中，缓冲池中页的大小默认为16KB，同样使用LRU算法对缓冲池进行管理。稍有不同的是InnoDB存储引擎对传统的LRU算法做了一些优化。在InnoDB的存储引擎中，LRU列表中还加入了midpoint位置。新读取到的页，虽然是最新访问的页，但并不是直接放入到LRU列表的首部，而是放入到LRU列表的midpoint位置。这个算法在InnoDB存储引擎下称为midpoint insertion strategy。在默认配置下，该位置在LRU列表长度的5/8处。midpoint位置可由参数innodb_old_blocks_pct控制，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_old_blocks_pct'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_old_blocks_pct</p>
+
+  <p class="ziti4">Value:37</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">从上面的例子可以看到，参数innodb_old_blocks_pct默认值为37，表示新读取的页插入到LRU列表尾端的37%的位置（差不多3/8的位置）。在InnoDB存储引擎中，把midpoint之后的列表称为old列表，之前的列表称为new列表。可以简单地理解为new列表中的页都是最为活跃的热点数据。</p>
+
+  <p class="ziti3">那为什么不采用朴素的LRU算法，直接将读取的页放入到LRU列表的首部呢？这是因为若直接将读取到的页放入到LRU的首部，那么某些SQL操作可能会使缓冲池中的页被刷新出，从而影响缓冲池的效率。常见的这类操作为索引或数据的扫描操作。这类操作需要访问表中的许多页，甚至是全部的页，而这些页通常来说又仅在这次查询操作中需要，并不是活跃的热点数据。如果页被放入LRU列表的首部，那么非常可能将所需要的热点数据页从LRU列表中移除，而在下一次需要读取该页时，InnoDB存储引擎需要再次访问磁盘。</p>
+
+  <p class="ziti3">为了解决这个问题，InnoDB存储引擎引入了另一个参数来进一步管理LRU列表，这个参数是innodb_old_blocks_time，用于表示页读取到mid位置后需要等待多久才会被加入到LRU列表的热端。因此当需要执行上述所说的SQL操作时，可以通过下面的方法尽可能使LRU列表中热点数据不被刷出。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET GLOBAL innodb_old_blocks_time=1000;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">#data or index scan operation</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">mysql＞SET GLOBAL innodb_old_blocks_time=0;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果用户预估自己活跃的热点数据不止63%，那么在执行SQL语句前，还可以通过下面的语句来减少热点页可能被刷出的概率。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET GLOBAL innodb_old_blocks_pct=20;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">LRU列表用来管理已经读取的页，但当数据库刚启动时，LRU列表是空的，即没有任何的页。这时页都存放在Free列表中。当需要从缓冲池中分页时，首先从Free列表中查找是否有可用的空闲页，若有则将该页从Free列表中删除，放入到LRU列表中。否则，根据LRU算法，淘汰LRU列表末尾的页，将该内存空间分配给新的页。当页从LRU列表的old部分加入到new部分时，称此时发生的操作为page made young，而因为innodb_old_blocks_time的设置而导致页没有从old部分移动到new部分的操作称为page not made young。可以通过命令SHOW ENGINE INNODB STATUS来观察LRU列表及Free列表的使用情况和运行状态。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Type:InnoDB</p>
+
+  <p class="ziti4">Name:</p>
+
+  <p class="ziti4">Status:</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">120725 22:04:25 INNODB MONITOR OUTPUT</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">Per second averages calculated from the last 24 seconds</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">Buffer pool size 327679</p>
+
+  <p class="ziti4">Free buffers 0</p>
+
+  <p class="ziti4">Database pages 307717</p>
+
+  <p class="ziti4">Old database pages 113570</p>
+
+  <p class="ziti4">Modified db pages 24673</p>
+
+  <p class="ziti4">Pending reads 0</p>
+
+  <p class="ziti4">Pending writes:LRU 0,flush list 0,single page 0</p>
+
+  <p class="ziti4">Pages made young 6448526,not young 0</p>
+
+  <p class="ziti4">48.75 youngs/s,0.00 non-youngs/s</p>
+
+  <p class="ziti4">Pages read 5354420,created 239625,written 3486063</p>
+
+  <p class="ziti4">55.68 reads/s,81.74 creates/s,955.88 writes/s</p>
+
+  <p class="ziti4">Buffer pool hit rate 1000/1000,young-making rate 0/1000 not 0/1000</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过命令SHOW ENGINE INNODB STATUS可以看到：当前Buffer pool size共有327 679个页，即327679*16K，总共5GB的缓冲池。Free buffers表示当前Free列表中页的数量，Database pages表示LRU列表中页的数量。可能的情况是Free buffers与Database pages的数量之和不等于Buffer pool size。正如图2-2所示的那样，因为缓冲池中的页还可能会被分配给自适应哈希索引、Lock信息、Insert Buffer等页，而这部分页不需要LRU算法进行维护，因此不存在于LRU列表中。</p>
+
+  <p class="ziti3">pages made young显示了LRU列表中页移动到前端的次数，因为该服务器在运行阶段没有改变innodb_old_blocks_time的值，因此not young为0。youngs/s、non-youngs/s表示每秒这两类操作的次数。这里还有一个重要的观察变量——Buffer pool hit rate，表示缓冲池的命中率，这个例子中为100%，说明缓冲池运行状态非常良好。通常该值不应该小于95%。若发生Buffer pool hit rate的值小于95%这种情况，用户需要观察是否是由于全表扫描引起的LRU列表被污染的问题。</p>
+
+  <p class="ziti3">注意　执行命令SHOW ENGINE INNODB STATUS显示的不是当前的状态，而是过去某个时间范围内InnoDB存储引擎的状态。从上面的例子可以发现，Per second averages calculated from the last 24 seconds代表的信息为过去24秒内的数据库状态。</p>
+
+  <p class="ziti3">从InnoDB 1.2版本开始，还可以通过表INNODB_BUFFER_POOL_STATS来观察缓冲池的运行状态，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT POOL_ID,HIT_RATE,</p>
+
+  <p class="ziti4">-＞PAGES_MADE_YOUNG,PAGES_NOT_MADE_YOUNG</p>
+
+  <p class="ziti4">-＞FROM information_schema.INNODB_BUFFER_POOL_STATS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">POOL_ID:0</p>
+
+  <p class="ziti4">HIT_RATE:980</p>
+
+  <p class="ziti4">PAGES_MADE_YOUNG:450</p>
+
+  <p class="ziti4">PAGES_NOT_MADE_YOUNG:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">此外，还可以通过表INNODB_BUFFER_PAGE_LRU来观察每个LRU列表中每个页的具体信息，例如通过下面的语句可以看到缓冲池LRU列表中SPACE为1的表的页类型：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT TABLE_NAME,SPACE,PAGE_NUMBER,PAGE_TYPE</p>
+
+  <p class="ziti4">-＞FROM INNODB_BUFFER_PAGE_LRU WHERE SPACE=1;</p>
+
+  <p class="ziti4">+------------+-------+-------------+-------------------+</p>
+
+  <p class="ziti4">|TABLE_NAME|SPACE|PAGE_NUMBER|PAGE_TYPE|</p>
+
+  <p class="ziti4">+------------+-------+-------------+-------------------+</p>
+
+  <p class="ziti4">|NULL|1|0|FILE_SPACE_HEADER|</p>
+
+  <p class="ziti4">|NULL|1|1|IBUF_BITMAP|</p>
+
+  <p class="ziti4">|NULL|1|2|INODE|</p>
+
+  <p class="ziti4">|test/t|1|3|INDEX|</p>
+
+  <p class="ziti4">+------------+-------+-------------+-------------------+</p>
+
+  <p class="ziti4">4 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">InnoDB存储引擎从1.0.x版本开始支持压缩页的功能，即将原本16KB的页压缩为1KB、2KB、4KB和8KB。而由于页的大小发生了变化，LRU列表也有了些许的改变。对于非16KB的页，是通过unzip_LRU列表进行管理的。通过命令SHOW ENGINE INNODB STATUS可以观察到如下内容：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">Buffer pool hit rate 999/1000,young-making rate 0/1000 not 0/1000</p>
+
+  <p class="ziti4">Pages read ahead 0.00/s,evicted without access 0.00/s,Random read ahead 0.00/s</p>
+
+  <p class="ziti4">LRU len:1539,unzip_LRU len:156</p>
+
+  <p class="ziti4">I/O sum[0]:cur[0],unzip sum[0]:cur[0]</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到LRU列表中一共有1539个页，而unzip_LRU列表中有156个页。这里需要注意的是，LRU中的页包含了unzip_LRU列表中的页。</p>
+
+  <p class="ziti3">对于压缩页的表，每个表的压缩比率可能各不相同。可能存在有的表页大小为8KB，有的表页大小为2KB的情况。unzip_LRU是怎样从缓冲池中分配内存的呢？</p>
+
+  <p class="ziti3">首先，在unzip_LRU列表中对不同压缩页大小的页进行分别管理。其次，通过伙伴算法进行内存的分配。例如对需要从缓冲池中申请页为4KB的大小，其过程如下：</p>
+
+  <p class="ziti3">1）检查4KB的unzip_LRU列表，检查是否有可用的空闲页；</p>
+
+  <p class="ziti3">2）若有，则直接使用；</p>
+
+  <p class="ziti3">3）否则，检查8KB的unzip_LRU列表；</p>
+
+  <p class="ziti3">4）若能够得到空闲页，将页分成2个4KB页，存放到4KB的unzip_LRU列表；</p>
+
+  <p class="ziti3">5）若不能得到空闲页，从LRU列表中申请一个16KB的页，将页分为1个8KB的页、2个4KB的页，分别存放到对应的unzip_LRU列表中。</p>
+
+  <p class="ziti3">同样可以通过information_schema架构下的表INNODB_BUFFER_PAGE_LRU来观察unzip_LRU列表中的页，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT</p>
+
+  <p class="ziti4">-＞TABLE_NAME,SPACE,PAGE_NUMBER,COMPRESSED_SIZE</p>
+
+  <p class="ziti4">-＞FROM INNODB_BUFFER_PAGE_LRU</p>
+
+  <p class="ziti4">-＞WHERE COMPRESSED_SIZE＜＞0;</p>
+
+  <p class="ziti4">+------------+-------+-------------+-----------------+</p>
+
+  <p class="ziti4">|TABLE_NAME|SPACE|PAGE_NUMBER|COMPRESSED_SIZE|</p>
+
+  <p class="ziti4">+------------+-------+-------------+-----------------+</p>
+
+  <p class="ziti4">|sbtest/t|9|134|8192|</p>
+
+  <p class="ziti4">|sbtest/t|9|135|8192|</p>
+
+  <p class="ziti4">|sbtest/t|9|96|8192|</p>
+
+  <p class="ziti4">|sbtest/t|9|136|8192|</p>
+
+  <p class="ziti4">|sbtest/t|9|32|8192|</p>
+
+  <p class="ziti4">|sbtest/t|9|97|8192|</p>
+
+  <p class="ziti4">|sbtest/t|9|137|8192|</p>
+
+  <p class="ziti4">|sbtest/t|9|98|8192|</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在LRU列表中的页被修改后，称该页为脏页（dirty page），即缓冲池中的页和磁盘上的页的数据产生了不一致。这时数据库会通过CHECKPOINT机制将脏页刷新回磁盘，而Flush列表中的页即为脏页列表。需要注意的是，脏页既存在于LRU列表中，也存在于Flush列表中。LRU列表用来管理缓冲池中页的可用性，Flush列表用来管理将页刷新回磁盘，二者互不影响。</p>
+
+  <p class="ziti3">同LRU列表一样，Flush列表也可以通过命令SHOW ENGINE INNODB STATUS来查看，前面例子中Modified db pages 24673就显示了脏页的数量。information_schema架构下并没有类似INNODB_BUFFER_PAGE_LRU的表来显示脏页的数量及脏页的类型，但正如前面所述的那样，脏页同样存在于LRU列表中，故用户可以通过元数据表INNODB_BUFFER_PAGE_LRU来查看，唯一不同的是需要加入OLDEST_MODIFICATION大于0的SQL查询条件，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT TABLE_NAME,SPACE,PAGE_NUMBER,PAGE_TYPE</p>
+
+  <p class="ziti4">-＞FROM INNODB_BUFFER_PAGE_LRU</p>
+
+  <p class="ziti4">-＞WHERE OLDEST_MODIFICATION＞0;</p>
+
+  <p class="ziti4">+------------+-------+-------------+-------------------+</p>
+
+  <p class="ziti4">|TABLE_NAME|SPACE|PAGE_NUMBER|PAGE_TYPE|</p>
+
+  <p class="ziti4">+------------+-------+-------------+-------------------+</p>
+
+  <p class="ziti4">|NULL|0|56|SYSTEM|</p>
+
+  <p class="ziti4">|NULL|0|0|FILE_SPACE_HEADER|</p>
+
+  <p class="ziti4">|test/t|1|3|INDEX|</p>
+
+  <p class="ziti4">|NULL|0|320|INODE|</p>
+
+  <p class="ziti4">|NULL|0|325|UNDO_LOG|</p>
+
+  <p class="ziti4">+------------+-------+-------------+-------------------+</p>
+
+  <p class="ziti4">5 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到当前共有5个脏页及它们对应的表和页的类型。TABLE_NAME为NULL表示该页属于系统表空间。</p>
+
+  <p class="yanse">3.重做日志缓冲</p>
+
+  <p class="ziti3">从图2-2可以看到，InnoDB存储引擎的内存区域除了有缓冲池外，还有重做日志缓冲（redo log buffer）。InnoDB存储引擎首先将重做日志信息先放入到这个缓冲区，然后按一定频率将其刷新到重做日志文件。重做日志缓冲一般不需要设置得很大，因为一般情况下每一秒钟会将重做日志缓冲刷新到日志文件，因此用户只需要保证每秒产生的事务量在这个缓冲大小之内即可。该值可由配置参数innodb_log_buffer_size控制，默认为8MB：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_log_buffer_size'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_log_buffer_size</p>
+
+  <p class="ziti4">Value:8388608</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在通常情况下，8MB的重做日志缓冲池足以满足绝大部分的应用，因为重做日志在下列三种情况下会将重做日志缓冲中的内容刷新到外部磁盘的重做日志文件中。</p>
+
+  <p class="ziti3">❑Master Thread每一秒将重做日志缓冲刷新到重做日志文件；</p>
+
+  <p class="ziti3">❑每个事务提交时会将重做日志缓冲刷新到重做日志文件；</p>
+
+  <p class="ziti3">❑当重做日志缓冲池剩余空间小于1/2时，重做日志缓冲刷新到重做日志文件。</p>
+
+  <p class="yanse">4.额外的内存池</p>
+
+  <p class="ziti3">额外的内存池通常被DBA忽略，他们认为该值并不十分重要，事实恰恰相反，该值同样十分重要。在InnoDB存储引擎中，对内存的管理是通过一种称为内存堆（heap）的方式进行的。在对一些数据结构本身的内存进行分配时，需要从额外的内存池中进行申请，当该区域的内存不够时，会从缓冲池中进行申请。例如，分配了缓冲池（innodb_buffer_pool），但是每个缓冲池中的帧缓冲（frame buffer）还有对应的缓冲控制对象（buffer control block），这些对象记录了一些诸如LRU、锁、等待等信息，而这个对象的内存需要从额外内存池中申请。因此，在申请了很大的InnoDB缓冲池时，也应考虑相应地增加这个值。</p>
+</body></html>

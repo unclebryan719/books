@@ -1,0 +1,33 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>3.2.3　查询日志</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="190860-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">3.2.3　查询日志</h3>
+
+  <p class="ziti3">查询日志记录了所有对MySQL数据库请求的信息，无论这些请求是否得到了正确的执行。默认文件名为：主机名.log。如查看一个查询日志：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nineyou0-43 data]#tail nineyou0-43.log</p>
+
+  <p class="ziti4">090925 11:00:24 44 Connect zlm@192.168.0.100 on</p>
+
+  <p class="ziti4">44 Query SET AUTOCOMMIT=0</p>
+
+  <p class="ziti4">44 Query set autocommit=0</p>
+
+  <p class="ziti4">44 Quit</p>
+
+  <p class="ziti4">090925 11:02:37 45 Connect Access denied for user'root'@'localhost'(using password:NO)</p>
+
+  <p class="ziti4">090925 11:03:51 46 Connect Access denied for user'root'@'localhost'(using password:NO)</p>
+
+  <p class="ziti4">090925 11:04:38 23 Query rollback</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过上述查询日志会发现，查询日志甚至记录了对Access denied的请求，即对于未能正确执行的SQL语句，查询日志也会进行记录。同样地，从MySQL 5.1开始，可以将查询日志的记录放入mysql架构下的general_log表中，该表的使用方法和前面小节提到的slow_log基本一样，这里不再赘述。</p>
+</body></html>

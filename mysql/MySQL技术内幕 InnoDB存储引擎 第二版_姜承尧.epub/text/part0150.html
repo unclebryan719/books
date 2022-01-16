@@ -1,0 +1,111 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>8.3.2　SELECT...INTO OUTFILE</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4F1KC0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">8.3.2　SELECT...INTO OUTFILE</h3>
+
+  <p class="ziti3">SELECT...INTO语句也是一种逻辑备份的方法，更准确地说是导出一张表中的数据。SELECT...INTO的语法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT[column 1],[column 2]...</p>
+
+  <p class="ziti4">INTO</p>
+
+  <p class="ziti4">OUTFILE'file_name'</p>
+
+  <p class="ziti4">[{FIELDS|COLUMNS}</p>
+
+  <p class="ziti4">[TERMINATED BY'string']</p>
+
+  <p class="ziti4">[[OPTIONALLY]ENCLOSED BY'char']</p>
+
+  <p class="ziti4">[ESCAPED BY'char']</p>
+
+  <p class="ziti4">]</p>
+
+  <p class="ziti4">[LINES</p>
+
+  <p class="ziti4">[STARTING BY'string']</p>
+
+  <p class="ziti4">[TERMINATED BY'string']</p>
+
+  <p class="ziti4">]</p>
+
+  <p class="ziti4">FROM TABLE WHERE......</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">其中FIELDS[TERMINATED BY'string']表示每个列的分隔符，[[OPTIONALLY]ENCLOSED BY'char']表示对于字符串的包含符，[ESCAPED BY'char']表示转义符。[STARTING BY'string']表示每行的开始符号，TERMINATED BY'string'表示每行的结束符号。如果没有指定任何的FIELDS和LINES的选项，默认使用以下的设置：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">FIELDS TERMINATED BY'\t'ENCLOSED BY''ESCAPED BY'\\'</p>
+
+  <p class="ziti4">LINES TERMINATED BY'\n'STARTING BY''</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">file_name表示导出的文件，但文件所在的路径的权限必须是mysql∶mysql的，否则MySQL会报没有权限导出：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞select*into outfile'/root/a.txt'from a;</p>
+
+  <p class="ziti4">ERROR 1(HY000):Can't create/write to file'/root/a.txt'(Errcode:13)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">若已经存在该文件，则同样会报错：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#mysql test-e"select*into outfile'/home/mysql/a.txt'fields terminated by','from a";</p>
+
+  <p class="ziti4">ERROR 1086(HY000)at line 1:File'/home/mysql/a.txt'already exists</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">查看通过SELECT INTO导出的表a文件：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞select*into outfile'/home/mysql/a.txt'from a;</p>
+
+  <p class="ziti4">Query OK,3 rows affected(0.02 sec)</p>
+
+  <p class="ziti4">mysql＞quit</p>
+
+  <p class="ziti4">Bye</p>
+
+  <p class="ziti4">[root@xen-server～]#cat/home/mysql/a.txt</p>
+
+  <p class="ziti4">1 a</p>
+
+  <p class="ziti4">2 b</p>
+
+  <p class="ziti4">3 c</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以发现，默认导出的文件是以TAB进行列分割的，如果想要使用其他分割符，如“，”，则可以使用FIELDS TERMINATED BY'string'选项，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#mysql test-e"select*into outfile'/home/mysql/a.txt'fields terminated by','from a";</p>
+
+  <p class="ziti4">[root@xen-server～]#cat/home/mysql/a.txt</p>
+
+  <p class="ziti4">1,a</p>
+
+  <p class="ziti4">2,b</p>
+
+  <p class="ziti4">3,c</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在Windows平台下，由于换行符是“\r\n”，因此在导出时可能需要指定LINES TERMINATED BY选项，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-servermysql]#mysql test-e"select*into outfile'/home/mysql/a.txt'fields terminated by','lines terminated by'\r\n'from a";</p>
+
+  <p class="ziti4">[root@xen-servermysql]#od-c a.txt</p>
+
+  <p class="ziti4">0000000 1,a\r\n 2,b\r\n 3,c\r\n</p>
+
+  <p class="ziti4">0000017</p>
+  <hr class="calibre2"/>
+</body></html>

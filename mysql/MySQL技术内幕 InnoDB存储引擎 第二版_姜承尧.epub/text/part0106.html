@@ -1,0 +1,57 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.7.3　自适应哈希索引</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="352RK0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.7.3　自适应哈希索引</h3>
+
+  <p class="ziti3">自适应哈希索引采用之前讨论的哈希表的方式实现。不同的是，这仅是数据库自身创建并使用的，DBA本身并不能对其进行干预。自适应哈希索引经哈希函数映射到一个哈希表中，因此对于字典类型的查找非常快速，如SELECT*FROM TABLE WHERE index_col='xxx'。但是对于范围查找就无能为力了。通过命令SHOW ENGINE INNODB STATUS可以看到当前自适应哈希索引的使用状况，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Status:</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">090922 11:52:51 INNODB MONITOR OUTPUT</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">Per second averages calculated from the last 15 seconds</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">-------------------------------------</p>
+
+  <p class="ziti4">INSERT BUFFER AND ADAPTIVE HASH INDEX</p>
+
+  <p class="ziti4">-------------------------------------</p>
+
+  <p class="ziti4">Ibuf:size 2249,free list len 3346,seg size 5596,</p>
+
+  <p class="ziti4">374650 inserts,51897 merged recs,14300 merges</p>
+
+  <p class="ziti4">Hash table size 4980499,node heap has 1246 buffer(s)</p>
+
+  <p class="ziti4">1640.60 hash searches/s,3709.46 non-hash searches/s</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">现在可以看到自适应哈希索引的使用信息了，包括自适应哈希索引的大小、使用情况、每秒使用自适应哈希索引搜索的情况。需要注意的是，哈希索引只能用来搜索等值的查询，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM table WHERE index_col='xxx'</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">而对于其他查找类型，如范围查找，是不能使用哈希索引的。因此，这里出现了non-hash searches/s的情况。通过hash searches:non-hash searches可以大概了解使用哈希索引后的效率。</p>
+
+  <p class="ziti3">由于自适应哈希索引是由InnoDB存储引擎自己控制的，因此这里的这些信息只供参考。不过可以通过参数innodb_adaptive_hash_index来禁用或启动此特性，默认为开启。</p>
+</body></html>

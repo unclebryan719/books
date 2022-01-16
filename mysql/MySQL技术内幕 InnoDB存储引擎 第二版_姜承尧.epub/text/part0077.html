@@ -1,0 +1,189 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.7　视图</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="29DRA0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">4.7　视图</h2>
+
+  <p class="ziti3">在MySQL数据库中，视图（View）是一个命名的虚表，它由一个SQL查询来定义，可以当做表使用。与持久表（permanent table）不同的是，视图中的数据没有实际的物理存储。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>4.7.1　视图的作用</h3>
+
+  <p class="ziti3">视图在数据库中发挥着重要的作用。视图的主要用途之一是被用做一个抽象装置，特别是对于一些应用程序，程序本身不需要关心基表（base table）的结构，只需要按照视图定义来取数据或更新数据，因此，视图同时在一定程度上起到一个安全层的作用。</p>
+
+  <p class="ziti3">MySQL数据库从5.0版本开始支持视图，创建视图的语法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE</p>
+
+  <p class="ziti4">[OR REPLACE]</p>
+
+  <p class="ziti4">[ALGORITHM={UNDEFINED|MERGE|TEMPTABLE}]</p>
+
+  <p class="ziti4">[DEFINER={user|CURRENT_USER}]</p>
+
+  <p class="ziti4">[SQL SECURITY{DEFINER|INVOKER}]</p>
+
+  <p class="ziti4">VIEW view_name[(column_list)]</p>
+
+  <p class="ziti4">AS select_statement</p>
+
+  <p class="ziti4">[WITH[CASCADED|LOCAL]CHECK OPTION]</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">虽然视图是基于基表的一个虚拟表，但是用户可以对某些视图进行更新操作，其本质就是通过视图的定义来更新基本表。一般称可以进行更新操作的视图为可更新视图（updatable view）。视图定义中的WITH CHECK OPTION就是针对于可更新的视图的，即更新的值是否需要检查。先看下面的一个例子:</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t(id INT);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.13 sec)</p>
+
+  <p class="ziti4">mysql＞CREATE VIEW v_t</p>
+
+  <p class="ziti4">-＞AS</p>
+
+  <p class="ziti4">-＞SELECT*FROM t WHERE id＜10;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO v_t SELECT 20;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.03 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM v_t;</p>
+
+  <p class="ziti4">Empty set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在上面的例子中，创建了一个id＜10的视图v_t。但之后向视图里插入了id为20的值，插入操作并没有报错。但是用户查询视图还是没能查到数据。接着更改视图的定义，加上WITH CHECK OPTION选项：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞ALTER VIEW v_t</p>
+
+  <p class="ziti4">-＞AS</p>
+
+  <p class="ziti4">-＞SELECT*FROM t WHERE id＜10</p>
+
+  <p class="ziti4">-＞WITH CHECK OPTION;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO v_t SELECT 20;</p>
+
+  <p class="ziti4">ERROR 1369(HY000):CHECK OPTION failed'mytest.v_t'</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这次MySQL数据库会对更新视图插入的数据进行检查，对于不满足视图定义条件的，将会抛出一个异常，不允许视图中数据更新。</p>
+
+  <p class="ziti3">MySQL数据库DBA的一个常用的命令是SHOW TABLES，该命令会显示出当前数据库下所有的表。但因为视图是虚表，同样被作为表显示出来，例如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW TABLES\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Tables_in_mytest:t</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">Tables_in_mytest：v_t</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可见SHOW TABLES命令把表t和视图v_t都显示出来了。若用户只想查看当前架构下的基表，可以通过information_schema架构下的TABLE表来查询，并搜索表类型为BASE TABLE的表，SQL语句如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM information_schema.TABLES</p>
+
+  <p class="ziti4">-＞WHERE table_type='BASE TABLE'</p>
+
+  <p class="ziti4">-＞AND table_schema=database()\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">TABLE_CATALOG:NULL</p>
+
+  <p class="ziti4">TABLE_SCHEMA:mytest</p>
+
+  <p class="ziti4">TABLE_NAME:t</p>
+
+  <p class="ziti4">TABLE_TYPE:BASE TABLE</p>
+
+  <p class="ziti4">ENGINE:InnoDB</p>
+
+  <p class="ziti4">VERSION:10</p>
+
+  <p class="ziti4">ROW_FORMAT:Compact</p>
+
+  <p class="ziti4">TABLE_ROWS:1</p>
+
+  <p class="ziti4">AVG_ROW_LENGTH:16384</p>
+
+  <p class="ziti4">DATA_LENGTH:16384</p>
+
+  <p class="ziti4">MAX_DATA_LENGTH:0</p>
+
+  <p class="ziti4">INDEX_LENGTH:0</p>
+
+  <p class="ziti4">DATA_FREE:0</p>
+
+  <p class="ziti4">AUTO_INCREMENT:NULL</p>
+
+  <p class="ziti4">CREATE_TIME:2009-11-09 16:27:52</p>
+
+  <p class="ziti4">UPDATE_TIME:NULL</p>
+
+  <p class="ziti4">CHECK_TIME:NULL</p>
+
+  <p class="ziti4">TABLE_COLLATION:utf8_general_ci</p>
+
+  <p class="ziti4">CHECKSUM:NULL</p>
+
+  <p class="ziti4">CREATE_OPTIONS:</p>
+
+  <p class="ziti4">TABLE_COMMENT:</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">要想查看视图的一些元数据（meta data），可以访问information_schema架构下的VIEWS表，该表给出了视图的详细信息，包括视图定义者（definer）、定义内容、是否是可更新视图、字符集等。如查询VIEWS表可得：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM</p>
+
+  <p class="ziti4">-＞information_schema.VIEWS</p>
+
+  <p class="ziti4">-＞WHERE table_schema=database()\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">TABLE_CATALOG:NULL</p>
+
+  <p class="ziti4">TABLE_SCHEMA:mytest</p>
+
+  <p class="ziti4">TABLE_NAME:v_t</p>
+
+  <p class="ziti4">VIEW_DEFINITION:select'mytest'.'t'.'id'AS'id'from'mytest'.'t'where('mytest'.'t'.'id'＜10)</p>
+
+  <p class="ziti4">CHECK_OPTION:CASCADED</p>
+
+  <p class="ziti4">IS_UPDATABLE:YES</p>
+
+  <p class="ziti4">DEFINER:root@localhost</p>
+
+  <p class="ziti4">SECURITY_TYPE:DEFINER</p>
+
+  <p class="ziti4">CHARACTER_SET_CLIENT:latin1</p>
+
+  <p class="ziti4">COLLATION_CONNECTION:latin1_swedish_ci</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

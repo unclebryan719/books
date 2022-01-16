@@ -1,0 +1,325 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.7　分布式事务</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="45GEO0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">7.7　分布式事务</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>7.7.1　MySQL数据库分布式事务</h3>
+
+  <p class="ziti3">InnoDB存储引擎提供了对XA事务的支持，并通过XA事务来支持分布式事务的实现。分布式事务指的是允许多个独立的事务资源（transactional resources）参与到一个全局的事务中。事务资源通常是关系型数据库系统，但也可以是其他类型的资源。全局事务要求在其中的所有参与的事务要么都提交，要么都回滚，这对于事务原有的ACID要求又有了提高。另外，在使用分布式事务时，InnoDB存储引擎的事务隔离级别必须设置为SERIALIZABLE。</p>
+
+  <p class="ziti3">XA事务允许不同数据库之间的分布式事务，如一台服务器是MySQL数据库的，另一台是Oracle数据库的，又可能还有一台服务器是SQL Server数据库的，只要参与在全局事务中的每个节点都支持XA事务。分布式事务可能在银行系统的转账中比较常见，如用户David需要从上海转10 000元到北京的用户Mariah的银行卡中：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#Bank@Shanghai：</p>
+
+  <p class="ziti4">UPDATE account SET money=money-10000 WHERE user='David';</p>
+
+  <p class="ziti4">#Bank@Beijing</p>
+
+  <p class="ziti4">UPDATE account SET money=money+10000 WHERE user='Mariah';</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在这种情况下，一定需要使用分布式事务来保证数据的安全。如果发生的操作不能全部提交或回滚，那么任何一个结点出现问题都会导致严重的结果。要么是David的账户被扣款，但是Mariah没收到，又或者是David的账户没有扣款，Mariah却收到钱了。</p>
+
+  <p class="ziti3">XA事务由一个或多个资源管理器（Resource Managers）、一个事务管理器（Transaction Manager）以及一个应用程序（Application Program）组成。</p>
+
+  <p class="ziti3">❑资源管理器：提供访问事务资源的方法。通常一个数据库就是一个资源管理器。</p>
+
+  <p class="ziti3">❑事务管理器：协调参与全局事务中的各个事务。需要和参与全局事务的所有资源管理器进行通信。</p>
+
+  <p class="ziti3">❑应用程序：定义事务的边界，指定全局事务中的操作。</p>
+
+  <p class="ziti3">在MySQL数据库的分布式事务中，资源管理器就是MySQL数据库，事务管理器为连接MySQL服务器的客户端。图7-22显示了一个分布式事务的模型。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00135.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　7-22　分布式事务模型
+  </div>
+
+  <p class="ziti3">分布式事务使用两段式提交（two-phase commit）的方式。在第一阶段，所有参与全局事务的节点都开始准备（PREPARE），告诉事务管理器它们准备好提交了。在第二阶段，事务管理器告诉资源管理器执行ROLLBACK还是COMMIT。如果任何一个节点显示不能提交，则所有的节点都被告知需要回滚。可见与本地事务不同的是，分布式事务需要多一次的PREPARE操作，待收到所有节点的同意信息后，再进行COMMIT或是ROLLBACK操作。</p>
+
+  <p class="ziti3">MySQL数据库XA事务的SQL语法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">XA{START|BEGIN}xid[JOIN|RESUME]</p>
+
+  <p class="ziti4">XA END xid[SUSPEND[FOR MIGRATE]]</p>
+
+  <p class="ziti4">XA PREPARE xid</p>
+
+  <p class="ziti4">XA COMMIT xid[ONE PHASE]</p>
+
+  <p class="ziti4">XA ROLLBACK xid</p>
+
+  <p class="ziti4">XA RECOVER</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在单个节点上运行XA事务的例子：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞XA START'a';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO z SELECT 11;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞XA END'a';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞XA PREPARE'a';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.05 sec)</p>
+
+  <p class="ziti4">mysql＞XA RECOVER\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">formatID:1</p>
+
+  <p class="ziti4">gtrid_length:1</p>
+
+  <p class="ziti4">bqual_length:0</p>
+
+  <p class="ziti4">data:a</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞XA COMMIT'a';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.05 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在单个节点上运行分布式事务没有太大的实际意义，但是要在MySQL数据库的命令下演示多个节点参与的分布式事务也是行不通的。通常来说，都是通过编程语言来完成分布式事务的操作的。当前Java的JTA（Java Transaction API）可以很好地支持MySQL的分布式事务，需要使用分布式事务应该认真参考其API。下面的一个示例显示了如何使用JTA来调用MySQL的分布式事务，就是前面所举例的银行转账的例子，代码如下，仅供参考：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">import java.sql.Connection;</p>
+
+  <p class="ziti4">import javax.sql.XAConnection;</p>
+
+  <p class="ziti4">import javax.transaction.xa.*;</p>
+
+  <p class="ziti4">import com.mysql.jdbc.jdbc2.optional.MysqlXADataSource;</p>
+
+  <p class="ziti4">import java.sql.*;</p>
+
+  <p class="ziti4">class MyXid implements Xid</p>
+
+  <p class="ziti4">{</p>
+
+  <p class="ziti4">public int formatId;</p>
+
+  <p class="ziti4">public byte gtrid[];</p>
+
+  <p class="ziti4">public byte bqual[];</p>
+
+  <p class="ziti4">public MyXid(){</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">public MyXid(int formatId,byte gtrid[],byte bqual[])</p>
+
+  <p class="ziti4">{</p>
+
+  <p class="ziti4">this.formatId=formatId;</p>
+
+  <p class="ziti4">this.gtrid=gtrid;</p>
+
+  <p class="ziti4">this.bqual=bqual;</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">public int getFormatId()</p>
+
+  <p class="ziti4">{</p>
+
+  <p class="ziti4">return formatId;</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">public byte[]getBranchQualifier()</p>
+
+  <p class="ziti4">{</p>
+
+  <p class="ziti4">return bqual;</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">public byte[]getGlobalTransactionId()</p>
+
+  <p class="ziti4">{</p>
+
+  <p class="ziti4">return gtrid;</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">public class xa_demo{</p>
+
+  <p class="ziti4">public static MysqlXADataSource GetDataSource(</p>
+
+  <p class="ziti4">String connString,</p>
+
+  <p class="ziti4">String user,</p>
+
+  <p class="ziti4">String passwd){</p>
+
+  <p class="ziti4">try{</p>
+
+  <p class="ziti4">MysqlXADataSource ds=new MysqlXADataSource();</p>
+
+  <p class="ziti4">ds.setUrl(connString);</p>
+
+  <p class="ziti4">ds.setUser(user);</p>
+
+  <p class="ziti4">ds.setPassword(passwd);</p>
+
+  <p class="ziti4">return ds;</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">catch(Exception e){</p>
+
+  <p class="ziti4">System.out.println(e.toString());</p>
+
+  <p class="ziti4">return null;</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">public static void main(String[]args){</p>
+
+  <p class="ziti4">String connString1="jdbc:mysql://192.168.24.43:3306/bank_shanghai";</p>
+
+  <p class="ziti4">String connString2="jdbc:mysql://192.168.24.166:3306/bank_</p>
+
+  <p class="ziti4">beijing";</p>
+
+  <p class="ziti4">try{</p>
+
+  <p class="ziti4">MysqlXADataSource ds1=</p>
+
+  <p class="ziti4">GetDataSource(connString1,"peter","12345");</p>
+
+  <p class="ziti4">MysqlXADataSource ds2=</p>
+
+  <p class="ziti4">GetDataSource(connString2,"david","12345");</p>
+
+  <p class="ziti4">XAConnection xaConn1=ds1.getXAConnection();</p>
+
+  <p class="ziti4">XAResource xaRes1=xaConn1.getXAResource();</p>
+
+  <p class="ziti4">Connection conn1=xaConn1.getConnection();</p>
+
+  <p class="ziti4">Statement stmt1=conn1.createStatement();</p>
+
+  <p class="ziti4">XAConnection xaConn2=ds2.getXAConnection();</p>
+
+  <p class="ziti4">XAResource xaRes2=xaConn2.getXAResource();</p>
+
+  <p class="ziti4">Connection conn2=xaConn2.getConnection();</p>
+
+  <p class="ziti4">Statement stmt2=conn2.createStatement();</p>
+
+  <p class="ziti4">Xid xid1=new MyXid(</p>
+
+  <p class="ziti4">100,</p>
+
+  <p class="ziti4">new byte[]{0x01},</p>
+
+  <p class="ziti4">new byte[]{0x02});</p>
+
+  <p class="ziti4">Xid xid2=new MyXid(</p>
+
+  <p class="ziti4">100,</p>
+
+  <p class="ziti4">new byte[]{0x11},</p>
+
+  <p class="ziti4">new byte[]{0x12});</p>
+
+  <p class="ziti4">try{</p>
+
+  <p class="ziti4">xaRes1.start(xid1,XAResource.TMNOFLAGS);</p>
+
+  <p class="ziti4">stmt1.execute("</p>
+
+  <p class="ziti4">UPDATE account SET money=money-10000</p>
+
+  <p class="ziti4">WHERE user='david'"</p>
+
+  <p class="ziti4">);</p>
+
+  <p class="ziti4">xaRes1.end(xid1,XAResource.TMSUCCESS);</p>
+
+  <p class="ziti4">xaRes2.start(xid2,XAResource.TMNOFLAGS);</p>
+
+  <p class="ziti4">stmt2.execute("</p>
+
+  <p class="ziti4">UPDATE account SET money=money+10000</p>
+
+  <p class="ziti4">WHERE user='mariah'"</p>
+
+  <p class="ziti4">);</p>
+
+  <p class="ziti4">xaRes2.end(xid2,XAResource.TMSUCCESS);</p>
+
+  <p class="ziti4">int ret2=xaRes2.prepare(xid2);</p>
+
+  <p class="ziti4">int ret1=xaRes1.prepare(xid1);</p>
+
+  <p class="ziti4">if(ret1==XAResource.XA_OK</p>
+
+  <p class="ziti4">＆＆ret2==XAResource.XA_OK){</p>
+
+  <p class="ziti4">xaRes1.commit(xid1,false);</p>
+
+  <p class="ziti4">xaRes2.commit(xid2,false);</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">}catch(Exception e){</p>
+
+  <p class="ziti4">e.printStackTrace();</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">}catch(Exception e){</p>
+
+  <p class="ziti4">System.out.println(e.toString());</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">}</p>
+
+  <p class="ziti4">}</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过参数innodb_support_xa可以查看是否启用了XA事务的支持（默认为ON）：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_support_xa'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_support_xa</p>
+
+  <p class="ziti4">Value:ON</p>
+
+  <p class="ziti4">1 row in set(0.01 sec)</p>
+  <hr class="calibre2"/>
+</body></html>

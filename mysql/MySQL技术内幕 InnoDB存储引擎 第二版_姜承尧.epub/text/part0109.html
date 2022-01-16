@@ -1,0 +1,339 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.8.3　InnoDB全文检索</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="37UDA0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.8.3　InnoDB全文检索</h3>
+
+  <p class="ziti3">InnoDB存储引擎从1.2.x版本开始支持全文检索的技术，其采用full inverted index的方式。在InnoDB存储引擎中，将(DocumentId，Position)视为一个“ilist”。因此在全文检索的表中，有两个列，一个是word字段，另一个是ilist字段，并且在word字段上有设有索引。此外，由于InnoDB存储引擎在ilist字段中存放了Position信息，故可以进行Proximity Search，而MyISAM存储引擎不支持该特性。</p>
+
+  <p class="ziti3">正如之前所说的那样，倒排索引需要将word存放到一张表中，这个表称为Auxiliary Table（辅助表）。在InnoDB存储引擎中，为了提高全文检索的并行性能，共有6张Auxiliary Table，目前每张表根据word的Latin编码进行分区。</p>
+
+  <p class="ziti3">Auxiliary Table是持久的表，存放于磁盘上。然而在InnoDB存储引擎的全文索引中，还有另外一个重要的概念FTS Index Cache（全文检索索引缓存），其用来提高全文检索的性能。</p>
+
+  <p class="ziti3">FTS Index Cache是一个红黑树结构，其根据（word，ilist）进行排序。这意味着插入的数据已经更新了对应的表，但是对全文索引的更新可能在分词操作后还在FTS Index Cache中，Auxiliary Table可能还没有更新。InnoDB存储引擎会批量对Auxiliary Table进行更新，而不是每次插入后更新一次Auxiliary Table。当对全文检索进行查询时，Auxiliary Table首先会将在FTS Index Cache中对应的word字段合并到Auxiliary Table中，然后再进行查询。这种merge操作非常类似之前介绍的Insert Buffer的功能，不同的是Insert Buffer是一个持久的对象，并且其是B+树的结构。然而FTS Index Cache的作用又和Insert Buffer是类似的，它提高了InnoDB存储引擎的性能，并且由于其根据红黑树排序后进行批量插入，其产生的Auxiliary Table相对较小。</p>
+
+  <p class="ziti3">InnoDB存储引擎允许用户查看指定倒排索引的Auxiliary Table中分词的信息，可以通过设置参数innodb_ft_aux_table来观察倒排索引的Auxiliary Table。下面的SQL语句设置查看test架构下表fts_a的Auxiliary Table：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET GLOBAL innodb_ft_aux_table='test/fts_a';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在上述设置完成后，就可以通过查询information_schema架构下的表INNODB_FT_INDEX_TABLE得到表fts_a中的分词信息。</p>
+
+  <p class="ziti3">对于其他数据库，如Oracle 11g，用户可以选择手工在事务提交时，或者固定间隔时间时将倒排索引的更新刷新到磁盘。对于InnoDB存储引擎而言，其总是在事务提交时将分词写入到FTS Index Cache，然后再通过批量更新写入到磁盘。虽然InnoDB存储引擎通过一种延时的、批量的写入方式来提高数据库的性能，但是上述操作仅在事务提交时发生。</p>
+
+  <p class="ziti3">当数据库关闭时，在FTS Index Cache中的数据库会同步到磁盘上的Auxiliary Table中。然而，如果当数据库发生宕机时，一些FTS Index Cache中的数据库可能未被同步到磁盘上。那么下次重启数据库时，当用户对表进行全文检索（查询或者插入操作）时，InnoDB存储引擎会自动读取未完成的文档，然后进行分词操作，再将分词的结果放入到FTS Index Cache中。</p>
+
+  <p class="ziti3">参数innodb_ft_cache_size用来控制FTS Index Cache的大小，默认值为32M。当该缓存满时，会将其中的(word，ilist)分词信息同步到磁盘的Auxiliary Table中。增大该参数可以提高全文检索的性能，但是在宕机时，未同步到磁盘中的索引信息可能需要更长的时间进行恢复。</p>
+
+  <p class="ziti3">FTS Document ID是另外一个重要的概念。在InnoDB存储引擎中，为了支持全文检索，必须有一个列与word进行映射，在InnoDB中这个列被命名为FTS_DOC_ID，其类型必须是BIGINT UNSIGNED NOT NULL，并且InnoDB存储引擎自动会在该列上加入一个名为FTS_DOC_ID_INDEX的Unique Index。上述这些操作都由InnoDB存储引擎自己完成，用户也可以在建表时自动添加FTS_DOC_ID，以及相应的Unique Index。由于列名为FTS_DOC_ID的列具有特殊意义，因此创建时必须注意相应的类型，否则MySQL数据库会抛出错误，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE fts_a(</p>
+
+  <p class="ziti4">-＞FTS_DOC_ID INT UNSIGNED AUTO_INCREMENT NOT NULL,</p>
+
+  <p class="ziti4">-＞body TEXT,</p>
+
+  <p class="ziti4">-＞PRIMARY KEY(FTS_DOC_ID)</p>
+
+  <p class="ziti4">-＞);</p>
+
+  <p class="ziti4">ERROR 1166(42000):Incorrect column name'FTS_DOC_ID'</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，由于用户手动定义的列FTS_DOC_ID的类型是INT，而非BIG INT，因此在创建的时候抛出了Incorrect column name'FTS_DOC_ID'，因此需将该列修改为对应的数据类型，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE fts_a(</p>
+
+  <p class="ziti4">-＞FTS_DOC_ID BIGINT UNSIGNED AUTO_INCREMENT NOT NULL,</p>
+
+  <p class="ziti4">-＞body TEXT,</p>
+
+  <p class="ziti4">-＞PRIMARY KEY(FTS_DOC_ID)</p>
+
+  <p class="ziti4">-＞);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.02 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">文档中分词的插入操作是在事务提交时完成，然而对于删除操作，其在事务提交时，不删除磁盘Auxiliary Table中的记录，而只是删除FTS Cache Index中的记录。对于Auxiliary Table中被删除的记录，InnoDB存储引擎会记录其FTS Document ID，并将其保存在DELETED auxiliary table中。在设置参数innodb_ft_aux_table后，用户同样可以访问information_schema架构下的表INNODB_FT_DELETED来观察删除的FTS Document ID。</p>
+
+  <p class="ziti3">由于文档的DML操作实际并不删除索引中的数据，相反还会在对应的DELETED表中插入记录，因此随着应用程序的允许，索引会变得非常大，即使索引中的有些数据已经被删除，查询也不会选择这类记录。为此，InnoDB存储引擎提供了一种方式，允许用户手工地将已经删除的记录从索引中彻底删除，该命令就是OPTIMIZE TABLE。因为OPTIMIZE TABLE还会进行一些其他的操作，如Cardinality的重新统计，若用户希望仅对倒排索引进行操作，那么可以通过参数innodb_optimize_fulltext_only进行设置，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET GLOBAL innodb_optimize_fulltext_only=1;</p>
+
+  <p class="ziti4">mysql＞OPTIMIZE TABLEfts_a;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">若被删除的文档非常多，那么OPTIMIZE TABLE操作可能需要占用非常多的时间，这会影响应用程序的并发性，并极大地降低用户的响应时间。用户可以通过参数innodb_ft_num_word_optimize来限制每次实际删除的分词数量。该参数的默认值为2000。</p>
+
+  <p class="ziti3">下面来看一个具体的例子，首先通过如下代码创建表fts_a：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE fts_a(</p>
+
+  <p class="ziti4">FTS_DOC_ID BIGINT UNSIGNED AUTO_INCREMENT NOT NULL,</p>
+
+  <p class="ziti4">body TEXT,</p>
+
+  <p class="ziti4">PRIMARY KEY(FTS_DOC_ID)</p>
+
+  <p class="ziti4">);</p>
+
+  <p class="ziti4">INSERT INTO fts_a</p>
+
+  <p class="ziti4">SELECT NULL,'Pease porridge in the pot';</p>
+
+  <p class="ziti4">INSERT INTO fts_a</p>
+
+  <p class="ziti4">SELECT NULL,'Pease porridge hot,pease porridge cold';</p>
+
+  <p class="ziti4">INSERT INTO fts_a</p>
+
+  <p class="ziti4">SELECT NULL,'Nine days old';</p>
+
+  <p class="ziti4">INSERT INTO fts_a</p>
+
+  <p class="ziti4">SELECT NULL,'Some like it hot,some like it cold';</p>
+
+  <p class="ziti4">INSERT INTO fts_a</p>
+
+  <p class="ziti4">SELECT NULL,'Some like it in the pot';</p>
+
+  <p class="ziti4">INSERT INTO fts_a</p>
+
+  <p class="ziti4">SELECT NULL,'Nine days old';</p>
+
+  <p class="ziti4">INSERT INTO fts_a</p>
+
+  <p class="ziti4">SELECT NULL,'I like code days';</p>
+
+  <p class="ziti4">CREATE FULLTEXT INDEX idx_fts ON fts_a(body);</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述代码创建了表fts_a，由于body字段是进行全文检索的字段，因此创建一个类型为FULLTEXT的索引。这里首先导入数据，然后再进行倒排索引的创建，这也是比较推荐的一种方式。创建完成后观察到表fts_a中的数据：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM fts_a;</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">|FTS_DOC_ID|body|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">|1|Pease porridge in the pot|</p>
+
+  <p class="ziti4">|2|Pease porridge hot,pease porridge cold|</p>
+
+  <p class="ziti4">|3|Nine days old|</p>
+
+  <p class="ziti4">|4|Some like it hot,some like it cold|</p>
+
+  <p class="ziti4">|5|Some like it in the pot|</p>
+
+  <p class="ziti4">|6|Nine days old|</p>
+
+  <p class="ziti4">|7|I like code days|</p>
+
+  <p class="ziti4">+------------+-----------------------------------------+</p>
+
+  <p class="ziti4">7 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过设置参数innodb_ft_aux_table来查看分词对应的信息：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET GLOBAL innodb_ft_aux_table='test/fts_a';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM information_schema.INNODB_FT_INDEX_TABLE;</p>
+
+  <p class="ziti4">+----------+--------------+-------------+-----------+--------+----------+</p>
+
+  <p class="ziti4">|WORD|FIRST_DOC_ID|LAST_DOC_ID|DOC_COUNT|DOC_ID|POSITION|</p>
+
+  <p class="ziti4">+----------+--------------+-------------+-----------+--------+----------+</p>
+
+  <p class="ziti4">|code|7|7|1|7|7|</p>
+
+  <p class="ziti4">|cold|2|4|2|2|35|</p>
+
+  <p class="ziti4">|cold|2|4|2|4|31|</p>
+
+  <p class="ziti4">|days|3|7|3|3|5|</p>
+
+  <p class="ziti4">|days|3|7|3|6|5|</p>
+
+  <p class="ziti4">|days|3|7|3|7|12|</p>
+
+  <p class="ziti4">|hot|2|4|2|2|15|</p>
+
+  <p class="ziti4">|hot|2|4|2|4|13|</p>
+
+  <p class="ziti4">|like|4|7|3|4|5|</p>
+
+  <p class="ziti4">|like|4|7|3|4|18|</p>
+
+  <p class="ziti4">|like|4|7|3|5|5|</p>
+
+  <p class="ziti4">|like|4|7|3|7|2|</p>
+
+  <p class="ziti4">|nine|3|6|2|3|0|</p>
+
+  <p class="ziti4">|nine|3|6|2|6|0|</p>
+
+  <p class="ziti4">|old|3|6|2|3|10|</p>
+
+  <p class="ziti4">|old|3|6|2|6|10|</p>
+
+  <p class="ziti4">|pease|1|2|2|1|0|</p>
+
+  <p class="ziti4">|pease|1|2|2|2|0|</p>
+
+  <p class="ziti4">|pease|1|2|2|2|20|</p>
+
+  <p class="ziti4">|porridge|1|2|2|1|6|</p>
+
+  <p class="ziti4">|porridge|1|2|2|2|6|</p>
+
+  <p class="ziti4">|porridge|1|2|2|2|20|</p>
+
+  <p class="ziti4">|pot|1|5|2|1|22|</p>
+
+  <p class="ziti4">|pot|1|5|2|5|20|</p>
+
+  <p class="ziti4">|some|4|5|2|4|0|</p>
+
+  <p class="ziti4">|some|4|5|2|4|18|</p>
+
+  <p class="ziti4">|some|4|5|2|5|0|</p>
+
+  <p class="ziti4">+----------+--------------+-------------+-----------+--------+----------+</p>
+
+  <p class="ziti4">27 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到每个word都对应了一个DOC_ID和POSITION。此外，还记录了FIRST_DOC_ID、LAST_DOC_ID以及DOC_COUNT，分别代表了该word第一次出现的文档ID，最后一次出现的文档ID，以及该word在多少个文档中存在。</p>
+
+  <p class="ziti3">若这时执行下面的SQL语句，会删除FTS_DOC_ID为7的文档：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞DELETE FROM test.fts_a WHERE FTS_DOC_ID=7;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">由于之前的介绍，InnoDB存储引擎并不会直接删除索引中对应的记录，而是将删除的文档ID插入到DELETED表，因此用户可以进行如下的查询：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT*FROM INNODB_FT_DELETED;</p>
+
+  <p class="ziti4">+--------+</p>
+
+  <p class="ziti4">|DOC_ID|</p>
+
+  <p class="ziti4">+--------+</p>
+
+  <p class="ziti4">|7|</p>
+
+  <p class="ziti4">+--------+</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到删除的文档ID插入到了表INNODB_FT_DELETED中，若用户想要彻底删除倒排索引中该文档的分词信息，那么可以运行如下的SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET GLOBAL innodb_optimize_fulltext_only=1;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞OPTIMIZE TABLE test.fts_a;</p>
+
+  <p class="ziti4">+------------+----------+----------+----------+</p>
+
+  <p class="ziti4">|Table|Op|Msg_type|Msg_text|</p>
+
+  <p class="ziti4">+------------+----------+----------+----------+</p>
+
+  <p class="ziti4">|test.fts_a|optimize|status|OK|</p>
+
+  <p class="ziti4">+------------+----------+----------+----------+</p>
+
+  <p class="ziti4">1 row in set(0.01 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM INNODB_FT_DELETED;</p>
+
+  <p class="ziti4">+--------+</p>
+
+  <p class="ziti4">|DOC_ID|</p>
+
+  <p class="ziti4">+--------+</p>
+
+  <p class="ziti4">|7|</p>
+
+  <p class="ziti4">+--------+</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM INNODB_FT_BEING_DELETED;</p>
+
+  <p class="ziti4">+--------+</p>
+
+  <p class="ziti4">|DOC_ID|</p>
+
+  <p class="ziti4">+--------+</p>
+
+  <p class="ziti4">|7|</p>
+
+  <p class="ziti4">+--------+</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过上面的例子可以看到，运行命令OPTIMIZE TABLE可将记录进行彻底的删除，并且彻底删除的文档ID会记录到表INNODB_FT_BEING_DELETED中。此外，由于7这个文档ID已经被删除，因此不允许再次插入这个文档ID，否则数据库会抛出如下异常：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞INSERT INTO test.fts_a SELECT 7,'I like this days';</p>
+
+  <p class="ziti4">ERROR 182(HY000):Invalid InnoDB FTS Doc ID</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">stopword列表（stopword list）是本小节最后阐述的一个概念，其表示该列表中的word不需要对其进行索引分词操作。例如，对于the这个单词，由于其不具有具体的意义，因此将其视为stopword。InnoDB存储引擎有一张默认的stopword列表，其在information_schema架构下，表名为INNODB_FT_DEFAULT_STOPWORD，默认共有36个stopword。此外用户也可以通过参数innodb_ft_server_stopword_table来自定义stopword列表。如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE user_stopword(</p>
+
+  <p class="ziti4">-＞value VARCHAR(30)</p>
+
+  <p class="ziti4">-＞)ENGINE=INNODB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.03 sec)</p>
+
+  <p class="ziti4">mysql＞SET GLOBAL</p>
+
+  <p class="ziti4">-＞innodb_ft_server_stopword_table="test/user_stopword";</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">当前InnoDB存储引擎的全文检索还存在以下的限制：</p>
+
+  <p class="ziti3">❑每张表只能有一个全文检索的索引。</p>
+
+  <p class="ziti3">❑由多列组合而成的全文检索的索引列必须使用相同的字符集与排序规则。</p>
+
+  <p class="ziti3">❑不支持没有单词界定符（delimiter）的语言，如中文、日语、韩语等。</p>
+</body></html>

@@ -1,0 +1,313 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>3.2.2　慢查询日志</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="181NK0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">3.2.2　慢查询日志</h3>
+
+  <p class="ziti3">3.2.1小节提到可以通过错误日志得到一些关于数据库优化的信息，而慢查询日志（slow log）可帮助DBA定位可能存在问题的SQL语句，从而进行SQL语句层面的优化。例如，可以在MySQL启动时设一个阈值，将运行时间超过该值的所有SQL语句都记录到慢查询日志文件中。DBA每天或每过一段时间对其进行检查，确认是否有SQL语句需要进行优化。该阈值可以通过参数long_query_time来设置，默认值为10，代表10秒。</p>
+
+  <p class="ziti3">在默认情况下，MySQL数据库并不启动慢查询日志，用户需要手工将这个参数设为ON：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'long_query_time'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:long_query_time</p>
+
+  <p class="ziti4">Value:10.000000</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'log_slow_queries'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:log_slow_queries</p>
+
+  <p class="ziti4">Value:ON</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这里有两点需要注意。首先，设置long_query_time这个阈值后，MySQL数据库会记录运行时间超过该值的所有SQL语句，但运行时间正好等于long_query_time的情况并不会被记录下。也就是说，在源代码中判断的是大于long_query_time，而非大于等于。其次，从MySQL 5.1开始，long_query_time开始以微秒记录SQL语句运行的时间，之前仅用秒为单位记录。而这样可以更精确地记录SQL的运行时间，供DBA分析。对DBA来说，一条SQL语句运行0.5秒和0.05秒是非常不同的，前者可能已经进行了表扫，后面可能是进行了索引。</p>
+
+  <p class="ziti3">另一个和慢查询日志有关的参数是log_queries_not_using_indexes，如果运行的SQL语句没有使用索引，则MySQL数据库同样会将这条SQL语句记录到慢查询日志文件。首先确认打开了log_queries_not_using_indexes：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'log_queries_not_using_indexes'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:log_queries_not_using_indexes</p>
+
+  <p class="ziti4">Value:ON</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">MySQL 5.6.5版本开始新增了一个参数log_throttle_queries_not_using_indexes，用来表示每分钟允许记录到slow log的且未使用索引的SQL语句次数。该值默认为0，表示没有限制。在生产环境下，若没有使用索引，此类SQL语句会频繁地被记录到slow log，从而导致slow log文件的大小不断增加，故DBA可通过此参数进行配置。</p>
+
+  <p class="ziti3">DBA可以通过慢查询日志来找出有问题的SQL语句，对其进行优化。然而随着MySQL数据库服务器运行时间的增加，可能会有越来越多的SQL查询被记录到了慢查询日志文件中，此时要分析该文件就显得不是那么简单和直观的了。而这时MySQL数据库提供的mysqldumpslow命令，可以很好地帮助DBA解决该问题：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nh122-190 data]#mysqldumpslow nh122-190-slow.log</p>
+
+  <p class="ziti4">Reading mysql slow query log from nh122-190-slow.log</p>
+
+  <p class="ziti4">Count:11 Time=10.00s(110s)Lock=0.00s(0s)Rows=0.0(0),dbother[dbother]@localhost</p>
+
+  <p class="ziti4">insert into test.DbStatus select now(),(N-com_select)/(N-uptime),(N-com_insert)/(N-uptime),(N-com_update)/(N-uptime),(N-com_delete)/(N-uptime),N-(N/N),N-(N/N),N.N/N,N-N/(N*N),GetCPULoadInfo(N)from test.CheckDbStatus order by check_id desc limit N</p>
+
+  <p class="ziti4">Count:653 Time=0.00s(0s)Lock=0.00s(0s)Rows=0.0(0),9YOUgs_SC[9YOUgs_SC]@[192.168.43.7]</p>
+
+  <p class="ziti4">select custom_name_one from'low_game_schema'.'role_details'where role_id='S'rse and summarize the MySQL slow query log.Options are</p>
+
+  <p class="ziti4">--verbose verbose</p>
+
+  <p class="ziti4">--debug debug</p>
+
+  <p class="ziti4">--help write this text to standard output</p>
+
+  <p class="ziti4">-v verbose</p>
+
+  <p class="ziti4">-d debug</p>
+
+  <p class="ziti4">-s ORDER what to sort by(al,at,ar,c,l,r,t),'at'is default</p>
+
+  <p class="ziti4">al:average lock time</p>
+
+  <p class="ziti4">ar:average rows sent</p>
+
+  <p class="ziti4">at:average query time</p>
+
+  <p class="ziti4">c:count</p>
+
+  <p class="ziti4">l:lock time</p>
+
+  <p class="ziti4">r:rows sent</p>
+
+  <p class="ziti4">t:query time</p>
+
+  <p class="ziti4">-r reverse the sort order(largest last instead of first)</p>
+
+  <p class="ziti4">-t NUM just show the top n queries</p>
+
+  <p class="ziti4">-a don't abstract all numbers to N and strings to'S'</p>
+
+  <p class="ziti4">-n NUM abstract numbers with at least n digits within names</p>
+
+  <p class="ziti4">-g PATTERN grep:only consider stmts that include this string</p>
+
+  <p class="ziti4">-h HOSTNAME hostname of db server for*-slow.log filename(can be wildcard),</p>
+
+  <p class="ziti4">default is'*',i.e.match all</p>
+
+  <p class="ziti4">-i NAME name of server instance(if using mysql.server startup script)</p>
+
+  <p class="ziti4">-l don't subtract lock time from total time</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果用户希望得到执行时间最长的10条SQL语句，可以运行如下命令：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nh119-141 data]#mysqldumpslow-s al-n 10 david.log</p>
+
+  <p class="ziti4">Reading mysql slow query log from david.log</p>
+
+  <p class="ziti4">Count:5 Time=0.00s(0s)Lock=0.20s(1s)Rows=4.4(22),Audition[Audition]@[192.168.30.108]</p>
+
+  <p class="ziti4">SELECT OtherSN,State FROM wait_friend_info WHERE UserSN=N</p>
+
+  <p class="ziti4">Count:1 Time=0.00s(0s)Lock=0.00s(0s)Rows=1.0(1),audition-kr[audition-kr]@[192.168.30.105]</p>
+
+  <p class="ziti4">SELECT COUNT(N)FROM famverifycode WHERE UserSN=N AND verifycode='S'</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">MySQL 5.1开始可以将慢查询的日志记录放入一张表中，这使得用户的查询更加方便和直观。慢查询表在mysql架构下，名为slow_log，其表结构定义如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW CREATE TABLE mysql.slow_log\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Table:slow_log</p>
+
+  <p class="ziti4">Create Table:CREATE TABLE'slow_log'(</p>
+
+  <p class="ziti4">'start_time'timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,</p>
+
+  <p class="ziti4">'user_host'mediumtext NOT NULL,</p>
+
+  <p class="ziti4">'query_time'time NOT NULL,</p>
+
+  <p class="ziti4">'lock_time'time NOT NULL,</p>
+
+  <p class="ziti4">'rows_sent'int(11)NOT NULL,</p>
+
+  <p class="ziti4">'rows_examined'int(11)NOT NULL,</p>
+
+  <p class="ziti4">'db'varchar(512)NOT NULL,</p>
+
+  <p class="ziti4">'last_insert_id'int(11)NOT NULL,</p>
+
+  <p class="ziti4">'insert_id'int(11)NOT NULL,</p>
+
+  <p class="ziti4">'server_id'int(11)NOT NULL,</p>
+
+  <p class="ziti4">'sql_text'mediumtext NOT NULL</p>
+
+  <p class="ziti4">)ENGINE=CSV DEFAULT CHARSET=utf8 COMMENT='Slow log'</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">参数log_output指定了慢查询输出的格式，默认为FILE，可以将它设为TABLE，然后就可以查询mysql架构下的slow_log表了，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'log_output'\G;</p>
+
+  <p class="ziti4">+---------------+---------+</p>
+
+  <p class="ziti4">|Variable_name|Value|</p>
+
+  <p class="ziti4">+---------------+---------+</p>
+
+  <p class="ziti4">|log_output|FILE|</p>
+
+  <p class="ziti4">+---------------+---------+</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SET GLOBAL log_output='TABLE';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'log_output'\G;</p>
+
+  <p class="ziti4">+---------------+---------+</p>
+
+  <p class="ziti4">|Variable_name|Value|</p>
+
+  <p class="ziti4">+---------------+---------+</p>
+
+  <p class="ziti4">|log_output|TABLE|</p>
+
+  <p class="ziti4">+---------------+---------+</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞select sleep(10)\G;</p>
+
+  <p class="ziti4">+-----------+</p>
+
+  <p class="ziti4">|sleep(10)|</p>
+
+  <p class="ziti4">+-----------+</p>
+
+  <p class="ziti4">|0|</p>
+
+  <p class="ziti4">+-----------+</p>
+
+  <p class="ziti4">1 row in set(10.01 sec)</p>
+
+  <p class="ziti4">mysql＞SELECT*FROM mysql.slow_log\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">start_time:2009-09-25 13:44:29</p>
+
+  <p class="ziti4">user_host:david[david]@localhost[]</p>
+
+  <p class="ziti4">query_time:00:00:09</p>
+
+  <p class="ziti4">lock_time:00:00:00</p>
+
+  <p class="ziti4">rows_sent:1</p>
+
+  <p class="ziti4">rows_examined:0</p>
+
+  <p class="ziti4">db:mysql</p>
+
+  <p class="ziti4">last_insert_id:0</p>
+
+  <p class="ziti4">insert_id:0</p>
+
+  <p class="ziti4">server_id:0</p>
+
+  <p class="ziti4">sql_text:select sleep(10)</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">参数log_output是动态的，并且是全局的，因此用户可以在线进行修改。在上表中人为设置了睡眠（sleep）10秒，那么这句SQL语句就会被记录到slow_log表了。</p>
+
+  <p class="ziti3">查看slow_log表的定义会发现该表使用的是CSV引擎，对大数据量下的查询效率可能不高。用户可以把slow_log表的引擎转换到MyISAM，并在start_time列上添加索引以进一步提高查询的效率。但是，如果已经启动了慢查询，将会提示错误：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞ALTER TABLE mysql.slow_log ENGINE=MyISM;</p>
+
+  <p class="ziti4">ERROR 1580(HY000):You cannot'ALTER'a log table if logging is enabled</p>
+
+  <p class="ziti4">mysql＞SET GLOBAL slow_query_log=off;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞ALTER TABLE mysql.slow_log ENGINE=MyISAM;</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.00 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">不能忽视的是，将slow_log表的存储引擎更改为MyISAM后，还是会对数据库造成额外的开销。不过好在很多关于慢查询的参数都是动态的，用户可以方便地在线进行设置或修改。</p>
+
+  <p class="ziti3">MySQL的slow log通过运行时间来对SQL语句进行捕获，这是一个非常有用的优化技巧。但是当数据库的容量较小时，可能因为数据库刚建立，此时非常大的可能是数据全部被缓存在缓冲池中，SQL语句运行的时间可能都是非常短的，一般都是0.5秒。</p>
+
+  <p class="ziti3">InnoSQL版本加强了对于SQL语句的捕获方式。在原版MySQL的基础上在slow log中增加了对于逻辑读取（logical reads）和物理读取（physical reads）的统计。这里的物理读取是指从磁盘进行IO读取的次数，逻辑读取包含所有的读取，不管是磁盘还是缓冲池。例如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">#Time:111227 23:49:16</p>
+
+  <p class="ziti4">#User@Host:root[root]@localhost[127.0.0.1]</p>
+
+  <p class="ziti4">#Query_time:6.081214 Lock_time:0.046800 Rows_sent:42 Rows_examined:727558 Logical_reads:91584 Physical_reads:19</p>
+
+  <p class="ziti4">use tpcc;</p>
+
+  <p class="ziti4">SET timestamp=1325000956;</p>
+
+  <p class="ziti4">SELECT orderid,customerid,employeeid,orderdate</p>
+
+  <p class="ziti4">FROM orders</p>
+
+  <p class="ziti4">WHERE orderdate IN</p>
+
+  <p class="ziti4">(SELECT MAX(orderdate)</p>
+
+  <p class="ziti4">FROM orders</p>
+
+  <p class="ziti4">GROUP BY(DATE_FORMAT(orderdate,'%Y%M'))</p>
+
+  <p class="ziti4">);</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">从上面的例子可以看到该子查询的逻辑读取次数是91 584次，物理读取为19次。从逻辑读与物理读的比例上看，该SQL语句可进行优化。</p>
+
+  <p class="ziti3">用户可以通过额外的参数long_query_io将超过指定逻辑IO次数的SQL语句记录到slow log中。该值默认为100，即表示对于逻辑读取次数大于100的SQL语句，记录到slow log中。而为了兼容原MySQL数据库的运行方式，还添加了参数slow_query_type，用来表示启用slow log的方式，可选值为：</p>
+
+  <p class="ziti3">❑0表示不将SQL语句记录到slow log</p>
+
+  <p class="ziti3">❑1表示根据运行时间将SQL语句记录到slow log</p>
+
+  <p class="ziti3">❑2表示根据逻辑IO次数将SQL语句记录到slow log</p>
+
+  <p class="ziti3">❑3表示根据运行时间及逻辑IO次数将SQL语句记录到slow log</p>
+</body></html>

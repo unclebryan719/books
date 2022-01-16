@@ -1,0 +1,175 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>2.3　InnoDB体系架构</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="OPEK0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">2.3　InnoDB体系架构</h2>
+
+  <p class="ziti3">通过第1章读者已经了解了MySQL数据库的体系结构，现在可能想更深入地了解InnoDB存储引擎的架构。图2-1简单显示了InnoDB的存储引擎的体系架构，从图可见，InnoDB存储引擎有多个内存块，可以认为这些内存块组成了一个大的内存池，负责如下工作：</p>
+
+  <p class="ziti3">❑维护所有进程/线程需要访问的多个内部数据结构。</p>
+
+  <p class="ziti3">❑缓存磁盘上的数据，方便快速地读取，同时在对磁盘文件的数据修改之前在这里缓存。</p>
+
+  <p class="ziti3">❑重做日志（redo log）缓冲。</p>
+
+  <p class="ziti3">……</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00004.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　2-1　InnoDB存储引擎体系架构
+  </div>
+
+  <p class="ziti3">后台线程的主要作用是负责刷新内存池中的数据，保证缓冲池中的内存缓存的是最近的数据。此外将已修改的数据文件刷新到磁盘文件，同时保证在数据库发生异常的情况下InnoDB能恢复到正常运行状态。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>2.3.1　后台线程</h3>
+
+  <p class="ziti3">InnoDB存储引擎是多线程的模型，因此其后台有多个不同的后台线程，负责处理不同的任务。</p>
+
+  <p class="yanse">1.Master Thread</p>
+
+  <p class="ziti3">Master Thread是一个非常核心的后台线程，主要负责将缓冲池中的数据异步刷新到磁盘，保证数据的一致性，包括脏页的刷新、合并插入缓冲（INSERT BUFFER）、UNDO页的回收等。2.5节会详细地介绍各个版本中Master Thread的工作方式。</p>
+
+  <p class="yanse">2.IO Thread</p>
+
+  <p class="ziti3">在InnoDB存储引擎中大量使用了AIO（Async IO）来处理写IO请求，这样可以极大提高数据库的性能。而IO Thread的工作主要是负责这些IO请求的回调（call back）处理。InnoDB 1.0版本之前共有4个IO Thread，分别是write、read、insert buffer和log IO thread。在Linux平台下，IO Thread的数量不能进行调整，但是在Windows平台下可以通过参数innodb_file_io_threads来增大IO Thread。从InnoDB 1.0.x版本开始，read thread和write thread分别增大到了4个，并且不再使用innodb_file_io_threads参数，而是分别使用innodb_read_io_threads和innodb_write_io_threads参数进行设置，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_version'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_version</p>
+
+  <p class="ziti4">Value:1.0.6</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_%io_threads'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_read_io_threads</p>
+
+  <p class="ziti4">Value:4</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_write_io_threads</p>
+
+  <p class="ziti4">Value:4</p>
+
+  <p class="ziti4">2 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以通过命令SHOW ENGINE INNODB STATUS来观察InnoDB中的IO Thread：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW ENGINE INNODB STATUS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Type:InnoDB</p>
+
+  <p class="ziti4">Name:</p>
+
+  <p class="ziti4">Status:</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">100719 21:55:26 INNODB MONITOR OUTPUT</p>
+
+  <p class="ziti4">=====================================</p>
+
+  <p class="ziti4">Per second averages calculated from the last 36 seconds</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">--------</p>
+
+  <p class="ziti4">FILE I/O</p>
+
+  <p class="ziti4">--------</p>
+
+  <p class="ziti4">I/O thread 0 state:waiting for i/o request(insert buffer thread)</p>
+
+  <p class="ziti4">I/O thread 1 state:waiting for i/o request(log thread)</p>
+
+  <p class="ziti4">I/O thread 2 state:waiting for i/o request(read thread)</p>
+
+  <p class="ziti4">I/O thread 3 state:waiting for i/o request(read thread)</p>
+
+  <p class="ziti4">I/O thread 4 state:waiting for i/o request(read thread)</p>
+
+  <p class="ziti4">I/O thread 5 state:waiting for i/o request(read thread)</p>
+
+  <p class="ziti4">I/O thread 6 state:waiting for i/o request(write thread)</p>
+
+  <p class="ziti4">I/O thread 7 state:waiting for i/o request(write thread)</p>
+
+  <p class="ziti4">I/O thread 8 state:waiting for i/o request(write thread)</p>
+
+  <p class="ziti4">I/O thread 9 state:waiting for i/o request(write thread)</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">----------------------------</p>
+
+  <p class="ziti4">END OF INNODB MONITOR OUTPUT</p>
+
+  <p class="ziti4">============================</p>
+
+  <p class="ziti4">1 row in set(0.01 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到IO Thread 0为insert buffer thread。IO Thread 1为log thread。之后就是根据参数innodb_read_io_threads及innodb_write_io_threads来设置的读写线程，并且读线程的ID总是小于写线程。</p>
+
+  <p class="yanse">3.Purge Thread</p>
+
+  <p class="ziti3">事务被提交后，其所使用的undolog可能不再需要，因此需要PurgeThread来回收已经使用并分配的undo页。在InnoDB 1.1版本之前，purge操作仅在InnoDB存储引擎的Master Thread中完成。而从InnoDB 1.1版本开始，purge操作可以独立到单独的线程中进行，以此来减轻Master Thread的工作，从而提高CPU的使用率以及提升存储引擎的性能。用户可以在MySQL数据库的配置文件中添加如下命令来启用独立的Purge Thread：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[mysqld]</p>
+
+  <p class="ziti4">innodb_purge_threads=1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在InnoDB 1.1版本中，即使将innodb_purge_threads设为大于1，InnoDB存储引擎启动时也会将其设为1，并在错误文件中出现如下类似的提示：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">120529 22:54:16[Warning]option'innodb-purge-threads':unsigned value 4 adjusted to 1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">从InnoDB 1.2版本开始，InnoDB支持多个Purge Thread，这样做的目的是为了进一步加快undo页的回收。同时由于Purge Thread需要离散地读取undo页，这样也能更进一步利用磁盘的随机读取性能。如用户可以设置4个Purge Thread：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SELECT VERSION()\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">VERSION():5.6.6</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_purge_threads'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_purge_threads</p>
+
+  <p class="ziti4">Value:4</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="yanse">4.Page Cleaner Thread</p>
+
+  <p class="ziti3">Page Cleaner Thread是在InnoDB 1.2.x版本中引入的。其作用是将之前版本中脏页的刷新操作都放入到单独的线程中来完成。而其目的是为了减轻原Master Thread的工作及对于用户查询线程的阻塞，进一步提高InnoDB存储引擎的性能。</p>
+</body></html>

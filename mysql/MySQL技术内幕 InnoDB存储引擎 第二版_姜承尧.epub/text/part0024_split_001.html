@@ -1,0 +1,25 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>第2章　InnoDB存储引擎</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="MSDG0-878f632495a744b2a24ea2205f162355" class="calibre">
+<h2 class="p4" id="heading_id_3"><a id="bw1" class="pcalibre calibre1"></a>2.1　InnoDB存储引擎概述</h2>
+
+  <p class="ziti3">InnoDB存储引擎最早由Innobase Oy公司<sup class="calibre4"><a id="ch1" href="part0024_split_001.html#ch1-back" class="pcalibre calibre1">[1]</a></sup>开发，被包括在MySQL数据库所有的二进制发行版本中，从MySQL 5.5版本开始是默认的表存储引擎（之前的版本InnoDB存储引擎仅在Windows下为默认的存储引擎）。该存储引擎是第一个完整支持ACID事务的MySQL存储引擎（BDB是第一个支持事务的MySQL存储引擎，现在已经停止开发），其特点是行锁设计、支持MVCC、支持外键、提供一致性非锁定读，同时被设计用来最有效地利用以及使用内存和CPU。</p>
+
+  <p class="ziti3">Heikki Tuuri（1964年，芬兰赫尔辛基）是InnoDB存储引擎的创始人，和著名的Linux创始人Linus是芬兰赫尔辛基大学校友。在1990年获得赫尔辛基大学的数学逻辑博士学位后，他于1995年成立Innobase Oy公司并担任CEO。同时，在InnoDB存储引擎的开发团队中，有来自中国科技大学的Calvin Sun。而最近又有一个中国人Jimmy Yang也加入了InnoDB存储引擎的核心开发团队，负责全文索引的开发，其之前任职于Sybase数据库公司，负责数据库的相关开发工作。</p>
+
+  <p class="ziti3">InnoDB存储引擎已经被许多大型网站使用，如用户熟知的Google、Yahoo!、Facebook、YouTube、Flickr，在网络游戏领域有《魔兽世界》、《Second Life》、《神兵玄奇》等。我不是MySQL数据库的布道者，也不是InnoDB的鼓吹者，但是我认为当前实施一个新的OLTP项目不使用MySQL InnoDB存储引擎将是多么的愚蠢。</p>
+
+  <p class="ziti3">从MySQL数据库的官方手册可得知，著名的Internet新闻站点Slashdot.org运行在InnoDB上。Mytrix、Inc.在InnoDB上存储超过1 TB的数据，还有一些其他站点在InnoDB上处理插入/更新操作的速度平均为800次/秒。这些都证明了InnoDB是一个高性能、高可用、高可扩展的存储引擎。</p>
+
+  <p class="ziti3">InnoDB存储引擎同MySQL数据库一样，在GNU GPL 2下发行。更多有关MySQL证书的信息，可参考http://www.mysql.com/about/legal/，这里不再详细介绍。</p>
+
+  <div class="fnote">
+    <a id="ch1-back" href="part0024_split_001.html#ch1" class="pcalibre calibre1">[1]</a>2006年该公司已经被Oracle公司收购。
+  </div>
+</body></html>

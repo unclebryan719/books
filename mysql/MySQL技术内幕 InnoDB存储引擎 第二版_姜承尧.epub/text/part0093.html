@@ -1,0 +1,69 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.4.3　B+树索引的分裂</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2OM4A0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.4.3　B+树索引的分裂</h3>
+
+  <p class="ziti3">在5.3节中介绍B+树的分裂是最为简单的一种情况，这和数据库中B+树索引的情况可能略有不同。此外5.3节页没有涉及并发，而这才是B+树索引实现最为困难的部分。</p>
+
+  <p class="ziti3">B+树索引页的分裂并不总是从页的中间记录开始，这样可能会导致页空间的浪费。例如下面的记录：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">1、2、3、4、5、6、7、8、9</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">插入是根据自增顺序进行的，若这时插入10这条记录后需要进行页的分裂操作，那么根据5.3.1节介绍的分裂方法，会将记录5作为分裂点记录（split record），分裂后得到下面两个页：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">P1：1、2、3、4</p>
+
+  <p class="ziti4">P2：5、6、7、8、9、10</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">然而由于插入是顺序的，P1这个页中将不会再有记录被插入，从而导致空间的浪费。而P2又会再次进行分裂。</p>
+
+  <p class="ziti3">InnoDB存储引擎的Page Header中有以下几个部分用来保存插入的顺序信息：</p>
+
+  <p class="ziti3">❑PAGE_LAST_INSERT</p>
+
+  <p class="ziti3">❑PAGE_DIRECTION</p>
+
+  <p class="ziti3">❑PAGE_N_DIRECTION</p>
+
+  <p class="ziti3">通过这些信息，InnoDB存储引擎可以决定是向左还是向右进行分裂，同时决定将分裂点记录为哪一个。若插入是随机的，则取页的中间记录作为分裂点的记录，这和之前介绍的相同。若往同一方向进行插入的记录数量为5，并且目前已经定位（cursor）到的记录（InnoDB存储引擎插入时，首先需要进行定位，定位到的记录为待插入记录的前一条记录）之后还有3条记录，则分裂点的记录为定位到的记录后的第三条记录，否则分裂点记录就是待插入的记录。</p>
+
+  <p class="ziti3">来看一个向右分裂的例子，并且定位到的记录之后还有3条记录，则分裂点记录如图5-17所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00048.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-17　向右分裂的一种情况
+  </div>
+
+  <p class="ziti3">图5-17向右分裂且定位到的记录之后还有3条记录，split record为分裂点记录最终向右分裂得到如图5-18所示的情况。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00049.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-18　向右分裂后页中记录的情况
+  </div>
+
+  <p class="ziti3">对于图5-19的情况，分裂点就为插入记录本身，向右分裂后仅插入记录本身，这在自增插入时是普遍存在的一种情况。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00050.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-19　向右分裂的另一种情况
+  </div>
+</body></html>

@@ -1,0 +1,21 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>9.5　操作系统的选择</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="515F20-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">9.5　操作系统的选择</h2>
+
+  <p class="ziti3">Linux是MySQL数据库服务器中最常使用的操作系统。与其他操作系统不同的是Linux有着众多的发行版本，每个用户的偏好可能不尽相同。然而在将Linux操作系统作为数据库服务器时需要考虑更多的是操作系统的稳定性，而不是新特性。</p>
+
+  <p class="ziti3">除了Linux操作系统外，FreeBSD也是另一个常见的优秀操作系统。之前版本的FreeBSD对MySQL数据库支持得不是很好，需要选择单独的线程库进行手动编译，但是新版本的FreeBSD对MySQL数据库的支持已经好了很多，直接下载二进制安装包即可。</p>
+
+  <p class="ziti3">Solaris也是非常不错的操作系统，之前是基于SPARC硬件的操作系统，现在已经移植到了X86平台上。Solaris是高性能、高可靠性的操作系统，同时其提供的ZFS文件系统非常适合MySQL的数据库应用。如果需要，用户可以尝试它的开源版本Open Solaris。</p>
+
+  <p class="ziti3">Windows操作系统在MySQL数据库应用中也非常普及。也有公司喜欢在开发环境下使用Windows版本的MySQL数据库，而在正式生产环境下选择使用Linux操作系统。这本身没有什么问题，但问题通常存在于文件系统大小写敏感对应用程序的影响。在Windows操作系统下表名不区分大小写，而Linux操作系统却是大小写敏感的，这点在开发阶段需要特别注意。</p>
+
+  <p class="ziti3">4G内存在当前已经非常普遍了，即使是桌面用户也开始使用8G的内存。为了可以更好地使用大于4G的内存容量，用户必须使用64位的操作系统，上述介绍的这些操作系统都提供了64位的版本。此外，使用64位的操作系统还必须使用64位的软件。这听上去像是句废话，但是我曾多次看到32位的MySQL数据库安装在64位的系统上，导致不能充分发挥64位操作系统的内存寻址能力。</p>
+</body></html>

@@ -1,0 +1,235 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>9.7.2　mysql-tpcc</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="5410O0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">9.7.2　mysql-tpcc</h3>
+
+  <p class="ziti3">TPC（Transaction Processing Performance Council，事务处理性能协会）是一个用来评价大型数据库系统软硬件性能的非盈利组织。TPC-C是TPC协会制定的，用来测试典型的复杂OLTP（在线事务处理）系统的性能。目前在学术界和工业界普遍采用TPC-C来评价OLTP应用的性能。</p>
+
+  <p class="ziti3">TPC-C用3NF（第三范式）虚拟实现了一家仓库销售供应商公司，拥有一批分布在不同地方的仓库和地区分公司。当公司业务扩大时，将建立新的仓库和地区分公司。通常每个仓库供货覆盖10家地区分公司，每个地区分公司服务3000名客户。公司共有100 000种商品，分别储存在各个仓库中。该系统包含了库存管理、销售、分发产品、付款、订单查询等一系列操作，一共包含了9个基本关系，基本关系如图9-9所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00155.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　9-9　TPC-C基本关系图
+  </div>
+
+  <p class="ziti3">TPC-C的性能度量单位是tpmC，tpm是transaction per minute的缩写，C代表TPC的C基准测试。该值越大，代表事务处理的性能越高。</p>
+
+  <p class="ziti3">tpcc-mysql是开源的TPC-C测试工具，该测试工具完全遵守TPC-C的标准。其官方网站为：https://code.launchpad.net/～percona-dev/perconatools/tpcc-mysql。之前tpcc-mysql主要工作在Linux操作系统上，我已经将其移植到了Windows平台，可以在http://code.google.com/p/david-mysql-tools/downloads/list下载到Windows版本的tpcc-mysql。</p>
+
+  <p class="ziti3">tpcc-mysql由以下两个工具组成。</p>
+
+  <p class="ziti3">❑tpcc_load：根据仓库数量，生成9张表中的数据。</p>
+
+  <p class="ziti3">❑tpcc_start：根据不同选项进行TPC-C测试。</p>
+
+  <p class="ziti3">tpcc_load命令的使用方法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#tpcc_load</p>
+
+  <p class="ziti4">*************************************</p>
+
+  <p class="ziti4">***###easy###TPC-C Data Loader***</p>
+
+  <p class="ziti4">*************************************</p>
+
+  <p class="ziti4">usage:tpcc_load[server][DB][user][pass][warehouse]</p>
+
+  <p class="ziti4">OR</p>
+
+  <p class="ziti4">tpcc_load[server][DB][user][pass][warehouse][part][min_wh][max_wh]</p>
+
+  <p class="ziti4">*[part]:1=ITEMS 2=WAREHOUSE 3=CUSTOMER 4=ORDERS</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">各参数的意义如下：</p>
+
+  <p class="ziti3">❑server，导入的MySQL服务器IP。</p>
+
+  <p class="ziti3">❑DB，导入的数据库。</p>
+
+  <p class="ziti3">❑user，MySQL的用户名。</p>
+
+  <p class="ziti3">❑pass，MySQL的密码。</p>
+
+  <p class="ziti3">❑warehouse，要生产的仓库数量。</p>
+
+  <p class="ziti3">如果用tpcc_load工具创建100个仓库的数据库tpcc，可以这样：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server tpcc-mysql]#mysql tpcc＜create_table.sql</p>
+
+  <p class="ziti4">[root@xen-server tpcc-mysql]#mysql tpcc＜add_fkey_idx.sql</p>
+
+  <p class="ziti4">[root@xen-server tpcc-mysql]#tpcc_load 127.0.0.1 tpcc2 root xxxxxx 100</p>
+
+  <p class="ziti4">*************************************</p>
+
+  <p class="ziti4">***###easy###TPC-C Data Loader***</p>
+
+  <p class="ziti4">*************************************</p>
+
+  <p class="ziti4">＜Parameters＞</p>
+
+  <p class="ziti4">[server]:127.0.0.1</p>
+
+  <p class="ziti4">[DBname]:tpcc2</p>
+
+  <p class="ziti4">[user]:root</p>
+
+  <p class="ziti4">[pass]:</p>
+
+  <p class="ziti4">[warehouse]:100</p>
+
+  <p class="ziti4">TPCC Data Load Started...</p>
+
+  <p class="ziti4">Loading Item</p>
+
+  <p class="ziti4">..................................................5000</p>
+
+  <p class="ziti4">..................................................10000</p>
+
+  <p class="ziti4">..................................................15000</p>
+
+  <p class="ziti4">……（略）</p>
+
+  <p class="ziti4">...DATA LOADING COMPLETED SUCCESSFULLY.</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">tpcc_start命令的使用方法如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#tpcc_start</p>
+
+  <p class="ziti4">***************************************</p>
+
+  <p class="ziti4">***###easy###TPC-C Load Generator***</p>
+
+  <p class="ziti4">***************************************</p>
+
+  <p class="ziti4">usage:tpcc_start[server][DB][user][pass][warehouse][connection][rampup][measure]</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">相关参数的作用如下：</p>
+
+  <p class="ziti3">❑connection，测试时的线程数量。</p>
+
+  <p class="ziti3">❑rampup，热身时间，单位秒，这段时间的操作不计入统计信息。</p>
+
+  <p class="ziti3">❑measure，测试时间，单位秒。</p>
+
+  <p class="ziti3">如使用tpcc_start进行16个线程的测试，热身时间为10分钟，测试时间为20分钟，如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server～]#tpcc_start 127.0.0.1 tpcc root xxxxxx 100 16 600 1200</p>
+
+  <p class="ziti4">***************************************</p>
+
+  <p class="ziti4">***###easy###TPC-C Load Generator***</p>
+
+  <p class="ziti4">***************************************</p>
+
+  <p class="ziti4">＜Parameters＞</p>
+
+  <p class="ziti4">[server]:127.0.0.1</p>
+
+  <p class="ziti4">[DBname]:tpcc</p>
+
+  <p class="ziti4">[user]:root</p>
+
+  <p class="ziti4">[pass]:xxxxxx</p>
+
+  <p class="ziti4">[warehouse]:100</p>
+
+  <p class="ziti4">[connection]:16</p>
+
+  <p class="ziti4">[rampup]:600(sec.)</p>
+
+  <p class="ziti4">[measure]:1200(sec.)</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在测试的时候用户或许会在终端上看到类似如下的输出：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">RAMP-UP TIME.(1 sec.)</p>
+
+  <p class="ziti4">MEASURING START.</p>
+
+  <p class="ziti4">10,624(0):0.4,624(0):0.2,62(0):0.2,63(0):0.6,62(0):0.8</p>
+
+  <p class="ziti4">20,990(0):0.2,988(0):0.2,98(0):0.2,99(0):0.4,98(0):0.6</p>
+
+  <p class="ziti4">30,1435(0):0.2,1436(0):0.2,144(0):0.2,143(0):0.2,144(0):0.4</p>
+
+  <p class="ziti4">40,1736(0):0.2,1739(0):0.2,174(0):0.2,174(0):0.2,174(0):0.4</p>
+
+  <p class="ziti4">50,2041(0):0.2,2044(0):0.2,204(0):0.2,204(0):0.2,207(0):0.2</p>
+
+  <p class="ziti4">60,2195(0):0.2,2193(0):0.2,220(0):0.2,221(0):0.2,218(0):0.2</p>
+
+  <p class="ziti4">70,2332(0):0.2,2335(0):0.2,233(0):0.2,232(0):0.2,234(0):0.2</p>
+
+  <p class="ziti4">80,2408(0):0.2,2401(0):0.2,241(0):0.2,239(0):0.2,241(0):0.2</p>
+
+  <p class="ziti4">90,2473(0):0.2,2476(0):0.2,247(0):0.2,250(0):0.2,248(0):0.2</p>
+
+  <p class="ziti4">100,2350(0):0.2,2347(0):0.2,235(0):0.2,233(0):0.2,235(0):0.2</p>
+
+  <p class="ziti4">……</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这些信息是每10秒TPC-C测试的结果数据，TPC-C测试一共测试5个模块，分别是New Order、Payment、Order-Status、Delivery、Stock-Level。第一个值即为New Order，这也是TPC-C测试结果的一个重要考量标准New Order Per 10 Second（每十秒订单处理能力），可以将测试时所有的数据组成一张折线图或散点图，观察InnoDB存储引擎每10秒的性能表现，如图9-10所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00156.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　9-10　New Order Per 10　Second
+  </div>
+
+  <p class="ziti3">而tpcc_load最后结束时产生的tpmC也是通过New Order Per 10 Second来进行的，首先求出New Order Per 10 Second的平均值，然后乘以6，得到的就是最终的tpmC。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">＜Constraint Check＞(all must be[OK])</p>
+
+  <p class="ziti4">[transaction percentage]</p>
+
+  <p class="ziti4">Payment:43.48%(＞=43.0%)[OK]</p>
+
+  <p class="ziti4">Order-Status:4.35%(＞=4.0%)[OK]</p>
+
+  <p class="ziti4">Delivery:4.35%(＞=4.0%)[OK]</p>
+
+  <p class="ziti4">Stock-Level:4.35%(＞=4.0%)[OK]</p>
+
+  <p class="ziti4">[response time(at least 90%passed)]</p>
+
+  <p class="ziti4">New-Order:99.72%[OK]</p>
+
+  <p class="ziti4">Payment:99.95%[OK]</p>
+
+  <p class="ziti4">Order-Status:99.93%[OK]</p>
+
+  <p class="ziti4">Delivery:100.00%[OK]</p>
+
+  <p class="ziti4">Stock-Level:100.00%[OK]</p>
+
+  <p class="ziti4">＜TpmC＞</p>
+
+  <p class="ziti4">7949.942 TpmC</p>
+  <hr class="calibre2"/>
+</body></html>

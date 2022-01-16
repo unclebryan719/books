@@ -1,0 +1,413 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.3.3　行溢出数据</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1O8H60-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.3.3　行溢出数据</h3>
+
+  <p class="ziti3">InnoDB存储引擎可以将一条记录中的某些数据存储在真正的数据页面之外。一般认为BLOB、LOB这类的大对象列类型的存储会把数据存放在数据页面之外。但是，这个理解有点偏差，BLOB可以不将数据放在溢出页面，而且即便是VARCHAR列数据类型，依然有可能被存放为行溢出数据。</p>
+
+  <p class="ziti3">首先对VARCHAR数据类型进行研究。很多DBA喜欢MySQL数据库提供的VARCHAR类型，因为相对于Oracle VARCHAR2最大存放4000字节，SQL Server最大存放8000字节，MySQL数据库的VARCHAR类型可以存放65535字节。但是，这是真的吗？真的可以存放65535字节吗？如果创建VARCHAR长度为65535的表，用户会得到下面的错误信息：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE test(</p>
+
+  <p class="ziti4">-＞a VARCHAR(65535)</p>
+
+  <p class="ziti4">-＞)CHARSET=latin1 ENGINE=InnoDB;</p>
+
+  <p class="ziti4">ERROR 1118(42000):Row size too large.The maximum row size for the used table type,not counting BLOBs,is 65535.You have to change some columns to TEXT or BLOBs</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">从错误消息可以看到InnoDB存储引擎并不支持65535长度的VARCHAR。这是因为还有别的开销，通过实际测试发现能存放VARCHAR类型的最大长度为65532。例如，按下面的命令创建表就不会报错了。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE test(</p>
+
+  <p class="ziti4">-＞a VARCHAR(65532)</p>
+
+  <p class="ziti4">-＞)CHARSET=latin1 ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.15 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">需要注意的是，如果在执行上述示例的时候没有将SQL_MODE设为严格模式，或许可以建立表，但是MySQL数据库会抛出一个warning，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE test(</p>
+
+  <p class="ziti4">-＞a VARCHAR(65535)</p>
+
+  <p class="ziti4">-＞)CHARSET=latin1 ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected,1 warning(0.14 sec)</p>
+
+  <p class="ziti4">mysql＞SHOW WARNINGS\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Level:Note</p>
+
+  <p class="ziti4">Code:1246</p>
+
+  <p class="ziti4">Message:Converting column'a'from VARCHAR to TEXT</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">warning信息提示了这次可以创建是因为MySQL数据库自动地将VARCHAR类型转换成了TEXT类型。查看test的表结构会发现：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW CREATE TABLE test\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Table:test</p>
+
+  <p class="ziti4">Create Table:CREATE TABLE'test'(</p>
+
+  <p class="ziti4">'a'mediumtext</p>
+
+  <p class="ziti4">)ENGINE=InnoDB DEFAULT CHARSET=utf8</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">还需要注意上述创建的VARCHAR长度为65 532的表，其字符类型是latin1的，如果换成GBK又或UTF-8的，会产生怎样的结果呢？</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE test(</p>
+
+  <p class="ziti4">-＞a VARCHAR(65532)</p>
+
+  <p class="ziti4">-＞)CHARSET=GBK ENGINE=InnoDB;</p>
+
+  <p class="ziti4">ERROR 1074(42000):Column length too big for column'a'(max=32767);use BLOB or TEXT instead</p>
+
+  <p class="ziti4">mysql＞mysql＞CREATE TABLE test(</p>
+
+  <p class="ziti4">-＞a VARCHAR(65532)</p>
+
+  <p class="ziti4">-＞)CHARSET=UTF8 ENGINE=InnoDB;</p>
+
+  <p class="ziti4">ERROR 1074(42000):Column length too big for column'a'(max=21845);use BLOB or TEXT instead</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这次即使创建列的VARCHAR长度为65532，也会提示报错，但是两次报错对max值的提示是不同的。因此从这个例子中用户也应该理解VARCHAR（N）中的N指的是字符的长度。而文档中说明VARCHAR类型最大支持65535，单位是字节。</p>
+
+  <p class="ziti3">此外需要注意的是，MySQL官方手册中定义的65535长度是指所有VARCHAR列的长度总和，如果列的长度总和超出这个长度，依然无法创建，如下所示：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE test2(</p>
+
+  <p class="ziti4">-＞a VARCHAR(22000),</p>
+
+  <p class="ziti4">-＞b VARCHAR(22000),</p>
+
+  <p class="ziti4">-＞c VARCHAR(22000)</p>
+
+  <p class="ziti4">-＞)CHARSET=latin1 ENGINE=InnoDB;</p>
+
+  <p class="ziti4">ERROR 1118(42000):Row size too large.The maximum row size for the used table type,not counting BLOBs,is 65535.You have to change some columns to TEXT or BLOBs</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">3个列长度总和是66000，因此InnoDB存储引擎再次报了同样的错误。即使能存放65532个字节，但是有没有想过，InnoDB存储引擎的页为16KB，即16384字节，怎么能存放65532字节呢？因此，在一般情况下，InnoDB存储引擎的数据都是存放在页类型为B-tree node中。但是当发生行溢出时，数据存放在页类型为Uncompress BLOB页中。来看下面一个例子：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t(</p>
+
+  <p class="ziti4">-＞a VARCHAR(65532)</p>
+
+  <p class="ziti4">-＞)ENGINE=InnoDB CHARSET=latin1;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.15 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t</p>
+
+  <p class="ziti4">-＞SELECT REPEAT('a',65532);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.08 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">在上述例子中，首先创建了一个列a长度为65 532的VARCHAR类型表t，然后插入了列a长度为65 532的记录，接着通过工具py_innodb_page_info看表空间文件，可以看到的页类型有：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nineyou0-43 mytest]#py_innodb_page_info.py-v t.ibd</p>
+
+  <p class="ziti4">page offset 00000000,page type＜File Space Header＞</p>
+
+  <p class="ziti4">page offset 00000001,page type＜Insert Buffer Bitmap＞</p>
+
+  <p class="ziti4">page offset 00000002,page type＜File Segment inode＞</p>
+
+  <p class="ziti4">page offset 00000003,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000004,page type＜Uncompressed BLOB Page＞</p>
+
+  <p class="ziti4">page offset 00000005,page type＜Uncompressed BLOB Page＞</p>
+
+  <p class="ziti4">page offset 00000006,page type＜Uncompressed BLOB Page＞</p>
+
+  <p class="ziti4">page offset 00000007,page type＜Uncompressed BLOB Page＞</p>
+
+  <p class="ziti4">Total number of page:8:</p>
+
+  <p class="ziti4">Insert Buffer Bitmap:1</p>
+
+  <p class="ziti4">Uncompressed BLOB Page:4</p>
+
+  <p class="ziti4">File Space Header:1</p>
+
+  <p class="ziti4">B-tree Node:1</p>
+
+  <p class="ziti4">File Segment inode:1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">通过工具可以观察到表空间中有一个数据页节点B-tree Node，另外有4个未压缩的二进制大对象页Uncompressed BLOB Page，在这些页中才真正存放了65532字节的数据。既然实际存放的数据都在BLOB页中，那数据页中又存放了些什么内容呢？同样通过之前的hexdump来读取表空间文件，从数据页c000开始查看：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">0000c000 67 ce fc 0b 00 00 00 03 ff ff ff ff ff ff ff ff|g...............|</p>
+
+  <p class="ziti4">0000c010 00 00 00 0a 6a d9 c0 89 45 bf 00 00 00 00 00 00|....j...E.......|</p>
+
+  <p class="ziti4">0000c020 00 00 00 00 00 c3 00 02 03 a7 80 03 00 00 00 00|................|</p>
+
+  <p class="ziti4">0000c030 00 80 00 05 00 00 00 01 00 00 00 00 00 00 00 00|................|</p>
+
+  <p class="ziti4">0000c040 00 00 00 00 00 00 00 00 01 a1 00 00 00 c3 00 00|................|</p>
+
+  <p class="ziti4">0000c050 00 02 00 f2 00 00 00 c3 00 00 00 02 00 32 01 00|.............2..|</p>
+
+  <p class="ziti4">0000c060 02 00 1d 69 6e 66 69 6d 75 6d 00 02 00 0b 00 00|...infimum......|</p>
+
+  <p class="ziti4">0000c070 73 75 70 72 65 6d 75 6d 14 c3 00 00 00 10 ff f0|supremum........|</p>
+
+  <p class="ziti4">0000c080 00 00 00 b6 2b 00 00 00 00 51 4b 06 80 00 00 00|....+....QK.....|</p>
+
+  <p class="ziti4">0000c090 2d 01 10 61 61 61 61 61 61 61 61 61 61 61 61 61|-..aaaaaaaaaaaaa|</p>
+
+  <p class="ziti4">0000c0a0 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61|aaaaaaaaaaaaaaaa|</p>
+
+  <p class="ziti4">0000c0b0 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61|aaaaaaaaaaaaaaaa|</p>
+
+  <p class="ziti4">0000c0c0 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61|aaaaaaaaaaaaaaaa|</p>
+
+  <p class="ziti4">0000c0d0 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61|aaaaaaaaaaaaaaaa|</p>
+
+  <p class="ziti4">0000c0e0 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61|aaaaaaaaaaaaaaaa|</p>
+
+  <p class="ziti4">0000c0f0 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61|aaaaaaaaaaaaaaaa|</p>
+
+  <p class="ziti4">0000c100 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61|aaaaaaaaaaaaaaaa|</p>
+
+  <p class="ziti4">0000c110 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61 61|aaaaaaaaaaaaaaaa|</p>
+
+  <p class="ziti4">......</p>
+
+  <p class="ziti4">0000c390 61 61 61 00 00 00 c3 00 00 00 04 00 00 00 26 00|aaa...........＆.|</p>
+
+  <p class="ziti4">0000c3a0 00 00 00 00 00 fc fc 00 00 00 00 00 00 00 00 00|................|</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，从0x0000c093到0x0000c392数据页面其实只保存了VARCHAR（65532）的前768字节的前缀（prefix）数据（这里都是a），之后是偏移量，指向行溢出页，也就是前面用户看到的Uncompressed BLOB Page。因此，对于行溢出数据，其存放采用图4-4的方式。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00021.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　4-4　行溢出数据的存储
+  </div>
+
+  <p class="ziti3">那多长的VARCHAR是保存在单个数据页中的，从多长开始又会保存在BLOB页呢？可以这样进行思考：InnoDB存储引擎表是索引组织的，即B+Tree的结构，这样每个页中至少应该有两条行记录（否则失去了B+Tree的意义，变成链表了）。因此，如果页中只能存放下一条记录，那么InnoDB存储引擎会自动将行数据存放到溢出页中。考虑下面表的一种情况：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TALBE t(</p>
+
+  <p class="ziti4">-＞a VARCHAR(9000)</p>
+
+  <p class="ziti4">-＞)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.13 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t</p>
+
+  <p class="ziti4">-＞SELECT REPEAT('a',9000);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.04 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t</p>
+
+  <p class="ziti4">-＞SELECT REPEAT('a',9000);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.04 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">表t变长字段列a的长度为9000，故能存放在一个数据中，但是这并不能保证两条长度为9000的记录都能存放在一个页中。若此时通过py_innodb_page_info工具查看，可知行数据是否存放在BLOB页中。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nineyou0-43 mytest]#py_innodb_page_info.py-v t.ibd</p>
+
+  <p class="ziti4">page offset 00000000,page type＜File Space Header＞</p>
+
+  <p class="ziti4">page offset 00000001,page type＜Insert Buffer Bitmap＞</p>
+
+  <p class="ziti4">page offset 00000002,page type＜File Segment inode＞</p>
+
+  <p class="ziti4">page offset 00000003,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000004,page type＜Uncompressed BLOB Page＞</p>
+
+  <p class="ziti4">page offset 00000005,page type＜Uncompressed BLOB Page＞</p>
+
+  <p class="ziti4">Total number of page:6:</p>
+
+  <p class="ziti4">Insert Buffer Bitmap:1</p>
+
+  <p class="ziti4">Uncompressed BLOB Page:2</p>
+
+  <p class="ziti4">File Space Header:1</p>
+
+  <p class="ziti4">B-tree Node:1</p>
+
+  <p class="ziti4">File Segment inode:1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">注意　因为py_innodb_page_info工具查看的是磁盘文件，故运行上述示例时，需要确保缓冲池中的页都刷回到磁盘。</p>
+
+  <p class="ziti3">但是，如果可以在一个页中至少放入两行数据，那VARCHAR类型的行数据就不会存放到BLOB页中去。经过多次试验测试，发现这个阈值的长度为8098。如用户建立一个列为varchar（8098）的表，然后插入2条记录：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t(</p>
+
+  <p class="ziti4">-＞a varchar(8098)</p>
+
+  <p class="ziti4">)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.12 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT REPEAT('a',8098);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.04 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT REPEAT('a',8098);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.03 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">接着用py_innodb_page_info工具对表空间t.ibd进行查看，可以发现此时的行记录都是存放在数据页中，而不是在BLOB页中了（熟悉Microsoft SQL Server数据库的DBA可能会感觉InnoDB存储引擎对于VARCHAR类型的管理和SQL Server中的varchar（MAX）类似）。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nineyou0-43 mytest]#py_innodb_page_info.py-v t.ibd</p>
+
+  <p class="ziti4">page offset 00000000,page type＜File Space Header＞</p>
+
+  <p class="ziti4">page offset 00000001,page type＜Insert Buffer Bitmap＞</p>
+
+  <p class="ziti4">page offset 00000002,page type＜File Segment inode＞</p>
+
+  <p class="ziti4">page offset 00000003,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000000,page type＜Freshly Allocated Page＞</p>
+
+  <p class="ziti4">page offset 00000000,page type＜Freshly Allocated Page＞</p>
+
+  <p class="ziti4">Total number of page:6:</p>
+
+  <p class="ziti4">Freshly Allocated Page:2</p>
+
+  <p class="ziti4">Insert Buffer Bitmap:1</p>
+
+  <p class="ziti4">File Space Header:1</p>
+
+  <p class="ziti4">B-tree Node:1</p>
+
+  <p class="ziti4">File Segment inode:1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">另一个问题是，对于TEXT或BLOB的数据类型，用户总是以为它们是存放在Uncompressed BLOB Page中的，其实这也是不准确的。是放在数据页中还是BLOB页中，和前面讨论的VARCHAR一样，至少保证一个页能存放两条记录，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t(</p>
+
+  <p class="ziti4">-＞a BLOB</p>
+
+  <p class="ziti4">-＞)ENGINE=InnoDB;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.12 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT REPEAT('a',8000);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.03 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT REPEAT('a',8000);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.03 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT REPEAT('a',8000);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.01 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO t SELECT REPEAT('a',8000);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.06 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">上述例子建立含有BLOB类型列的表，然后插入4行数据长度为8000的记录。若通过py_innodb_page_info工具对表空间t.ibd进行查看，会发现其实数据并没有保存在BLOB页中。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@nineyou0-43 mytest]#py_innodb_page_info.py-v t.ibd</p>
+
+  <p class="ziti4">page offset 00000000,page type＜File Space Header＞</p>
+
+  <p class="ziti4">page offset 00000001,page type＜Insert Buffer Bitmap＞</p>
+
+  <p class="ziti4">page offset 00000002,page type＜File Segment inode＞</p>
+
+  <p class="ziti4">page offset 00000003,page type＜B-tree Node＞,page level＜0001＞</p>
+
+  <p class="ziti4">page offset 00000004,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000005,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000006,page type＜B-tree Node＞,page level＜0000＞</p>
+
+  <p class="ziti4">page offset 00000000,page type＜Freshly Allocated Page＞</p>
+
+  <p class="ziti4">Total number of page:8:</p>
+
+  <p class="ziti4">Freshly Allocated Page:1</p>
+
+  <p class="ziti4">Insert Buffer Bitmap:1</p>
+
+  <p class="ziti4">File Space Header:1</p>
+
+  <p class="ziti4">B-tree Node:4</p>
+
+  <p class="ziti4">File Segment inode:1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">当然既然用户使用了BLOB列类型，一般不可能存放长度这么小的数据。因此在大多数的情况下BLOB的行数据还是会发生行溢出，实际数据保存在BLOB页中，数据页只保存数据的前768字节。</p>
+</body></html>

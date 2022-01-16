@@ -1,0 +1,163 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.8　分区表</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2BASE0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">4.8　分区表</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>4.8.1　分区概述</h3>
+
+  <p class="ziti3">分区功能并不是在存储引擎层完成的，因此不是只有InnoDB存储引擎支持分区，常见的存储引擎MyISAM、NDB等都支持。但也并不是所有的存储引擎都支持，如CSV、FEDORATED、MERGE等就不支持。在使用分区功能前，应该对选择的存储引擎对分区的支持有所了解。</p>
+
+  <p class="ziti3">MySQL数据库在5.1版本时添加了对分区的支持。分区的过程是将一个表或索引分解为多个更小、更可管理的部分。就访问数据库的应用而言，从逻辑上讲，只有一个表或一个索引，但是在物理上这个表或索引可能由数十个物理分区组成。每个分区都是独立的对象，可以独自处理，也可以作为一个更大对象的一部分进行处理。</p>
+
+  <p class="ziti3">MySQL数据库支持的分区类型为水平分区<sup class="calibre4"><a id="ch1" href="part0079.html#ch1-back" class="pcalibre calibre1">[1]</a></sup>，并不支持垂直分区<sup class="calibre4"><a id="ch2" href="part0079.html#ch2-back" class="pcalibre calibre1">[2]</a></sup>。此外，MySQL数据库的分区是局部分区索引，一个分区中既存放了数据又存放了索引。而全局分区是指，数据存放在各个分区中，但是所有数据的索引放在一个对象中。目前，MySQL数据库还不支持全局分区。</p>
+
+  <p class="ziti3">可以通过以下命令来查看当前数据库是否启用了分区功能：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'%partition%'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:have_partitioning</p>
+
+  <p class="ziti4">Value:YES</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">也可以通过命令SHOW PLUGINS来查看：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW PLUGINS\G;</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">Name:partition</p>
+
+  <p class="ziti4">Status:ACTIVE</p>
+
+  <p class="ziti4">Type:STORAGE ENGINE</p>
+
+  <p class="ziti4">Library:NULL</p>
+
+  <p class="ziti4">License:GPL</p>
+
+  <p class="ziti4">……</p>
+
+  <p class="ziti4">9 rows in set(0.01 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">大多数DBA会有这样一个误区：只要启用了分区，数据库就会运行得更快。这个结论是存在很多问题的。就我的经验看来，分区可能会给某些SQL语句性能带来提高，但是分区主要用于数据库高可用性的管理。在OLTP应用中，对于分区的使用应该非常小心。总之，如果只是一味地使用分区，而不理解分区是如何工作的，也不清楚你的应用如何使用分区，那么分区极有可能会对性能产生负面的影响。</p>
+
+  <p class="ziti3">当前MySQL数据库支持以下几种类型的分区。</p>
+
+  <p class="ziti3">❑RANGE分区：行数据基于属于一个给定连续区间的列值被放入分区。MySQL 5.5开始支持RANGE COLUMNS的分区。</p>
+
+  <p class="ziti3">❑LIST分区：和RANGE分区类型，只是LIST分区面向的是离散的值。MySQL 5.5开始支持LIST COLUMNS的分区。</p>
+
+  <p class="ziti3">❑HASH分区：根据用户自定义的表达式的返回值来进行分区，返回值不能为负数。</p>
+
+  <p class="ziti3">❑KEY分区：根据MySQL数据库提供的哈希函数来进行分区。</p>
+
+  <p class="ziti3">不论创建何种类型的分区，如果表中存在主键或唯一索引时，分区列必须是唯一索引的一个组成部分，因此下面创建分区的SQL语句会产生错误。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t1(</p>
+
+  <p class="ziti4">-＞col1 INT NOT NULL,</p>
+
+  <p class="ziti4">-＞col2 DATE NOT NULL,</p>
+
+  <p class="ziti4">-＞col3 INT NOT NULL,</p>
+
+  <p class="ziti4">-＞col4 INT NOT NULL,</p>
+
+  <p class="ziti4">-＞UNIQUE KEY(col1,col2)</p>
+
+  <p class="ziti4">-＞)</p>
+
+  <p class="ziti4">-＞PARTITION BY HASH(col3)</p>
+
+  <p class="ziti4">-＞PARTITIONS 4;</p>
+
+  <p class="ziti4">ERROR 1503(HY000):A PRIMARY KEY must include all columns in the table's partitioning function</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">唯一索引可以是允许NULL值的，并且分区列只要是唯一索引的一个组成部分，不需要整个唯一索引列都是分区列，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE t1(</p>
+
+  <p class="ziti4">-＞col1 INT NULL,</p>
+
+  <p class="ziti4">-＞col2 DATE NULL,</p>
+
+  <p class="ziti4">-＞col3 INT NULL,</p>
+
+  <p class="ziti4">-＞col4 INT NULL,</p>
+
+  <p class="ziti4">-＞UNIQUE KEY(col1,col2,col3,col4)</p>
+
+  <p class="ziti4">-＞)</p>
+
+  <p class="ziti4">-＞PARTITION BY HASH(col3)</p>
+
+  <p class="ziti4">-＞PARTITIONS 4;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.53 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果建表时没有指定主键，唯一索引，可以指定任何一个列为分区列，因此下面两句创建分区的SQL语句都是可以正确运行的。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE TABLE t1(</p>
+
+  <p class="ziti4">col1 INT NULL,</p>
+
+  <p class="ziti4">col2 DATE NULL,</p>
+
+  <p class="ziti4">col3 INT NULL,</p>
+
+  <p class="ziti4">col4 INT NULL</p>
+
+  <p class="ziti4">)engine=innodb</p>
+
+  <p class="ziti4">PARTITION BY HASH(col3)</p>
+
+  <p class="ziti4">PARTITIONS 4;</p>
+
+  <p class="ziti4">CREATE TABLE t1(</p>
+
+  <p class="ziti4">col1 INT NULL,</p>
+
+  <p class="ziti4">col2 DATE NULL,</p>
+
+  <p class="ziti4">col3 INT NULL,</p>
+
+  <p class="ziti4">col4 INT NULL,</p>
+
+  <p class="ziti4">key(col4)</p>
+
+  <p class="ziti4">)engine=innodb</p>
+
+  <p class="ziti4">PARTITION BY HASH(col3)</p>
+
+  <p class="ziti4">PARTITIONS 4;</p>
+  <hr class="calibre2"/>
+
+  <div class="fnote">
+    <a id="ch1-back" href="part0079.html#ch1" class="pcalibre calibre1">[1]</a>水平分区，指将同一表中不同行的记录分配到不同的物理文件中。
+  </div>
+
+  <div class="fnote">
+    <a id="ch2-back" href="part0079.html#ch2" class="pcalibre calibre1">[2]</a>垂直分区，指将同一表中不同列的记录分配到不同的物理文件中。
+  </div>
+</body></html>

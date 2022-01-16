@@ -1,0 +1,61 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>5.6.7　Index Condition Pushdown（ICP）优化</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="3279U0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">5.6.7　Index Condition Pushdown（ICP）优化</h3>
+
+  <p class="ziti3">和Multi-Range Read一样，Index Condition Pushdown同样是MySQL 5.6开始支持的一种根据索引进行查询的优化方式。之前的MySQL数据库版本不支持Index Condition Pushdown，当进行索引查询时，首先根据索引来查找记录，然后再根据WHERE条件来过滤记录。在支持Index Condition Pushdown后，MySQL数据库会在取出索引的同时，判断是否可以进行WHERE条件的过滤，也就是将WHERE的部分过滤操作放在了存储引擎层。在某些查询下，可以大大减少上层SQL层对记录的索取（fetch），从而提高数据库的整体性能。</p>
+
+  <p class="ziti3">Index Condition Pushdown优化支持range、ref、eq_ref、ref_or_null类型的查询，当前支持MyISAM和InnoDB存储引擎。当优化器选择Index Condition Pushdown优化时，可在执行计划的列Extra看到Using index condition提示。</p>
+
+  <p class="ziti3">注意　NDB Cluster存储引擎支持Engine Condition Pushdown优化。不仅可以进行“Index”的Condition Pushdown，也可以支持非索引的Condition Pushdown，不过这是由其引擎本身的特性所决定的。另外在MySQL 5.1版本中NDB Cluster存储引擎就开始支持Engine Condition Pushdown优化。</p>
+
+  <p class="ziti3">假设某张表有联合索引(zip_code，last_name，firset_name)，并且查询语句如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM people</p>
+
+  <p class="ziti4">WHERE zipcode='95054'</p>
+
+  <p class="ziti4">AND lastname LIKE'%etrunia%'</p>
+
+  <p class="ziti4">AND address LIKE'%Main Street%';</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">对于上述语句，MySQL数据库可以通过索引来定位zipcode等于95 054的记录，但是索引对WHERE条件的lastname LIKE'%etrunia%'AND address LIKE'%Main Street%'没有任何帮助。若不支持Index Condition Pushdown优化，则数据库需要先通过索引取出所有zipcode等于95 054的记录，然后再过滤WHERE之后的两个条件。</p>
+
+  <p class="ziti3">若支持Index Condition Pushdown优化，则在索引取出时，就会进行WHERE条件的过滤，然后再去获取记录。这将极大地提高查询的效率。当然，WHERE可以过滤的条件是要该索引可以覆盖到的范围。来看下面的SQL语句：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">SELECT*FROM salaries</p>
+
+  <p class="ziti4">WHERE(from_date between'1986-01-01'AND'1995-01-01')</p>
+
+  <p class="ziti4">AND(salary between 38000 and 40000);</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">若不启用Multi-Range Read优化，则其执行计划如图5-37所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00070.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　5-37　不进行Multi-Range Read优化的执行计划
+  </div>
+
+  <p class="ziti3">可以看到列Extra有Using index condition的提示。但是为什么这里的idx_s索引会使用Index Condition Pushdown优化呢？因为这张表的主键是(emp_no，from_date)的联合索引，所以idx_s索引中包含了from_date的数据，故可使用此优化方式。</p>
+
+  <p class="ziti3">表5-5对比了在MySQL 5.5和MySQL 5.6中上述SQL语句的执行时间，并且同时比较开启MRR后的执行时间。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00071.jpeg" class="calibre3"/>
+  </div>
+
+  <p class="ziti3">上述的执行时间的比较同样是不对缓冲池做任何的预热操作。可见Index Condition Pushdown优化可以将查询效率在原有MySQL 5.5版本的技术上提高23%。而再同时启用Mulit-Range Read优化后，性能还能有400%的提升！</p>
+</body></html>

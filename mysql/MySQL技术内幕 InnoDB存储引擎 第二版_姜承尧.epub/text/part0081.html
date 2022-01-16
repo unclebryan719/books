@@ -1,0 +1,319 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.8.3　子分区</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="2D7TI0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.8.3　子分区</h3>
+
+  <p class="ziti3">子分区（subpartitioning）是在分区的基础上再进行分区，有时也称这种分区为复合分区（composite partitioning）。MySQL数据库允许在RANGE和LIST的分区上再进行HASH或KEY的子分区，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE ts(a INT,b DATE)engine=innodb</p>
+
+  <p class="ziti4">-＞PARTITION BY RANGE(YEAR(b))</p>
+
+  <p class="ziti4">-＞SUBPARTITION BY HASH(TO_DAYS(b))</p>
+
+  <p class="ziti4">-＞SUBPARTITIONS 2(</p>
+
+  <p class="ziti4">-＞PARTITION p0 VALUES LESS THAN(1990),</p>
+
+  <p class="ziti4">-＞PARTITION p1 VALUES LESS THAN(2000),</p>
+
+  <p class="ziti4">-＞PARTITION p2 VALUES LESS THAN MAXVALUE</p>
+
+  <p class="ziti4">-＞);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.01 sec)</p>
+
+  <p class="ziti4">mysql＞system ls-lh/usr/local/mysql/data/test2/ts*</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 8.4K Aug 1 15:50/usr/local/mysql/data/test2/ts.frm</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96 Aug 1 15:50/usr/local/mysql/data/test2/ts.par</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 15:50/usr/local/mysql/data/test2/ts#P#p0#SP#p0sp0.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 15:50/usr/local/mysql/data/test2/ts#P#p0#SP#p0sp1.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 15:50/usr/local/mysql/data/test2/ts#P#p1#SP#p1sp0.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 15:50/usr/local/mysql/data/test2/</p>
+
+  <p class="ziti4">ts#P#p1#SP#p1sp1.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 15:50/usr/local/mysql/data/test2/ts#P#p2#SP#p2sp0.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 15:50/usr/local/mysql/data/test2/ts#P#p2#SP#p2sp1.ibd</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">表ts先根据b列进行了RANGE分区，然后又进行了一次HASH分区，所以分区的数量应该为（3×2=）6个，这通过查看物理磁盘上的文件也可以得到证实。我们也可以通过使用SUBPARTITION语法来显式地指出各个子分区的名字，例如对上述的ts表同样可以这样：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE ts(a INT,b DATE)</p>
+
+  <p class="ziti4">-＞PARTITION BY RANGE(YEAR(b))</p>
+
+  <p class="ziti4">-＞SUBPARTITION BY HASH(TO_DAYS(b))(</p>
+
+  <p class="ziti4">-＞PARTITION p0 VALUES LESS THAN(1990)(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s0,</p>
+
+  <p class="ziti4">-＞SUBPARTITION s1</p>
+
+  <p class="ziti4">-＞),</p>
+
+  <p class="ziti4">-＞PARTITION p1 VALUES LESS THAN(2000)(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s2,</p>
+
+  <p class="ziti4">-＞SUBPARTITION s3</p>
+
+  <p class="ziti4">-＞),</p>
+
+  <p class="ziti4">-＞PARTITION p2 VALUES LESS THAN MAXVALUE(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s4,</p>
+
+  <p class="ziti4">-＞SUBPARTITION s5</p>
+
+  <p class="ziti4">-＞)</p>
+
+  <p class="ziti4">-＞);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">子分区的建立需要注意以下几个问题：</p>
+
+  <p class="ziti3">❑每个子分区的数量必须相同。</p>
+
+  <p class="ziti3">❑要在一个分区表的任何分区上使用SUBPARTITION来明确定义任何子分区，就必须定义所有的子分区。因此下面的创建语句是错误的：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE ts(a INT,b DATE)</p>
+
+  <p class="ziti4">-＞PARTITION BY RANGE(YEAR(b))</p>
+
+  <p class="ziti4">-＞SUBPARTITION BY HASH(TO_DAYS(b))(</p>
+
+  <p class="ziti4">-＞PARTITION p0 VALUES LESS THAN(1990)(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s0,</p>
+
+  <p class="ziti4">-＞SUBPARTITION s1</p>
+
+  <p class="ziti4">-＞),</p>
+
+  <p class="ziti4">-＞PARTITION p1 VALUES LESS THAN(2000),</p>
+
+  <p class="ziti4">-＞PARTITION p2 VALUES LESS THAN MAXVALUE(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s2,</p>
+
+  <p class="ziti4">-＞SUBPARTITION s3</p>
+
+  <p class="ziti4">-＞)</p>
+
+  <p class="ziti4">-＞);</p>
+
+  <p class="ziti4">ERROR 1064(42000):Wrong number of subpartitions defined,mismatch with previous setting near'</p>
+
+  <p class="ziti4">PARTITION p2 VALUES LESS THAN MAXVALUE(</p>
+
+  <p class="ziti4">SUBPARTITION s2,</p>
+
+  <p class="ziti4">SUBPARTITION s3</p>
+
+  <p class="ziti4">)</p>
+
+  <p class="ziti4">)'at line 8</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">❑每个SUBPARTITION子句必须包括子分区的一个名字。</p>
+
+  <p class="ziti3">❑子分区的名字必须是唯一的。因此下面的创建语句是错误的：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE ts(a INT,b DATE)</p>
+
+  <p class="ziti4">-＞PARTITION BY RANGE(YEAR(b))</p>
+
+  <p class="ziti4">-＞SUBPARTITION BY HASH(TO_DAYS(b))(</p>
+
+  <p class="ziti4">-＞PARTITION p0 VALUES LESS THAN(1990)(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s0,</p>
+
+  <p class="ziti4">-＞SUBPARTITION s1</p>
+
+  <p class="ziti4">-＞),</p>
+
+  <p class="ziti4">-＞PARTITION p1 VALUES LESS THAN(2000)(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s0,</p>
+
+  <p class="ziti4">-＞SUBPARTITION s1</p>
+
+  <p class="ziti4">-＞),</p>
+
+  <p class="ziti4">-＞PARTITION p2 VALUES LESS THAN MAXVALUE(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s0,</p>
+
+  <p class="ziti4">-＞SUBPARTITION s1</p>
+
+  <p class="ziti4">-＞)</p>
+
+  <p class="ziti4">-＞);</p>
+
+  <p class="ziti4">ERROR 1517(HY000):Duplicate partition name s0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">子分区可以用于特别大的表，在多个磁盘间分别分配数据和索引。假设有6个磁盘，分别为/disk0、/disk1、/disk2等。现在考虑下面的例子：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE ts(a INT,b DATE)ENGINE=MYISAM</p>
+
+  <p class="ziti4">-＞PARTITION BY RANGE(YEAR(b))</p>
+
+  <p class="ziti4">-＞SUBPARTITION BY HASH(TO_DAYS(b))(</p>
+
+  <p class="ziti4">-＞PARTITION p0 VALUES LESS THAN(2000)(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s0</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk0/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk0/idx',</p>
+
+  <p class="ziti4">-＞SUBPARTITION s1</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk1/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk1/idx'</p>
+
+  <p class="ziti4">-＞),</p>
+
+  <p class="ziti4">-＞PARTITION p1 VALUES LESS THAN(2010)(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s2</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk2/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk2/idx',</p>
+
+  <p class="ziti4">-＞SUBPARTITION s3</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk3/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk3/idx'</p>
+
+  <p class="ziti4">-＞),</p>
+
+  <p class="ziti4">-＞PARTITION p2 VALUES LESS THAN MAXVALUE(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s4</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk4/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk4/idx',</p>
+
+  <p class="ziti4">-＞SUBPARTITION s5</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk5/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk5/idx'</p>
+
+  <p class="ziti4">-＞)</p>
+
+  <p class="ziti4">-＞);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.02 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">由于InnoDB存储引擎使用表空间自动地进行数据和索引的管理，因此会忽略DATA DIRECTORY和INDEX DIRECTORY语法，因此上述的分区表的数据和索引文件分开放置对其是无效的：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE ts(a INT,b DATE)engine=innodb</p>
+
+  <p class="ziti4">-＞PARTITION BY RANGE(YEAR(b))</p>
+
+  <p class="ziti4">-＞SUBPARTITION BY HASH(TO_DAYS(b))(</p>
+
+  <p class="ziti4">-＞PARTITION p0 VALUES LESS THAN(2000)(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s0</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk0/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk0/idx',</p>
+
+  <p class="ziti4">-＞SUBPARTITION s1</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk1/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk1/idx'</p>
+
+  <p class="ziti4">-＞),</p>
+
+  <p class="ziti4">-＞PARTITION p1 VALUES LESS THAN(2010)(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s2</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk2/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk2/idx',</p>
+
+  <p class="ziti4">-＞SUBPARTITION s3</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk3/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk3/idx'</p>
+
+  <p class="ziti4">-＞),</p>
+
+  <p class="ziti4">-＞PARTITION p2 VALUES LESS THAN MAXVALUE(</p>
+
+  <p class="ziti4">-＞SUBPARTITION s4</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk4/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk4/idx',</p>
+
+  <p class="ziti4">-＞SUBPARTITION s5</p>
+
+  <p class="ziti4">-＞DATA DIRECTORY='/disk5/data'</p>
+
+  <p class="ziti4">-＞INDEX DIRECTORY='/disk5/idx'</p>
+
+  <p class="ziti4">-＞)</p>
+
+  <p class="ziti4">-＞);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.02 sec)</p>
+
+  <p class="ziti4">mysql＞system ls-lh/usr/local/mysql/data/test2/ts*</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 8.4K Aug 1 16:24/usr/local/mysql/data/test2/ts.frm</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 80 Aug 1 16:24/usr/local/mysql/data/test2/ts.par</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 16:25/usr/local/mysql/data/test2/ts#P#p0#SP#s0.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 16:25/usr/local/mysql/data/test2/ts#P#p0#SP#s1.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 16:25/usr/local/mysql/data/test2/ts#P#p1#SP#s2.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 16:25/usr/local/mysql/data/test2/ts#P#p1#SP#s3.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 16:25/usr/local/mysql/data/test2/ts#P#p2#SP#s4.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 96K Aug 1 16:25/usr/local/mysql/data/test2/ts#P#p2#SP#s5.ibd</p>
+  <hr class="calibre2"/>
+</body></html>

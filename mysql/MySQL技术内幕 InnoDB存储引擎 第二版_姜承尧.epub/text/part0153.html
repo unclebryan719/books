@@ -1,0 +1,109 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>8.3.5　mysqlimport</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="4HT620-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">8.3.5　mysqlimport</h3>
+
+  <p class="ziti3">mysqlimport是MySQL数据库提供的一个命令行程序，从本质上来说，是LOAD DATA INFILE的命令接口，而且大多数的选项都和LOAD DATA INFILE语法相同。其语法格式如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">shell＞mysqlimport[options]db_name textfile1[textfile2...]</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">和LOAD DATA INFILE不同的是，mysqlimport命令可以用来导入多张表。并且通过--user-thread参数并发地导入不同的文件。这里的并发是指并发导入多个文件，而不是指mysqlimport可以并发地导入一个文件，这是有明显区别的。此外，通常来说并发地对同一张表进行导入，其效果一般都不会比串行的方式好。下面通过mysqlimport并发地导入2张表：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-servermysql]#mysqlimport--use-threads=2 test/home/mysql/t.txt/home/mysql/s.txt</p>
+
+  <p class="ziti4">test.s:Records:5000000 Deleted:0 Skipped:0 Warnings:0</p>
+
+  <p class="ziti4">test.t:Records:5000000 Deleted:0 Skipped:0 Warnings:0</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">如果在上述命令的运行过程中，查看MySQL的数据库线程列表，应该可以看到类似如下内容：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW FULL PROCESSLIST\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Id:46</p>
+
+  <p class="ziti4">User:rep</p>
+
+  <p class="ziti4">Host:www.dao.com:1028</p>
+
+  <p class="ziti4">db:NULL</p>
+
+  <p class="ziti4">Command:Binlog Dump</p>
+
+  <p class="ziti4">Time:37651</p>
+
+  <p class="ziti4">State:Master has sent all binlog to slave;waiting for binlog to be updated</p>
+
+  <p class="ziti4">Info:NULL</p>
+
+  <p class="ziti4">***************************2.row***************************</p>
+
+  <p class="ziti4">Id:77</p>
+
+  <p class="ziti4">User:root</p>
+
+  <p class="ziti4">Host:localhost</p>
+
+  <p class="ziti4">db:test</p>
+
+  <p class="ziti4">Command:Query</p>
+
+  <p class="ziti4">Time:0</p>
+
+  <p class="ziti4">State:NULL</p>
+
+  <p class="ziti4">Info:show full processlist</p>
+
+  <p class="ziti4">***************************3.row***************************</p>
+
+  <p class="ziti4">Id:83</p>
+
+  <p class="ziti4">User:root</p>
+
+  <p class="ziti4">Host:localhost</p>
+
+  <p class="ziti4">db:test</p>
+
+  <p class="ziti4">Command:Query</p>
+
+  <p class="ziti4">Time:73</p>
+
+  <p class="ziti4">State:NULL</p>
+
+  <p class="ziti4">Info:LOAD DATA INFILE'/home/mysql/t.txt'INTO TABLE't'IGNORE 0 LINES</p>
+
+  <p class="ziti4">***************************4.row***************************</p>
+
+  <p class="ziti4">Id:84</p>
+
+  <p class="ziti4">User:root</p>
+
+  <p class="ziti4">Host:localhost</p>
+
+  <p class="ziti4">db:test</p>
+
+  <p class="ziti4">Command:Query</p>
+
+  <p class="ziti4">Time:73</p>
+
+  <p class="ziti4">State:NULL</p>
+
+  <p class="ziti4">Info:LOAD DATA INFILE'/home/mysql/s.txt'INTO TABLE's'IGNORE 0 LINES</p>
+
+  <p class="ziti4">4 rows in set(0.00 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到mysqlimport实际上是同时执行了两句LOAD DTA INFILE并发地导入数据。</p>
+</body></html>

@@ -1,0 +1,55 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>4.6.5　ENUM和SET约束</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="26I9K0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">4.6.5　ENUM和SET约束</h3>
+
+  <p class="ziti3">MySQL数据库不支持传统的CHECK约束，但是通过ENUM和SET类型可以解决部分这样的约束需求。例如表上有一个性别类型，规定域的范围只能是male或female，在这种情况下用户可以通过ENUM类型来进行约束。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CREATE TABLE a(</p>
+
+  <p class="ziti4">-＞id INT,</p>
+
+  <p class="ziti4">-＞sex ENUM('male','female'));</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.12 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO a</p>
+
+  <p class="ziti4">-＞SELECT 1,'female';</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.03 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:0</p>
+
+  <p class="ziti4">mysql＞INSERT INTO a</p>
+
+  <p class="ziti4">-＞SELECT 2,'bi';</p>
+
+  <p class="ziti4">Query OK,1 row affected,1 warning(0.03 sec)</p>
+
+  <p class="ziti4">Records:1 Duplicates:0 Warnings:1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">可以看到，在上述例子中对第二条记录的插入依然是报了警告。因此如果想实现CHECK约束，还需要配合设置参数sql_mode。</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SET sql_mode='STRICT_TRANS_TABLES';</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞INSERT INTO a</p>
+
+  <p class="ziti4">-＞SELECT 2,'bi';</p>
+
+  <p class="ziti4">ERROR 1265(01000):Data truncated for column'sex'at row 1</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这次对非法的输入值进行了约束，但是只限于对离散数值的约束，对于传统CHECK约束支持的连续值的范围约束或更复杂的约束，ENUM和SET类型还是无能为力，这时用户需要通过触发器来实现对于值域的约束。</p>
+</body></html>

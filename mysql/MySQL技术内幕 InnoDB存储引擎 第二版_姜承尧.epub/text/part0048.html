@@ -1,0 +1,69 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>3.6　InnoDB存储引擎文件</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="1DOR00-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">3.6　InnoDB存储引擎文件</h2>
+
+  <p class="ziti3">之前介绍的文件都是MySQL数据库本身的文件，和存储引擎无关。除了这些文件外，每个表存储引擎还有其自己独有的文件。本节将具体介绍与InnoDB存储引擎密切相关的文件，这些文件包括重做日志文件、表空间文件。</p>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>3.6.1　表空间文件</h3>
+
+  <p class="ziti3">InnoDB采用将存储的数据按表空间（tablespace）进行存放的设计。在默认配置下会有一个初始大小为10MB，名为ibdata1的文件。该文件就是默认的表空间文件（tablespace file），用户可以通过参数innodb_data_file_path对其进行设置，格式如下：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">innodb_data_file_path=datafle_spec1[;datafle_spec2]...</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">用户可以通过多个文件组成一个表空间，同时制定文件的属性，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[mysqld]</p>
+
+  <p class="ziti4">innodb_data_file_path=/db/ibdata1:2000M;/dr2/db/ibdata2:2000M:autoextend</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">这里将/db/ibdata1和/dr2/db/ibdata2两个文件用来组成表空间。若这两个文件位于不同的磁盘上，磁盘的负载可能被平均，因此可以提高数据库的整体性能。同时，两个文件的文件名后都跟了属性，表示文件idbdata1的大小为2000MB，文件ibdata2的大小为2000MB，如果用完了这2000MB，该文件可以自动增长（autoextend）。</p>
+
+  <p class="ziti3">设置innodb_data_file_path参数后，所有基于InnoDB存储引擎的表的数据都会记录到该共享表空间中。若设置了参数innodb_file_per_table，则用户可以将每个基于InnoDB存储引擎的表产生一个独立表空间。独立表空间的命名规则为：表名.ibd。通过这样的方式，用户不用将所有数据都存放于默认的表空间中。下面这台MySQL数据库服务器设置了innodb_file_per_table，故可以观察到：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞SHOW VARIABLES LIKE'innodb_file_per_table'\G;</p>
+
+  <p class="ziti4">***************************1.row***************************</p>
+
+  <p class="ziti4">Variable_name:innodb_file_per_table</p>
+
+  <p class="ziti4">Value:ON</p>
+
+  <p class="ziti4">1 row in set(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞system ls-lh/usr/local/mysql/data/member/*</p>
+
+  <p class="ziti4">-rw-r-----1 mysql mysql 8.7K 2009-02-24/usr/local/mysql/data/member/Profile.frm</p>
+
+  <p class="ziti4">-rw-r-----1 mysql mysql 1.7G 9月25 11:13/usr/local/mysql/data/member/Profile.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 8.7K 9月27 13:38/usr/local/mysql/data/member/t1.frm</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 17M 9月27 13:40/usr/local/mysql/data/member/t1.ibd</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 8.7K 9月27 15:42/usr/local/mysql/data/member/t2.frm</p>
+
+  <p class="ziti4">-rw-rw----1 mysql mysql 17M 9月27 15:54/usr/local/mysql/data/member/t2.ibd</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">表Profile、t1和t2都是基于InnoDB存储的表，由于设置参数innodb_file_per_table=ON，因此产生了单独的.ibd独立表空间文件。需要注意的是，这些单独的表空间文件仅存储该表的数据、索引和插入缓冲BITMAP等信息，其余信息还是存放在默认的表空间中。图3-1显示了InnoDB存储引擎对于文件的存储方式：</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00012.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　3-1　InnoDB表存储引擎文件
+  </div>
+</body></html>

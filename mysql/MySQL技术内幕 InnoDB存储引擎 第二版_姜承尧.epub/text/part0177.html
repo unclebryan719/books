@@ -1,0 +1,109 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>10.3.2　Linux下的调试</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="58PJI0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h3 class="p1" id="heading_id_2">10.3.2　Linux下的调试</h3>
+
+  <p class="ziti3">Linux下的调试通常使用Eclipse。对于其他类UNIX的操作系统，如Solaris、FreeBSD、MAC同样可以使用Eclipse进行调试。首先到http://www.eclipse.org/downloads/下载并安装Eclipse IDE for C/C++Developers。然后，解压MySQL源代码到指定目录，如解压到/root/workspace/mysql-5.5.5-m3，接着运行如下命令产生Make文件，Eclipse会使用产生的这些Make文件：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">[root@xen-server mysql-5.5.5-m3]#BUILD/compile-amd64-debug-max-no-ndb-c</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">BUILD下有很多compile文件，用户可以从中选择所需要的文件。本书编译的平台是64位的Linux系统，并且我希望可以进行Debug，因此选择了compile-amd64-debug-max-no-ndb文件。注意-c选项，这个选项只生产Make文件，不进行编译。</p>
+
+  <p class="ziti3">接着打开Eclipse，新建一个C++的项目，如图10-10所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00166.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-10　新建一个C++项目
+  </div>
+
+  <p class="ziti3">为项目取个名字，如这里的项目名为mysql_5_5_5，并选择一个空的项目，如图10-11所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00167.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-11　选择空项目
+  </div>
+
+  <p class="ziti3">选择Finish按钮后，可以看到新产生的一个空项目，如图10-12所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00168.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-12　新建的C++项目
+  </div>
+
+  <p class="ziti3">之后选择左边的Project Explorer，右击项目mysql_5_5_5，选择新建文件夹，将文件夹/root/workspace/mysql-5.5.5-m3导入到工程，如图10-13所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00169.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-13　选择文件夹
+  </div>
+
+  <p class="ziti3">导入文件夹后再右击项目名mysql_5_5_5，选择项目属性，在C/C++Build选项这里进行设置，需要将Build directory选择为源代码所在路径，如图10-14所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00170.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-14　编译配置
+  </div>
+
+  <p class="ziti3">编译配置完后，程序就会自动开始执行编译工作了，如图10-15所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00171.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-15　执行编译
+  </div>
+
+  <p class="ziti3">上述的这个过程只是编译的过程，换句话说，编译完后就产生了mysqld这样的执行文件。如果想要进行调试，我们还需要在Debug这里进行如下的配置，如图10-16所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00172.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-16　Debug配置
+  </div>
+
+  <p class="ziti3">另外如果需要配置一些额外的参数，需要切换到Arguments选项，如图10-17所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00173.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-17　调试参数
+  </div>
+
+  <p class="ziti3">之后就可以设置断点，进行调试工作了，这和一般的程序并没有什么不同，如图10-18所示。</p>
+
+  <div class="pic">
+    <img alt="" src="../images/00174.jpeg" class="calibre3"/>
+  </div>
+
+  <div class="middle-img">
+    图　10-18　用Eclipse进行调试
+  </div>
+</body></html>

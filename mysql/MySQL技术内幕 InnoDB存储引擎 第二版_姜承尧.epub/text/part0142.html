@@ -1,0 +1,127 @@
+<?xml version='1.0' encoding='utf-8'?>
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <title>7.8　不好的事务习惯</title>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8"/>
+  <link href="../stylesheet.css" rel="stylesheet" type="text/css"/>
+<link href="../page_styles.css" rel="stylesheet" type="text/css"/>
+</head>
+  <body id="47DFS0-878f632495a744b2a24ea2205f162355" class="calibre">
+  <h2 class="p4" id="heading_id_2">7.8　不好的事务习惯</h2>
+
+  <h3 class="p1" id="heading_id_3"><a id="bw2" class="pcalibre calibre1"></a>7.8.1　在循环中提交</h3>
+
+  <p class="ziti3">开发人员非常喜欢在循环中进行事务的提交，下面是他们可能常写的一个存储过程：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE PROCEDURE load1(count INT UNSIGNED)</p>
+
+  <p class="ziti4">BEGIN</p>
+
+  <p class="ziti4">DECLARE s INT UNSIGNED DEFAULT 1;</p>
+
+  <p class="ziti4">DECLARE c CHAR(80)DEFAULT REPEAT('a',80);</p>
+
+  <p class="ziti4">WHILE s＜=count DO</p>
+
+  <p class="ziti4">INSERT INTO t1 SELECT NULL,c;</p>
+
+  <p class="ziti4">COMMIT;</p>
+
+  <p class="ziti4">SET s=s+1;</p>
+
+  <p class="ziti4">END WHILE;</p>
+
+  <p class="ziti4">END;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">其实，在上述的例子中，是否加上提交命令COMMIT并不关键。因为InnoDB存储引擎默认为自动提交，所以在上述的存储过程中去掉COMMIT，结果其实是完全一样的。这也是另一个容易被开发人员忽视的问题：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE PROCEDURE load2(count INT UNSIGNED)</p>
+
+  <p class="ziti4">BEGIN</p>
+
+  <p class="ziti4">DECLARE s INT UNSIGNED DEFAULT 1;</p>
+
+  <p class="ziti4">DECLARE c CHAR(80)DEFAULT REPEAT('a',80);</p>
+
+  <p class="ziti4">WHILE s＜=count DO</p>
+
+  <p class="ziti4">INSERT INTO t1 SELECT NULL,c;</p>
+
+  <p class="ziti4">SET s=s+1;</p>
+
+  <p class="ziti4">END WHILE;</p>
+
+  <p class="ziti4">END;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">不论上面哪个存储过程都存在一个问题，当发生错误时，数据库会停留在一个未知的位置。例如，用户需要插入10 000条记录，但是在插入5000条时，发生了错误，这时前5000条记录已经存放在数据库中，那应该怎么处理呢？另一个问题是性能问题，上面两个存储过程都不会比下面的存储过程load3快，因为下面的存储过程将所有的INSERT都放在一个事务中：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">CREATE PROCEDURE load3(count INT UNSIGNED)</p>
+
+  <p class="ziti4">BEGIN</p>
+
+  <p class="ziti4">DECLARE s INT UNSIGNED DEFAULT 1;</p>
+
+  <p class="ziti4">DECLARE c CHAR(80)DEFAULT REPEAT('a',80);</p>
+
+  <p class="ziti4">START TRANSACTION;</p>
+
+  <p class="ziti4">WHILE s＜=count DO</p>
+
+  <p class="ziti4">INSERT INTO t1 SELECT NULL,c;</p>
+
+  <p class="ziti4">SET s=s+1;</p>
+
+  <p class="ziti4">END WHILE;</p>
+
+  <p class="ziti4">COMMIT;</p>
+
+  <p class="ziti4">END;</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">比较这3个存储过程的执行时间：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞CALL load1(10000);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(1 min 3.15 sec)</p>
+
+  <p class="ziti4">mysql＞TRUNCATE TABLE t1;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.05 sec)</p>
+
+  <p class="ziti4">mysql＞CALL load2(10000);</p>
+
+  <p class="ziti4">Query OK,1 row affected(1 min 1.69 sec)</p>
+
+  <p class="ziti4">mysql＞TRUNCATE TABLE t1;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.05 sec)</p>
+
+  <p class="ziti4">mysql＞CALL load3(10000);</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.63 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">显然，第三种方法要快得多!这是因为每一次提交都要写一次重做日志，存储过程load1和load2实际写了10 000次重做日志文件，而对于存储过程load3来说，实际只写了1次。可以对第二个存储过程load2的调用进行调整，同样可以达到存储过程load3的性能，如：</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti4">mysql＞BEGIN;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.00 sec)</p>
+
+  <p class="ziti4">mysql＞CALL load2(10000);</p>
+
+  <p class="ziti4">Query OK,1 row affected(0.56 sec)</p>
+
+  <p class="ziti4">mysql＞COMMIT;</p>
+
+  <p class="ziti4">Query OK,0 rows affected(0.03 sec)</p>
+  <hr class="calibre2"/>
+
+  <p class="ziti3">大多数程序员会使用第一种或第二种方法，有人可能不知道InnoDB存储引擎自动提交的情况，另外有些人可能持有以下两种观点：首先，在他们曾经使用过的数据库中，对事务的要求总是尽快地进行释放，不能有长时间的事务；其次，他们可能担心存在Oracle数据库中由于没有足够undo产生的Snapshot Too Old的经典问题。MySQL的InnoDB存储引擎没有上述两个问题，因此程序员不论从何种角度出发，都不应该在一个循环中反复进行提交操作，不论是显式的提交还是隐式的提交。</p>
+</body></html>
